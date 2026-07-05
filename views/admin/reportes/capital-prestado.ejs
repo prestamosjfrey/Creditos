@@ -1,0 +1,53 @@
+<div class="mb-6">
+  <a href="/admin/dashboard" class="text-sm text-blue-600 hover:underline">&larr; Volver al dashboard</a>
+  <h1 class="text-xl font-semibold text-slate-800 mt-2">Capital prestado por mes</h1>
+  <p class="text-sm text-slate-400">Filtra por un rango de fechas, o por un mes específico usando el primer y último día de ese mes.</p>
+</div>
+
+<form method="GET" class="card mb-6 flex flex-wrap items-end gap-4">
+  <div>
+    <label class="label-field" for="desde">Desde</label>
+    <input class="input-field" type="date" id="desde" name="desde" value="<%= desde || '' %>" />
+  </div>
+  <div>
+    <label class="label-field" for="hasta">Hasta</label>
+    <input class="input-field" type="date" id="hasta" name="hasta" value="<%= hasta || '' %>" />
+  </div>
+  <button type="submit" class="btn-primary">Filtrar</button>
+  <% if (desde || hasta) { %>
+    <a href="/admin/reportes/capital-prestado" class="btn-secondary">Limpiar</a>
+  <% } %>
+</form>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+  <%- include('../../partials/kpi-card', {
+    titulo: (desde || hasta) ? 'Total prestado en el rango seleccionado' : 'Total prestado (histórico)',
+    valor: formatCOP(total)
+  }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'Préstamos otorgados', valor: cantidad }) %>
+</div>
+
+<h2 class="font-medium text-slate-700 mb-3">Total por mes</h2>
+<div class="card overflow-hidden p-0">
+  <table class="table-base" data-datatable>
+    <thead>
+      <tr>
+        <th>Mes</th>
+        <th>Préstamos otorgados</th>
+        <th>Capital prestado</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (meses.length === 0) { %>
+        <tr><td colspan="3" class="px-3 py-6 text-center text-slate-500">No hay préstamos registrados en este rango.</td></tr>
+      <% } %>
+      <% meses.forEach(function(m) { %>
+        <tr>
+          <td class="text-slate-700"><%= m.etiqueta %></td>
+          <td class="num"><%= m.cantidad %></td>
+          <td class="num font-medium text-slate-800"><%= formatCOP(m.total) %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>

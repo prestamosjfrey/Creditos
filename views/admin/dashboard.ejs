@@ -1,0 +1,227 @@
+<%
+  var seriesJson = JSON.stringify(seriesPorPeriodo).replace(/<\//g, '<\\/');
+%>
+
+<%- include('../partials/header-admin', {
+  tituloHeader: 'Hola, ' + (usuario.nombre_completo || 'Admin').split(' ')[0] + ' 👋',
+  subtituloHeader: 'Aquí tienes el resumen de tu cartera al día de hoy.',
+  mostrarVolver: false,
+}) %>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+  <div class="hero-card lg:col-span-2 flex items-center justify-between">
+    <div>
+      <p class="text-sm text-white/80">Disponible para préstamo</p>
+      <p class="num mt-2 text-3xl font-semibold"><%= formatCOP(saldoDisponible) %></p>
+      <% if (saldoDisponible < 0) { %>
+        <span class="badge bg-white/20 text-white mt-3 inline-flex">⚠ Saldo en negativo</span>
+      <% } else { %>
+        <span class="badge bg-white/20 text-white mt-3 inline-flex">👥 <%= resumenDestacado.clientesActivos %> clientes activos</span>
+      <% } %>
+    </div>
+    <div class="hidden sm:flex flex-col items-center gap-2">
+      <span class="flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
+        <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3" /></svg>
+      </span>
+      <div class="text-center">
+        <p class="text-xs text-white/70">Este mes</p>
+        <p class="text-sm font-semibold">+<%= formatCOP(resumenDestacado.interesesEsteMes) %></p>
+        <p class="text-[11px] text-white/60">Intereses generados</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3">
+    <a href="/admin/prestamos/nuevo" class="quick-action">
+      <span class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
+      </span>
+      <span class="text-xs text-slate-600">Nuevo préstamo</span>
+    </a>
+    <a href="/admin/prestamos" class="quick-action">
+      <span class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182.553-.439 1.278-.659 2.003-.659.725 0 1.45.22 2.003.659l.659.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+      </span>
+      <span class="text-xs text-slate-600">Registrar pago</span>
+    </a>
+    <a href="/admin/clientes" class="quick-action">
+      <span class="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" /></svg>
+      </span>
+      <span class="text-xs text-slate-600">Ver clientes</span>
+    </a>
+    <a href="/admin/reportes" class="quick-action">
+      <span class="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+      </span>
+      <span class="text-xs text-slate-600">Generar reporte</span>
+    </a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="card flex items-start gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3" /></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Capital prestado</p>
+      <p class="num mt-1 text-xl font-semibold text-slate-800"><%= formatCOP(kpis.capitalPrestado) %></p>
+      <p class="text-xs text-slate-400 mt-0.5">Histórico total</p>
+    </div>
+  </div>
+
+  <div class="card flex items-start gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182.553-.439 1.278-.659 2.003-.659.725 0 1.45.22 2.003.659l.659.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Total recuperado</p>
+      <p class="num mt-1 text-xl font-semibold text-slate-800"><%= formatCOP(kpis.totalRecuperado) %></p>
+      <p class="text-xs text-slate-400 mt-0.5">Abonos registrados</p>
+    </div>
+  </div>
+
+  <div class="card flex items-start gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <line x1="19" y1="5" x2="5" y2="19" stroke-linecap="round" />
+        <circle cx="7.5" cy="7.5" r="1.5" />
+        <circle cx="16.5" cy="16.5" r="1.5" />
+      </svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Interés cobrado</p>
+      <p class="num mt-1 text-xl font-semibold text-slate-800"><%= formatCOP(kpis.interesesCobrados) %></p>
+      <p class="text-xs text-slate-400 mt-0.5">Interés real ya recibido</p>
+    </div>
+  </div>
+
+  <div class="card flex items-start gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3" /></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Pendiente por cobrar</p>
+      <p class="num mt-1 text-xl font-semibold text-slate-800"><%= formatCOP(kpis.carteraActiva) %></p>
+      <p class="text-xs text-slate-400 mt-0.5">Saldo pendiente por cobrar</p>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <div class="card lg:col-span-2">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <p class="font-medium text-slate-700">Ingresos del mes</p>
+      <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1 text-sm" id="filtros-periodo">
+        <button type="button" data-periodo="7d" class="periodo-btn">7 días</button>
+        <button type="button" data-periodo="30d" class="periodo-btn periodo-btn-activo">30 días</button>
+        <button type="button" data-periodo="3m" class="periodo-btn">3 meses</button>
+        <button type="button" data-periodo="12m" class="periodo-btn">12 meses</button>
+      </div>
+    </div>
+    <canvas id="chart-ingresos" height="110"></canvas>
+    <div class="mt-5 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-sm">
+      <div>
+        <p class="text-slate-400">Total ingresos</p>
+        <p id="stat-total" class="num font-semibold text-slate-800"><%= formatCOP(seriesPorPeriodo['30d'].estadisticas.total) %></p>
+      </div>
+      <div>
+        <p class="text-slate-400">Promedio diario</p>
+        <p id="stat-promedio" class="num font-semibold text-slate-800"><%= formatCOP(seriesPorPeriodo['30d'].estadisticas.promedioDiario) %></p>
+      </div>
+      <div>
+        <p class="text-slate-400">Días con ingresos</p>
+        <p id="stat-dias" class="num font-semibold text-slate-800"><%= seriesPorPeriodo['30d'].estadisticas.diasConIngresos %> de <%= seriesPorPeriodo['30d'].estadisticas.diasTotales %></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-6">
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-medium text-slate-700">Próximos cobros</h2>
+        <a href="/admin/cobros" class="text-sm text-blue-600 hover:underline">Ver todos</a>
+      </div>
+      <%
+        var LIMITE_COBROS = 5;
+        var cobrosVisibles = proximosCobros.slice(0, LIMITE_COBROS);
+        var cobrosOcultos = proximosCobros.slice(LIMITE_COBROS);
+        var totalOcultos = cobrosOcultos.length;
+      %>
+      <div class="card divide-y divide-slate-100 p-0">
+        <% if (proximosCobros.length === 0) { %>
+          <p class="px-5 py-6 text-center text-sm text-slate-400">No hay cobros programados.</p>
+        <% } %>
+        <% cobrosVisibles.forEach(function(cuota) {
+          var urgente = cuota.etiquetaVencimiento === 'Vence hoy' || cuota.etiquetaVencimiento === 'Vence mañana';
+          var inicial = (cuota.prestamos?.perfiles?.nombre_completo || 'C').charAt(0).toUpperCase();
+        %>
+          <div class="flex items-center justify-between px-5 py-3">
+            <div class="flex items-center gap-3">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500"><%= inicial %></span>
+              <div>
+                <p class="text-sm font-medium text-slate-800"><%= cuota.prestamos?.perfiles?.nombre_completo || 'Cliente' %></p>
+                <span class="<%= urgente ? 'badge-peligro' : 'badge-mora' %>"><%= cuota.etiquetaVencimiento %></span>
+              </div>
+            </div>
+            <p class="num text-sm font-semibold text-slate-800"><%= formatCOP(cuota.monto_esperado - cuota.monto_pagado) %></p>
+          </div>
+        <% }); %>
+
+        <% if (totalOcultos > 0) { %>
+          <a href="/admin/cobros"
+             class="flex w-full items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 transition">
+            + <%= totalOcultos %> cobros más
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+          </a>
+        <% } %>
+      </div>
+    </section>
+
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-medium text-slate-700">Actividad reciente</h2>
+        <a href="/admin/pagos" class="text-sm text-blue-600 hover:underline">Ver todo</a>
+      </div>
+      <div class="card divide-y divide-slate-100 p-0">
+        <% if (actividadReciente.length === 0) { %>
+          <p class="px-5 py-6 text-center text-sm text-slate-400">Sin actividad reciente.</p>
+        <% } %>
+        <% actividadReciente.forEach(function(ev) { %>
+          <div class="flex items-center justify-between px-5 py-3">
+            <div class="flex items-center gap-3">
+              <% if (ev.tipo === 'pago') { %>
+                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                </span>
+              <% } else if (ev.tipo === 'prestamo') { %>
+                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
+                </span>
+              <% } else { %>
+                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-500">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Z" /></svg>
+                </span>
+              <% } %>
+              <div>
+                <p class="text-sm text-slate-700">
+                  <%= ev.tipo === 'pago' ? 'Pago recibido' : ev.tipo === 'prestamo' ? 'Nuevo préstamo' : 'Cliente en mora' %>
+                  · <%= ev.cliente %>
+                </p>
+                <p class="text-xs text-slate-400"><%= ev.hace %></p>
+              </div>
+            </div>
+            <p class="num text-sm font-semibold <%= ev.tipo === 'mora' ? 'text-red-500' : 'text-emerald-600' %>">
+              <%= ev.tipo === 'mora' ? '' : '+' %><%= formatCOP(ev.monto) %>
+            </p>
+          </div>
+        <% }); %>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  window.__SERIES_INGRESOS__ = <%- seriesJson %>;
+</script>

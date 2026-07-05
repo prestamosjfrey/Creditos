@@ -1,0 +1,138 @@
+<%- include('../../partials/header-admin', {
+  tituloHeader: 'Disponible para préstamo',
+  subtituloHeader: 'Saldo de caja disponible para nuevos préstamos, con el historial completo de movimientos.',
+  mostrarVolver: false,
+}) %>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+  <div class="hero-card lg:col-span-2 flex items-center justify-between">
+    <div>
+      <p class="text-sm text-white/80">Disponible para préstamo</p>
+      <p class="num mt-2 text-3xl font-semibold"><%= formatCOP(saldoDisponible) %></p>
+      <% if (saldoDisponible < 0) { %>
+        <span class="badge bg-white/20 text-white mt-3 inline-flex">⚠ Saldo en negativo</span>
+      <% } %>
+    </div>
+    <span class="hidden sm:flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
+      <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3" /></svg>
+    </span>
+  </div>
+
+  <div class="card flex items-center justify-center">
+    <button type="button" id="btn-mostrar-form-movimiento" class="btn-primary w-full justify-center">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
+      Registrar movimiento
+    </button>
+  </div>
+</div>
+
+<!-- Modal: registrar movimiento manual -->
+<div id="modal-movimiento" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4 lg:pl-64">
+  <div class="card relative w-full max-w-lg" role="dialog" aria-modal="true" aria-labelledby="titulo-movimiento">
+    <button type="button" id="btn-cerrar-movimiento" class="absolute right-4 top-4 text-slate-400 transition hover:text-slate-600" aria-label="Cerrar">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+    </button>
+    <div class="mb-6 text-center">
+      <span class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3"/></svg>
+      </span>
+      <h2 id="titulo-movimiento" class="text-lg font-semibold text-slate-800">Nuevo movimiento de caja</h2>
+      <p class="mt-1 text-sm text-slate-400">Registra un ingreso o egreso del dinero disponible.</p>
+    </div>
+    <form action="/admin/caja" method="POST" class="space-y-4" data-loading-title="Guardando movimiento…">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="label-field" for="tipo">Tipo de movimiento <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <span id="tipo-icono" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500"></span>
+            <select class="input-field pl-10" id="tipo" name="tipo" required>
+              <option value="ingreso">Ingreso (entra dinero)</option>
+              <option value="egreso">Egreso (sale dinero)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="label-field" for="monto">Monto <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-400">$</span>
+            <input class="input-field input-moneda pl-7 text-right" type="text" inputmode="numeric" id="monto" name="monto" placeholder="0" required />
+          </div>
+          <p class="mt-1 text-xs text-slate-400">Los miles se separan automáticamente.</p>
+        </div>
+      </div>
+      <div>
+        <label class="label-field" for="concepto">Concepto <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-3 text-slate-400">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+          </span>
+          <input class="input-field pl-10" type="text" id="concepto" name="concepto" maxlength="100" placeholder="Ej. ingreso de capital propio, pago de cliente, ajuste, etc." required />
+        </div>
+        <p class="mt-1 text-right text-xs text-slate-400"><span id="concepto-contador">0</span>/100</p>
+      </div>
+      <div class="flex justify-center gap-3 pt-2">
+        <button type="button" id="btn-cancelar-movimiento" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar movimiento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2 class="font-semibold text-slate-800 mb-4">Historial de movimientos</h2>
+  <% if (movimientos.length === 0) { %>
+    <p class="text-center text-sm text-slate-400 py-6">Aún no hay movimientos registrados. Usa "Registrar movimiento" para ingresar el saldo inicial de tu caja.</p>
+  <% } else { %>
+    <table class="table-base w-full" data-datatable>
+      <thead>
+        <tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th class="text-right">Monto</th><th class="text-right">Saldo</th></tr>
+      </thead>
+      <tbody>
+        <% movimientos.forEach(function(m) { %>
+          <tr>
+            <td><%= new Date(m.creado_en).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) %></td>
+            <td><span class="<%= m.tipo === 'ingreso' ? 'badge-exito' : 'badge-peligro' %>"><%= m.tipo === 'ingreso' ? 'Ingreso' : 'Egreso' %></span></td>
+            <td><%= m.concepto %></td>
+            <td class="num text-right <%= m.tipo === 'ingreso' ? 'text-emerald-600' : 'text-red-500' %>"><%= m.tipo === 'ingreso' ? '+' : '-' %><%= formatCOP(m.monto) %></td>
+            <td class="num text-right font-medium text-slate-700"><%= formatCOP(m.saldoResultante) %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<script>
+  (function () {
+    var modal = document.getElementById('modal-movimiento');
+    function abrir() { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+    function cerrar() { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+    document.getElementById('btn-mostrar-form-movimiento').addEventListener('click', abrir);
+    document.getElementById('btn-cancelar-movimiento').addEventListener('click', cerrar);
+    document.getElementById('btn-cerrar-movimiento').addEventListener('click', cerrar);
+    // Cerrar al hacer clic fuera de la tarjeta o con Escape.
+    modal.addEventListener('click', function (e) { if (e.target === modal) cerrar(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.classList.contains('hidden')) cerrar(); });
+
+    // Ícono de color según el tipo (verde = ingreso, rojo = egreso).
+    var sel = document.getElementById('tipo');
+    var ic = document.getElementById('tipo-icono');
+    var ICONOS = {
+      ingreso: { color: 'text-emerald-500', svg: '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8m0 0 3-3m-3 3-3-3"/></svg>' },
+      egreso: { color: 'text-red-500', svg: '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16V8m0 0 3 3m-3-3-3 3"/></svg>' },
+    };
+    function pintarTipo() {
+      var c = ICONOS[sel.value] || ICONOS.ingreso;
+      ic.className = 'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 ' + c.color;
+      ic.innerHTML = c.svg;
+    }
+    sel.addEventListener('change', pintarTipo);
+    pintarTipo();
+
+    // Contador de caracteres del concepto.
+    var con = document.getElementById('concepto');
+    var cnt = document.getElementById('concepto-contador');
+    con.addEventListener('input', function () { cnt.textContent = con.value.length; });
+  })();
+</script>

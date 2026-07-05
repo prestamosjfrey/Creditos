@@ -1,0 +1,103 @@
+{
+  "name": "cartera",
+  "version": "1.0.0",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"nodemon server.js\" \"npx tailwindcss -i ./src/input.css -o ./public/css/output.css --watch\"",
+    "build:css": "npx tailwindcss -i ./src/input.css -o ./public/css/output.css --minify",
+    "start": "node server.js",
+    "electron:dev": "electron .",
+    "electron:build": "npm run build:css && electron-builder --win",
+    "seed:admin": "node scripts/seed-admin.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Gestión de cartera de préstamos",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "chart.js": "^4.5.1",
+    "cookie-parser": "^1.4.7",
+    "date-fns": "^4.4.0",
+    "dotenv": "^17.4.2",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "express-ejs-layouts": "^2.5.1",
+    "express-validator": "^7.3.2",
+    "multer": "^2.2.0",
+    "pdfkit": "^0.19.1",
+    "simple-datatables": "^10.2.0",
+    "sweetalert2": "^11.26.25",
+    "tom-select": "^2.6.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.1",
+    "concurrently": "^10.0.3",
+    "electron": "^35.7.5",
+    "electron-builder": "^25.1.8",
+    "nodemon": "^3.1.14",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19"
+  },
+  "build": {
+    "appId": "com.cartera.prestamos",
+    "productName": "Cartera",
+    "copyright": "Uso personal",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "controllers/**/*",
+      "middlewares/**/*",
+      "routes/**/*",
+      "services/**/*",
+      "utils/**/*",
+      "views/**/*",
+      "public/**/*",
+      "server.js",
+      "!src/**/*",
+      "!node_modules/.cache/**/*",
+      "!node_modules/electron/**/*",
+      "!node_modules/electron-builder/**/*",
+      "!node_modules/nodemon/**/*",
+      "!node_modules/concurrently/**/*",
+      "!node_modules/tailwindcss/**/*",
+      "!node_modules/postcss/**/*",
+      "!node_modules/autoprefixer/**/*",
+      "!**/*.md",
+      "!**/*.map",
+      "!**/test/**",
+      "!**/tests/**",
+      "!**/*.test.js",
+      "!**/*.spec.js"
+    ],
+    "extraResources": [
+      {
+        "from": ".env",
+        "to": ".env"
+      }
+    ],
+    "asarUnpack": [
+      "public/**/*",
+      "node_modules/pdfkit/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Cartera"
+    }
+  }
+}

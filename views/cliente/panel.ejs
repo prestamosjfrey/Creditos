@@ -1,0 +1,122 @@
+<% if (prestamoPrincipal) {
+  var r = 34;
+  var circunferencia = 2 * Math.PI * r;
+  var offset = circunferencia - (circunferencia * prestamoPrincipal.pctPagado / 100);
+%>
+<div class="hero-card mb-6">
+  <div class="flex items-start justify-between">
+    <div>
+      <div class="flex items-center gap-2">
+        <p class="font-medium">Préstamo activo</p>
+        <% if (prestamoPrincipal.estado === 'en_mora') { %>
+          <span class="badge bg-white/20 text-white">En mora</span>
+        <% } else { %>
+          <span class="badge bg-white/20 text-white">Activo</span>
+        <% } %>
+      </div>
+      <p class="num mt-3 text-3xl font-semibold"><%= formatCOP(prestamoPrincipal.total_pagado) %></p>
+      <p class="text-sm text-white/70">de <%= formatCOP(prestamoPrincipal.monto_total_a_pagar) %></p>
+    </div>
+
+    <svg width="80" height="80" viewBox="0 0 80 80" class="-rotate-90">
+      <circle cx="40" cy="40" r="<%= r %>" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="6" />
+      <circle cx="40" cy="40" r="<%= r %>" fill="none" stroke="white" stroke-width="6" stroke-linecap="round"
+        stroke-dasharray="<%= circunferencia %>" stroke-dashoffset="<%= offset %>" />
+      <text x="40" y="40" transform="rotate(90 40 40)" text-anchor="middle" dominant-baseline="middle" fill="white" class="text-sm font-semibold" style="font-size: 16px;"><%= prestamoPrincipal.pctPagado %>%</text>
+    </svg>
+  </div>
+
+  <div class="mt-5 h-2 rounded-full bg-white/20">
+    <div class="h-2 rounded-full bg-white" style="width: <%= prestamoPrincipal.pctPagado %>%"></div>
+  </div>
+
+  <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+    <div>
+      <p class="text-white/60">Próximo pago</p>
+      <p class="font-medium"><%= proximaCuota ? proximaCuota.fecha_vencimiento : 'Sin pendientes' %></p>
+    </div>
+    <div>
+      <p class="text-white/60">Pago mensual</p>
+      <p class="font-medium"><%= formatCOP(prestamoPrincipal.valor_cuota) %></p>
+    </div>
+  </div>
+
+  <a href="/cliente/prestamos/<%= prestamoPrincipal.prestamo_id %>" class="mt-5 block w-full rounded-xl bg-white/15 py-2.5 text-center text-sm font-medium hover:bg-white/25">
+    Ver detalles del préstamo
+  </a>
+</div>
+<% } else { %>
+<div class="card mb-6 text-center">
+  <p class="text-slate-500">No tienes préstamos activos en este momento.</p>
+</div>
+<% } %>
+
+<div class="grid grid-cols-4 gap-3 mb-8">
+  <button type="button" id="qa-solicitar" class="quick-action">
+    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
+    </span>
+    <span class="text-xs text-slate-600">Solicitar préstamo</span>
+  </button>
+
+  <a href="#mis-prestamos" class="quick-action">
+    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4h8l3 3v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm8 0v3h3" /></svg>
+    </span>
+    <span class="text-xs text-slate-600">Mis préstamos</span>
+  </a>
+
+  <a href="<%= prestamoPrincipal ? '/cliente/prestamos/' + prestamoPrincipal.prestamo_id : '#mis-prestamos' %>" class="quick-action">
+    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16v3H4V6Zm0 5h16v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7Z" /></svg>
+    </span>
+    <span class="text-xs text-slate-600">Pagos</span>
+  </a>
+
+  <a href="<%= prestamoPrincipal ? '/cliente/prestamos/' + prestamoPrincipal.prestamo_id : '#mis-prestamos' %>" class="quick-action">
+    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+    </span>
+    <span class="text-xs text-slate-600">Historial</span>
+  </a>
+</div>
+
+<div id="mis-prestamos">
+  <h2 class="font-medium text-slate-700 mb-3">Mis préstamos</h2>
+  <div class="space-y-3">
+    <% if (prestamos.length === 0) { %>
+      <p class="card text-center text-slate-500">No tienes préstamos registrados.</p>
+    <% } %>
+    <% prestamos.forEach(function(p) { %>
+      <a href="/cliente/prestamos/<%= p.prestamo_id %>" class="card flex items-center gap-3 hover:shadow-md">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" /></svg>
+        </span>
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <p class="font-medium text-slate-800">Préstamo</p>
+            <% if (p.estado === 'pagado') { %><span class="badge-exito">Pagado</span>
+            <% } else if (p.estado === 'en_mora') { %><span class="badge-peligro">En mora</span>
+            <% } else { %><span class="badge-exito">Activo</span><% } %>
+          </div>
+          <p class="text-xs text-slate-400">Saldo pendiente: <%= formatCOP(p.saldo_pendiente) %></p>
+        </div>
+        <div class="text-right">
+          <p class="num text-sm font-semibold text-slate-800"><%= formatCOP(p.monto_total_a_pagar) %></p>
+        </div>
+        <svg class="h-4 w-4 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6" /></svg>
+      </a>
+    <% }); %>
+  </div>
+</div>
+
+<script>
+  document.getElementById('qa-solicitar')?.addEventListener('click', function () {
+    Swal.fire({
+      icon: 'info',
+      title: 'Próximamente',
+      text: 'La solicitud de préstamos desde la app estará disponible pronto. Por ahora, contáctanos directamente.',
+      confirmButtonColor: '#2563EB',
+    });
+  });
+</script>

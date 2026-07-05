@@ -1,0 +1,245 @@
+<%
+  function iniciales(n) { var p=(n||'').trim().split(/\s+/); return(((p[0]||'')[0]||'')+((p[1]||'')[0]||'')).toUpperCase()||'?'; }
+  var paletas=[['bg-blue-100','text-blue-600'],['bg-violet-100','text-violet-600'],['bg-emerald-100','text-emerald-600'],['bg-amber-100','text-amber-600'],['bg-rose-100','text-rose-600'],['bg-cyan-100','text-cyan-600']];
+  function paleta(n){ var s=n||'A',sum=0; for(var i=0;i<s.length;i++) sum+=s.charCodeAt(i); return paletas[sum%paletas.length]; }
+  var MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  function fechaCorta(iso){ if(!iso) return '—'; var d=new Date(iso+'T00:00:00'); return d.getDate()+' '+MESES[d.getMonth()]+' '+d.getFullYear(); }
+  function money(n){ return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n||0); }
+  var totalInteres = grupos.reduce(function(a,g){ return a+g.eventos.reduce(function(b,e){ return b+e.monto; },0); }, 0);
+%>
+
+<%- include('../../partials/header-admin', {
+  tituloHeader: 'Créditos renegociados',
+  subtituloHeader: 'Historial de préstamos con pagos de solo interés: extensiones de plazo y saldos pendientes.',
+  mostrarVolver: false,
+}) %>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Créditos renegociados</p>
+      <p class="text-2xl font-bold text-slate-800 num"><%= stats.totalCreditos %></p>
+      <p class="text-xs text-slate-400 mt-0.5"><%= stats.totalEventos %> evento(s) en total</p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="10"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Extensiones de plazo</p>
+      <p class="text-2xl font-bold text-amber-600 num"><%= stats.totalExtensiones %></p>
+      <p class="text-xs text-amber-500 mt-0.5">Cuota nueva agregada</p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 12h14"/><circle cx="12" cy="12" r="10"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Saldos pendientes</p>
+      <p class="text-2xl font-bold text-blue-600 num"><%= stats.totalSaldo %></p>
+      <p class="text-xs text-blue-500 mt-0.5">Capital diferido</p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Interés cobrado</p>
+      <p class="text-lg font-bold text-emerald-600 num"><%= money(totalInteres) %></p>
+      <p class="text-xs text-emerald-500 mt-0.5">En renegociaciones</p>
+    </div>
+  </div>
+</div>
+
+<% if (grupos.length === 0) { %>
+  <div class="card flex flex-col items-center py-16 text-center">
+    <span class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4">
+      <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+    </span>
+    <p class="font-semibold text-slate-700 text-lg">Sin renegociaciones aún</p>
+    <p class="text-sm text-slate-400 mt-1 max-w-sm">Cuando registres un pago de "solo interés" en un préstamo (extensión o saldo pendiente), aparecerá aquí con su historial completo.</p>
+  </div>
+<% } else { %>
+
+  <!-- Buscador y filtro -->
+  <div class="card py-3 px-4 mb-4 flex flex-col sm:flex-row gap-3 items-center">
+    <div class="relative flex-1 w-full">
+      <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="rn-buscar" type="text" placeholder="Buscar por cliente, documento o N° de préstamo…" class="input-field pl-9 w-full" />
+    </div>
+    <div class="flex gap-1 shrink-0">
+      <button type="button" data-filtro="" class="rn-filtro rounded-lg px-3 py-1.5 text-sm font-medium bg-slate-800 text-white transition">Todos</button>
+      <button type="button" data-filtro="extension" class="rn-filtro rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 transition">Solo extensiones</button>
+      <button type="button" data-filtro="saldo" class="rn-filtro rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 transition">Solo saldos</button>
+    </div>
+  </div>
+
+  <!-- Contador -->
+  <p class="text-sm text-slate-400 mb-3"><span id="rn-count"><%= grupos.length %></span> de <%= grupos.length %> créditos</p>
+
+  <!-- Cards -->
+  <div class="space-y-4" id="rn-lista">
+    <% grupos.forEach(function(g) {
+      var pr = g.prestamo;
+      var perf = pr.perfiles || {};
+      var col = paleta(perf.nombre_completo);
+      var nExt = g.eventos.filter(function(e){ return e.accion==='extension'; }).length;
+      var nSal = g.eventos.filter(function(e){ return e.accion==='saldo'; }).length;
+      var totalReneg = g.eventos.reduce(function(a,e){ return a+e.monto; }, 0);
+      var tel = (perf.telefono||'').replace(/\D/g,'');
+      var telWa = tel.length===10 ? '57'+tel : tel;
+      var estadoClase = pr.estado==='pagado' ? 'bg-emerald-100 text-emerald-700' : pr.estado==='activo' ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600';
+      var estadoLabel = pr.estado==='pagado' ? 'Pagado' : pr.estado==='activo' ? 'Activo' : 'En mora';
+      var tiposGrupo = (nExt>0 && nSal>0) ? 'mixto' : nExt>0 ? 'extension' : 'saldo';
+    %>
+      <div class="card p-0 overflow-hidden" data-rn-tipo="<%= tiposGrupo %>" data-rn-buscar="<%= (perf.nombre_completo+' '+(perf.numero_documento||'')+' '+(g.numeroPrestamo||'')).toLowerCase() %>">
+
+        <!-- Cabecera -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 pt-4 pb-3">
+          <div class="flex items-center gap-3">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full <%= col[0] %> <%= col[1] %> font-bold text-sm"><%= iniciales(perf.nombre_completo) %></span>
+            <div>
+              <p class="font-semibold text-slate-800"><%= perf.nombre_completo || 'Cliente' %></p>
+              <p class="text-xs text-slate-400">CC <%= perf.numero_documento||'—' %>
+                <% if (tel.length>=10) { %>
+                  · <a href="https://wa.me/<%= telWa %>" target="_blank" rel="noopener" class="text-green-500 hover:underline"><%= perf.telefono %></a>
+                <% } else { %> · <%= perf.telefono||'—' %> <% } %>
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="font-semibold text-slate-700"><%= g.numeroPrestamo||'—' %></span>
+            <span class="text-slate-300">|</span>
+            <span class="num text-slate-600"><%= money(pr.monto_capital) %></span>
+            <span class="text-slate-300">|</span>
+            <span class="text-slate-500"><%= pr.numero_cuotas %> cuotas (<%= pr.frecuencia_pago %>)</span>
+            <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium <%= estadoClase %>"><%= estadoLabel %></span>
+            <a href="/admin/prestamos/<%= pr.id %>" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition">Ver préstamo</a>
+            <% if (tel.length>=10) { %>
+              <a href="https://wa.me/<%= telWa %>" target="_blank" rel="noopener"
+                 style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:#22c55e;color:#fff;flex-shrink:0"
+                 onmouseover="this.style.background='#16a34a'" onmouseout="this.style.background='#22c55e'">
+                <svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885"/></svg>
+              </a>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Resumen de renegociaciones -->
+        <div class="flex items-center justify-between px-5 py-2 bg-slate-50 border-y border-slate-100">
+          <div class="flex gap-4 text-sm">
+            <span class="flex items-center gap-1.5 <%= nExt>0 ? 'text-amber-600 font-medium' : 'text-slate-300' %>">
+              <span class="flex h-5 w-5 items-center justify-center rounded-full <%= nExt>0 ? 'bg-amber-100' : 'bg-slate-100' %> text-xs font-bold"><%= nExt %></span>
+              Extensión<%= nExt!==1 ? 'es' : '' %>
+            </span>
+            <span class="flex items-center gap-1.5 <%= nSal>0 ? 'text-blue-600 font-medium' : 'text-slate-300' %>">
+              <span class="flex h-5 w-5 items-center justify-center rounded-full <%= nSal>0 ? 'bg-blue-100' : 'bg-slate-100' %> text-xs font-bold"><%= nSal %></span>
+              Saldo<%= nSal!==1 ? 's' : '' %> pendiente<%= nSal!==1 ? 's' : '' %>
+            </span>
+          </div>
+          <span class="text-xs text-slate-400">Interés cobrado: <span class="font-semibold text-slate-600 num"><%= money(totalReneg) %></span></span>
+        </div>
+
+        <!-- Timeline -->
+        <div class="px-5 py-4">
+          <ol class="relative space-y-5">
+            <% g.eventos.forEach(function(ev, idx) {
+              var esExt = ev.accion==='extension';
+              var evNum = g.eventos.length - idx;
+            %>
+              <li class="flex gap-4">
+                <!-- Ícono del evento -->
+                <div class="flex flex-col items-center">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full <%= esExt ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600' %> font-bold text-sm z-10">
+                    <% if (esExt) { %>
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    <% } else { %>
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>
+                    <% } %>
+                  </span>
+                  <% if (idx < g.eventos.length-1) { %>
+                    <div class="w-px flex-1 bg-slate-200 mt-1"></div>
+                  <% } %>
+                </div>
+
+                <!-- Contenido -->
+                <div class="flex-1 pb-1">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold <%= esExt ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700' %>">
+                          <%= esExt ? '↑ Extensión de plazo' : '— Saldo pendiente' %>
+                        </span>
+                        <span class="text-xs text-slate-400">Evento #<%= evNum %></span>
+                        <span class="text-xs text-slate-400">· <%= fechaCorta(ev.fecha) %></span>
+                      </div>
+                      <p class="text-sm text-slate-600 mt-1">
+                        <% if (esExt) { %>
+                          Se pagó el interés y se extendió el crédito <strong>un periodo más</strong>. Se agregó una cuota nueva al final del plan.
+                        <% } else { %>
+                          Se pagó el interés. El capital de la cuota quedó como <strong>saldo pendiente</strong> para renegociación.
+                        <% } %>
+                      </p>
+                      <% if (ev.notas) { %>
+                        <p class="text-xs text-slate-400 mt-1 italic">"<%= ev.notas %>"</p>
+                      <% } %>
+                    </div>
+                    <div class="shrink-0 text-right">
+                      <p class="text-base font-bold num <%= esExt ? 'text-amber-600' : 'text-blue-600' %>"><%= money(ev.monto) %></p>
+                      <p class="text-xs text-slate-400">interés cobrado</p>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            <% }); %>
+          </ol>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+<% } %>
+
+<script>
+(function () {
+  var filtroActual = '';
+  var cards = Array.from(document.querySelectorAll('[data-rn-tipo]'));
+  var counter = document.getElementById('rn-count');
+
+  function filtrar() {
+    var q = ((document.getElementById('rn-buscar')||{}).value||'').trim().toLowerCase();
+    var vis = 0;
+    cards.forEach(function (c) {
+      var tipo = c.getAttribute('data-rn-tipo') || '';
+      var txt = c.getAttribute('data-rn-buscar') || '';
+      var okTipo = !filtroActual || tipo === filtroActual || tipo === 'mixto';
+      var okQ = !q || txt.includes(q);
+      var show = okTipo && okQ;
+      c.style.display = show ? '' : 'none';
+      if (show) vis++;
+    });
+    if (counter) counter.textContent = vis;
+  }
+
+  document.querySelectorAll('.rn-filtro').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      filtroActual = btn.getAttribute('data-filtro') || '';
+      document.querySelectorAll('.rn-filtro').forEach(function (b) {
+        b.className = b.getAttribute('data-filtro') === filtroActual
+          ? 'rn-filtro rounded-lg px-3 py-1.5 text-sm font-medium bg-slate-800 text-white transition'
+          : 'rn-filtro rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 transition';
+      });
+      filtrar();
+    });
+  });
+
+  var inp = document.getElementById('rn-buscar');
+  if (inp) inp.addEventListener('input', filtrar);
+})();
+</script>

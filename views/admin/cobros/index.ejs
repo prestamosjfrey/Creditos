@@ -1,0 +1,351 @@
+<%
+  function iniciales(nombre) {
+    var p = (nombre||'').trim().split(/\s+/);
+    return (((p[0]||'')[0]||'')+((p[1]||'')[0]||'')).toUpperCase()||'?';
+  }
+  var paletas = [
+    ['bg-blue-100','text-blue-600'],['bg-violet-100','text-violet-600'],
+    ['bg-emerald-100','text-emerald-600'],['bg-amber-100','text-amber-600'],
+    ['bg-rose-100','text-rose-600'],['bg-cyan-100','text-cyan-600'],
+  ];
+  function paleta(n) { var s=n||'A',sum=0; for(var i=0;i<s.length;i++) sum+=s.charCodeAt(i); return paletas[sum%paletas.length]; }
+  var MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  function fechaCorta(iso) { if(!iso) return '—'; var d=new Date(iso+'T00:00:00'); return d.getDate()+' '+MESES[d.getMonth()]+' '+d.getFullYear(); }
+  function fmtFecha(iso) { if(!iso) return '—'; var d=new Date(iso+'T00:00:00'); return d.getDate().toString().padStart(2,'0')+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getFullYear(); }
+%>
+
+<!-- Header -->
+<div class="mb-6 flex items-start justify-between gap-4">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-800">Cobros</h1>
+    <p class="text-sm text-slate-400">Gestiona y consulta los cobros programados para los próximos 30 días.</p>
+  </div>
+  <% if (notificacionActiva) { %>
+    <form action="/admin/cobros/notificar" method="POST" data-loading-title="Enviando a WhatsApp…" class="shrink-0">
+      <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-green-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-600">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885"/></svg>
+        Avisarme cuotas de hoy
+      </button>
+    </form>
+  <% } %>
+</div>
+
+<!-- Stat cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-500">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm5 10v-2a4 4 0 0 0-3-3.87"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Clientes por cobrar</p>
+      <p class="text-2xl font-semibold text-slate-800 num"><%= stats.totalClientes %></p>
+      <p class="text-xs text-slate-400 mt-0.5">Activos: <%= stats.clientesActivos %> · Inactivos: <%= stats.clientesInactivos %></p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Total por cobrar</p>
+      <p class="text-xl font-semibold text-slate-800 num"><%= formatCOP(stats.totalPorCobrar) %></p>
+      <p class="text-xs text-emerald-500 mt-0.5">Próximos 30 días</p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Vencen hoy</p>
+      <p class="text-2xl font-semibold text-slate-800 num"><%= stats.vencenHoy %></p>
+      <p class="text-xs text-red-500 mt-0.5">Total: <%= formatCOP(stats.totalHoy) %></p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-50 text-violet-500">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Vencen esta semana</p>
+      <p class="text-2xl font-semibold text-slate-800 num"><%= stats.vencenSemana %></p>
+      <p class="text-xs text-violet-500 mt-0.5">Total: <%= formatCOP(stats.totalSemana) %></p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3 border-red-100">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">En mora</p>
+      <p class="text-2xl font-semibold text-red-600 num"><%= stats.enMora %></p>
+      <p class="text-xs text-red-400 mt-0.5">Total: <%= formatCOP(stats.totalMora) %></p>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card p-3 mb-4">
+  <div class="flex flex-wrap items-center gap-3">
+    <!-- Estado -->
+    <div class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 bg-white">
+      <svg class="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+      <label class="text-sm text-slate-500">Estado</label>
+      <svg class="h-3.5 w-3.5 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+      <select id="filtro-estado" class="text-sm font-medium text-slate-700 bg-transparent outline-none cursor-pointer">
+        <option value="">Todos</option>
+        <option value="hoy">Solo hoy</option>
+        <option value="semana">Esta semana</option>
+        <option value="mora">En mora</option>
+      </select>
+    </div>
+    <!-- Rango de fechas -->
+    <div class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 bg-white">
+      <svg class="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span class="text-sm text-slate-600 num"><%= fmtFecha(hoyISO) %> – <%= fmtFecha(hastaISO) %></span>
+    </div>
+    <!-- Buscar -->
+    <div class="flex-1 relative min-w-[200px]">
+      <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="filtro-buscar" type="text" placeholder="Buscar cliente, documento o teléfono..." class="input-field pl-9 w-full" />
+    </div>
+  </div>
+</div>
+
+<!-- Tabla -->
+<div class="card p-0 overflow-hidden">
+  <% if (cobros.length === 0) { %>
+    <p class="py-12 text-center text-sm text-slate-400">No hay cobros programados en los próximos 30 días.</p>
+  <% } else { %>
+    <div class="overflow-x-auto">
+      <table class="table-base w-full" id="tbl-cobros">
+        <thead>
+          <tr>
+            <th class="cursor-pointer select-none" data-col="cliente">CLIENTE
+              <svg class="inline h-3 w-3 ml-1 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+            </th>
+            <th class="cursor-pointer select-none" data-col="vence">VENCE
+              <svg class="inline h-3 w-3 ml-1 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+            </th>
+            <th>PRÉSTAMO</th>
+            <th>CONTACTO</th>
+            <th class="text-right cursor-pointer select-none" data-col="monto">MONTO
+              <svg class="inline h-3 w-3 ml-1 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+            </th>
+            <th>ESTADO</th>
+            <th class="text-right">ACCIÓN</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-cobros">
+          <% cobros.forEach(function(c) {
+            var perf = c.prestamos && c.prestamos.perfiles ? c.prestamos.perfiles : null;
+            var nombre = perf ? perf.nombre_completo : 'Cliente';
+            var doc = perf ? (perf.numero_documento||'') : '';
+            var tel = perf ? (perf.telefono||'') : '';
+            var telD = tel.replace(/\D/g,'');
+            var telWa = telD.length===10 ? '57'+telD : telD;
+            var col = paleta(nombre);
+            var nCuotas = c.prestamos ? (c.prestamos.numero_cuotas||0) : 0;
+            var pct = nCuotas>0 ? Math.min(100,Math.round(((c.numero_cuota-1)/nCuotas)*100)) : 0;
+          %>
+            <tr data-fecha="<%= c.fecha_vencimiento %>"
+                data-mora="<%= c.enMora ? '1' : '0' %>"
+                data-monto="<%= c.saldo %>"
+                data-buscar="<%= (nombre+' '+doc+' '+tel).toLowerCase() %>"
+                class="<%= c.enMora ? 'bg-red-50/40' : '' %>">
+              <td>
+                <div class="flex items-center gap-3">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold <%= col[0] %> <%= col[1] %>"><%= iniciales(nombre) %></span>
+                  <div>
+                    <p class="text-sm font-medium text-slate-700"><%= nombre %></p>
+                    <p class="text-xs text-slate-400">CC <%= doc||'—' %></p>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <% if (c.enMora) { %>
+                  <div>
+                    <p class="text-sm font-medium text-slate-700 num"><%= fechaCorta(c.fecha_vencimiento) %></p>
+                    <p class="text-xs font-semibold text-red-500 mt-0.5"><%= c.etiqueta %></p>
+                  </div>
+                <% } else if (c.colorEtiqueta==='rojo') { %>
+                  <div class="flex items-center gap-1.5">
+                    <svg class="h-4 w-4 text-red-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                    <div>
+                      <p class="text-sm font-semibold text-red-500"><%= c.etiqueta %></p>
+                      <p class="text-xs text-slate-400 num"><%= fechaCorta(c.fecha_vencimiento) %></p>
+                    </div>
+                  </div>
+                <% } else { %>
+                  <div>
+                    <p class="text-sm font-medium text-slate-700 num"><%= fechaCorta(c.fecha_vencimiento) %></p>
+                    <p class="text-xs font-medium mt-0.5 <%= c.colorEtiqueta==='ambar' ? 'text-amber-600' : 'text-teal-600' %>"><%= c.etiqueta %></p>
+                  </div>
+                <% } %>
+              </td>
+              <td>
+                <p class="text-sm font-medium text-slate-700"><%= c.numeroPrestamo||'—' %></p>
+                <p class="text-xs text-slate-400">Cuota <%= c.numero_cuota %> de <%= nCuotas %></p>
+                <div class="mt-1.5 h-1 w-20 rounded-full bg-slate-100 overflow-hidden">
+                  <div class="h-full rounded-full bg-blue-500" style="width:<%= pct %>%"></div>
+                </div>
+              </td>
+              <td>
+                <% if (tel) { %>
+                  <div class="flex items-center gap-2">
+                    <svg style="width:18px;height:18px;flex-shrink:0;color:#94a3b8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.54 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 5.54 5.54l.87-.87a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+                    <span class="text-sm text-slate-600 num"><%= tel %></span>
+                    <% if (telD.length>=10) { %>
+                      <a href="https://wa.me/<%= telWa %>" target="_blank" rel="noopener"
+                         style="width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:#22c55e;color:#fff;transition:background .15s"
+                         onmouseover="this.style.background='#16a34a'" onmouseout="this.style.background='#22c55e'">
+                        <svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885"/></svg>
+                      </a>
+                    <% } %>
+                  </div>
+                <% } else { %>
+                  <span class="text-slate-300 text-sm" style="font-size:13px">—</span>
+                <% } %>
+              </td>
+              <td class="text-right">
+                <span class="num text-sm font-semibold text-slate-800"><%= formatCOP(c.saldo) %></span>
+              </td>
+              <td>
+                <% if (c.enMora) { %>
+                  <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-600">⚠ En mora</span>
+                <% } else if (c.colorEtiqueta==='rojo') { %>
+                  <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-600"><%= c.etiqueta %></span>
+                <% } else if (c.colorEtiqueta==='ambar') { %>
+                  <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700"><%= c.etiqueta %></span>
+                <% } else { %>
+                  <span class="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-1 text-xs font-medium text-teal-700"><%= c.etiqueta %></span>
+                <% } %>
+              </td>
+              <td class="text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <a href="/admin/prestamos/<%= c.prestamo_id %>" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition">Ver</a>
+                  <button type="button" class="action-menu-btn action-btn" data-menu-id="mx-<%= c.id %>">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                  </button>
+                  <div id="mx-<%= c.id %>" class="action-menu hidden fixed z-50 w-48 rounded-xl border border-slate-100 bg-white py-1 shadow-lg">
+                    <a href="/admin/prestamos/<%= c.prestamo_id %>" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Ver préstamo</a>
+                    <% if (telD.length>=10) { %>
+                      <a href="https://wa.me/<%= telWa %>" target="_blank" rel="noopener" class="block px-4 py-2 text-sm text-green-600 hover:bg-slate-50">Enviar WhatsApp</a>
+                    <% } %>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pie de tabla: contador + paginación + por página -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-sm text-slate-400">
+      <span id="lbl-cobros">Mostrando <span id="c-desde">1</span> a <span id="c-hasta">10</span> de <span id="c-total"><%= cobros.length %></span> cobros</span>
+      <div class="flex items-center gap-2">
+        <div id="paginacion-cobros" class="flex items-center gap-1"></div>
+        <div class="flex items-center gap-1.5 ml-2 border-l border-slate-100 pl-3">
+          <select id="por-pagina" class="text-sm text-slate-500 bg-transparent outline-none cursor-pointer">
+            <option value="10">10 / página</option>
+            <option value="25">25 / página</option>
+            <option value="50">50 / página</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<script>
+(function () {
+  // Menú ⋮
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.action-menu-btn');
+    var abiertos = document.querySelectorAll('.action-menu:not(.hidden)');
+    if (btn) {
+      e.stopPropagation();
+      var menu = document.getElementById(btn.dataset.menuId);
+      var estaba = !menu.classList.contains('hidden');
+      abiertos.forEach(function (m) { m.classList.add('hidden'); });
+      if (!estaba) {
+        menu.classList.remove('hidden');
+        var r = btn.getBoundingClientRect();
+        menu.style.top = (r.bottom + 4) + 'px';
+        menu.style.left = Math.max(4, r.right - menu.offsetWidth) + 'px';
+      }
+    } else if (!e.target.closest('.action-menu')) {
+      abiertos.forEach(function (m) { m.classList.add('hidden'); });
+    }
+  });
+
+  var hoyISO = '<%= hoyISO %>';
+  var semISO = new Date(new Date(hoyISO + 'T00:00:00').getTime() + 6 * 86400000).toISOString().slice(0, 10);
+  var todasFilas = Array.from(document.querySelectorAll('#tbody-cobros tr'));
+  var paginaActual = 1;
+  var porPag = 10;
+
+  function filasFiltradas() {
+    var est = (document.getElementById('filtro-estado') || {}).value || '';
+    var q = ((document.getElementById('filtro-buscar') || {}).value || '').trim().toLowerCase();
+    return todasFilas.filter(function (f) {
+      var fecha = f.getAttribute('data-fecha') || '';
+      var txt = f.getAttribute('data-buscar') || '';
+      var mora = f.getAttribute('data-mora') === '1';
+      var okE = !est || (est === 'hoy' ? fecha === hoyISO : est === 'semana' ? (fecha >= hoyISO && fecha <= semISO) : est === 'mora' ? mora : true);
+      var okQ = !q || txt.includes(q);
+      return okE && okQ;
+    });
+  }
+
+  function renderPaginacion(total, paginas) {
+    var c = document.getElementById('paginacion-cobros');
+    if (!c) return;
+    var btn = function (label, page, dis, activo) {
+      var b = document.createElement('button');
+      b.textContent = label;
+      b.className = 'flex h-8 min-w-[2rem] px-2 items-center justify-center rounded-lg text-sm transition ' +
+        (activo ? 'bg-blue-600 text-white' : dis ? 'text-slate-200 cursor-default' : 'text-slate-500 hover:bg-slate-100');
+      if (!dis && !activo) b.addEventListener('click', function () { paginaActual = page; render(); });
+      return b;
+    };
+    c.innerHTML = '';
+    c.appendChild(btn('«', 1, paginaActual === 1));
+    // Muestra máximo 5 páginas alrededor de la actual
+    var inicio = Math.max(1, paginaActual - 2);
+    var fin = Math.min(paginas, inicio + 4);
+    inicio = Math.max(1, fin - 4);
+    for (var i = inicio; i <= fin; i++) c.appendChild(btn(i, i, false, i === paginaActual));
+    c.appendChild(btn('»', paginas, paginaActual === paginas));
+  }
+
+  function render() {
+    var filtradas = filasFiltradas();
+    var total = filtradas.length;
+    var paginas = Math.max(1, Math.ceil(total / porPag));
+    if (paginaActual > paginas) paginaActual = paginas;
+    var desde = (paginaActual - 1) * porPag;
+    var hasta = Math.min(desde + porPag, total);
+
+    todasFilas.forEach(function (f) { f.classList.add('hidden'); });
+    filtradas.forEach(function (f, i) {
+      if (i >= desde && i < hasta) f.classList.remove('hidden');
+    });
+
+    var eD = document.getElementById('c-desde'), eH = document.getElementById('c-hasta'), eT = document.getElementById('c-total');
+    if (eD) eD.textContent = total === 0 ? 0 : desde + 1;
+    if (eH) eH.textContent = hasta;
+    if (eT) eT.textContent = total;
+    renderPaginacion(total, paginas);
+  }
+
+  var elE = document.getElementById('filtro-estado');
+  var elB = document.getElementById('filtro-buscar');
+  var elP = document.getElementById('por-pagina');
+  if (elE) elE.addEventListener('change', function () { paginaActual = 1; render(); });
+  if (elB) elB.addEventListener('input', function () { paginaActual = 1; render(); });
+  if (elP) elP.addEventListener('change', function () { porPag = parseInt(this.value); paginaActual = 1; render(); });
+  render();
+})();
+</script>

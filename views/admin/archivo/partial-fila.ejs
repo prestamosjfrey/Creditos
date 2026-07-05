@@ -1,0 +1,16 @@
+<% var hrefVer = href + (href.indexOf('?') === -1 ? '?' : '&') + 'ver=1'; %>
+<div class="flex items-center gap-2">
+  <a href="<%= hrefVer %>" target="_blank" rel="noopener" class="flex flex-1 items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm transition hover:bg-slate-50">
+    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-50"><%- icono %></span>
+    <span class="flex-1">
+      <span class="block font-medium text-slate-700"><%= titulo %></span>
+      <span class="block text-xs text-slate-400"><%= subtitulo %></span>
+    </span>
+    <%- icoIr %>
+  </a>
+  <button type="button" class="action-menu-btn icon-btn shrink-0" data-menu-id="<%= menuId %>" aria-label="Opciones"><%- icoDots %></button>
+  <div id="<%= menuId %>" class="action-menu hidden fixed z-50 w-52 rounded-xl border border-slate-100 bg-white py-1 shadow-lg">
+    <a href="<%= hrefVer %>" target="_blank" rel="noopener" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Ver en el navegador</a>
+    <a href="<%= href %>" download class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Descargar</a>
+  </div>
+</div>

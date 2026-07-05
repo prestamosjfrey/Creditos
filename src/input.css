@@ -1,0 +1,218 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl border border-slate-100 shadow-sm shadow-slate-200/60 p-5 sm:p-6;
+  }
+
+  .hero-card {
+    @apply rounded-3xl bg-gradient-to-br from-blue-500 to-blue-700 text-white p-5 sm:p-6 shadow-lg shadow-blue-500/25;
+  }
+
+  .quick-action {
+    @apply flex flex-col items-center gap-2 rounded-2xl bg-white p-3 text-center shadow-sm shadow-slate-200/60 border border-slate-100 transition hover:shadow-md;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-medium text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-medium text-slate-700 transition hover:bg-slate-50;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-medium text-white transition hover:bg-red-700;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500;
+  }
+
+  .label-field {
+    @apply mb-1 block text-sm font-medium text-slate-500;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+
+  .badge-exito {
+    @apply badge bg-emerald-100 text-emerald-600;
+  }
+
+  .badge-mora {
+    @apply badge bg-amber-100 text-amber-600;
+  }
+
+  .badge-neutro {
+    @apply badge bg-slate-100 text-slate-500;
+  }
+
+  .badge-peligro {
+    @apply badge bg-red-100 text-red-600;
+  }
+
+  .icon-btn {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white transition hover:bg-slate-50;
+  }
+
+  .action-btn {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600;
+  }
+
+  .tab-btn {
+    @apply -mb-px border-b-2 border-transparent pb-3 text-sm font-medium text-slate-400 transition hover:text-slate-600;
+  }
+
+  .tab-btn-activo {
+    @apply border-blue-600 text-blue-600;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-white/5 hover:text-white;
+  }
+
+  .sidebar-link-activo {
+    @apply bg-blue-600/15 text-blue-400;
+  }
+
+  .periodo-btn {
+    @apply rounded-md px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:text-slate-700;
+  }
+
+  .periodo-btn-activo {
+    @apply bg-blue-600 text-white hover:text-white;
+  }
+
+  .step-circle {
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-400;
+  }
+
+  .step-circle-activo {
+    @apply bg-blue-600 text-white;
+  }
+
+  .step-circle-completo {
+    @apply bg-emerald-500 text-white;
+  }
+
+  .step-line {
+    @apply h-0.5 bg-slate-100;
+  }
+
+  .step-line-activa {
+    @apply bg-blue-600;
+  }
+
+  .table-base {
+    @apply w-full text-left text-sm;
+  }
+
+  .table-base th {
+    @apply px-3 py-2 text-xs font-medium uppercase tracking-wide text-slate-400;
+  }
+
+  .table-base td {
+    @apply px-3 py-3 border-t border-slate-100;
+  }
+
+  /* Ajustes de simple-datatables para que combine con el tema claro */
+  .datatable-top {
+    @apply flex items-center justify-between px-5 pt-5;
+  }
+
+  .datatable-input {
+    @apply input-field max-w-xs;
+  }
+
+  .datatable-bottom {
+    @apply flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm text-slate-400;
+  }
+
+  .datatable-pagination-list {
+    @apply flex items-center gap-1;
+  }
+
+  .datatable-pagination a {
+    @apply flex h-8 w-8 items-center justify-center rounded-lg text-sm text-slate-500 hover:bg-slate-100;
+  }
+
+  .datatable-pagination .datatable-active a {
+    @apply bg-blue-600 text-white hover:bg-blue-600;
+  }
+
+  .datatable-pagination .datatable-disabled a {
+    @apply cursor-not-allowed text-slate-300 hover:bg-transparent;
+  }
+
+  .datatable-sorter {
+    @apply cursor-pointer select-none;
+  }
+
+  /* Ajustes de Tom Select para que combine con .input-field */
+  .ts-wrapper.single .ts-control {
+    @apply rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-800;
+  }
+
+  .ts-wrapper.focus .ts-control {
+    @apply border-blue-500 ring-1 ring-blue-500;
+  }
+
+  .ts-dropdown {
+    @apply rounded-lg border border-slate-200 shadow-lg;
+  }
+
+  .ts-dropdown .option.active {
+    @apply bg-blue-600 text-white;
+  }
+
+  .ts-dropdown .option {
+    @apply px-3 py-2 text-sm;
+  }
+}
+
+/* Oculta el scrollbar del nav del sidebar manteniendo el scroll funcional */
+#sidebar-admin nav::-webkit-scrollbar { display: none; }
+#sidebar-admin nav { scrollbar-width: none; }
+
+/* ---- Sidebar desplegable (hamburguesa) ----
+   - Escritorio (>=1024px): visible por defecto; .sidebar-collapsed lo oculta y
+     expande el contenido. La preferencia se recuerda en localStorage.
+   - Móvil (<1024px): oculto por defecto; .sidebar-mobile-open lo muestra como
+     cajón con fondo oscuro. */
+#sidebar-admin { transition: transform 0.2s ease; }
+.app-main { transition: margin-left 0.2s ease; }
+#btn-abrir-sidebar { display: none; }
+#sidebar-backdrop { display: none; }
+
+@media (min-width: 1024px) {
+  .app-main { margin-left: 16rem; }
+  html.sidebar-collapsed #sidebar-admin { transform: translateX(-100%); }
+  html.sidebar-collapsed .app-main { margin-left: 0; }
+  /* Solo el header (primer bloque) se corre para dejar el hamburguesa a su lado. */
+  html.sidebar-collapsed .app-main > :first-child { padding-left: 3.5rem; }
+  html.sidebar-collapsed #btn-abrir-sidebar { display: inline-flex; }
+}
+
+@media (max-width: 1023px) {
+  .app-main { margin-left: 0; }
+  /* El hamburguesa flota a la izquierda del header, en la misma línea. */
+  .app-main > :first-child { padding-left: 3.5rem; }
+  #sidebar-admin { transform: translateX(-100%); }
+  #btn-abrir-sidebar { display: inline-flex; }
+  html.sidebar-mobile-open #sidebar-admin { transform: translateX(0); }
+  html.sidebar-mobile-open #btn-abrir-sidebar { display: none; }
+  html.sidebar-mobile-open #sidebar-backdrop { display: block; }
+}

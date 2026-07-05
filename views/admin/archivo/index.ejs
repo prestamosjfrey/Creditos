@@ -1,0 +1,197 @@
+<%
+  var icoFolder = '<svg class="h-5 w-5 shrink-0 text-amber-400" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>';
+  var icoFile = '<svg class="h-5 w-5 shrink-0 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>';
+  var icoChevron = '<svg class="h-4 w-4 shrink-0 text-slate-400 transition-transform" data-chevron viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+  var icoIr = '<svg class="h-5 w-5 shrink-0 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
+  var icoDots = '<svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
+  function busquedaTexto(cliente) {
+    var t = cliente.nombre;
+    cliente.prestamos.forEach(function (p) { t += ' ' + p.fecha_inicio + ' ' + p.total; });
+    return t.toLowerCase().replace(/"/g, '');
+  }
+%>
+
+<%- include('../../partials/header-admin', {
+  tituloHeader: 'Comprobantes',
+  subtituloHeader: 'Documentos por cliente: plan de pago, cuotas y paz y salvo de cada préstamo.',
+  mostrarVolver: false,
+}) %>
+
+<div class="card">
+  <!-- Cabecera del archivo -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 mb-4">
+    <div class="flex items-center gap-3">
+      <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-500">
+        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+      </span>
+      <h2 class="text-lg font-semibold text-slate-800">Comprobantes</h2>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="relative flex-1 sm:w-72">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <input id="buscar-archivo" class="input-field pl-10" type="text" placeholder="Buscar cliente..." />
+      </div>
+      <button type="button" id="btn-expandir" class="icon-btn" title="Expandir todo" aria-label="Expandir todo">
+        <svg class="h-[18px] w-[18px] text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 13 5 5 5-5M7 6l5 5 5-5"/></svg>
+      </button>
+      <button type="button" id="btn-contraer" class="icon-btn" title="Contraer todo" aria-label="Contraer todo">
+        <svg class="h-[18px] w-[18px] text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5M17 18l-5-5-5 5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <% if (arbol.length === 0) { %>
+    <div class="flex flex-col items-center justify-center py-12 text-center">
+      <span class="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4">
+        <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+      </span>
+      <p class="font-medium text-slate-700">Aún no hay comprobantes</p>
+      <p class="text-sm text-slate-400">Cuando registres un préstamo, aparecerá aquí con su plan de pago; las cuotas pagadas y el paz y salvo se irán sumando.</p>
+    </div>
+  <% } else { %>
+    <div id="sin-resultados" class="hidden py-10 text-center text-sm text-slate-400">No se encontraron coincidencias.</div>
+
+    <div class="space-y-2">
+      <% arbol.forEach(function(cliente) { %>
+        <div data-cliente data-busqueda="<%= busquedaTexto(cliente) %>">
+          <!-- Cliente -->
+          <button type="button" data-folder class="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-slate-50 text-left">
+            <%- icoChevron %>
+            <%- icoFolder %>
+            <span class="font-semibold text-slate-800"><%= cliente.nombre %></span>
+            <span class="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-600"><%= cliente.prestamos.length %> préstamo<%= cliente.prestamos.length === 1 ? '' : 's' %></span>
+          </button>
+
+          <div data-hijos class="hidden ml-5 border-l border-slate-200 pl-4 space-y-2 pt-1">
+            <% cliente.prestamos.forEach(function(p) { %>
+              <div>
+                <!-- Préstamo -->
+                <div class="flex items-center gap-2">
+                  <button type="button" data-folder class="flex flex-1 items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm transition hover:bg-slate-50 text-left">
+                    <%- icoChevron %>
+                    <%- icoFolder %>
+                    <span class="flex-1 font-medium text-slate-700">Préstamo del <%= p.fecha_inicio %></span>
+                    <% if (p.estado === 'pagado') { %><span class="badge-exito">Pagado</span>
+                    <% } else if (p.estado === 'cancelado') { %><span class="badge-neutro">Cancelado</span>
+                    <% } else { %><span class="badge-neutro">Activo</span><% } %>
+                    <span class="num text-sm font-medium text-slate-500"><%= formatCOP(p.total) %></span>
+                  </button>
+                  <button type="button" class="action-menu-btn icon-btn shrink-0" data-menu-id="m-pr-<%= p.id %>" aria-label="Opciones"><%- icoDots %></button>
+                  <div id="m-pr-<%= p.id %>" class="action-menu hidden fixed z-50 w-48 rounded-xl border border-slate-100 bg-white py-1 shadow-lg">
+                    <a href="/admin/prestamos/<%= p.id %>" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Ver préstamo</a>
+                  </div>
+                </div>
+
+                <div data-hijos class="hidden ml-5 border-l border-slate-200 pl-4 space-y-2 pt-2">
+                  <!-- Plan de pago -->
+                  <%- include('partial-fila', {
+                    href: '/admin/prestamos/' + p.id + '/comprobante',
+                    icono: icoFile, titulo: 'Plan de pago', subtitulo: 'Plan de amortización del préstamo',
+                    menuId: 'm-doc-plan-' + p.id, icoIr: icoIr, icoDots: icoDots
+                  }) %>
+                  <!-- Cuotas (solo las pagadas tienen comprobante) -->
+                  <% p.cuotas.filter(function(c){ return c.estado === 'pagada'; }).forEach(function(c) { %>
+                    <%- include('partial-fila', {
+                      href: '/admin/prestamos/' + p.id + '/cuotas/' + c.id + '/comprobante',
+                      icono: icoFolder, titulo: 'Cuota ' + c.numero_cuota, subtitulo: 'Comprobante de pago',
+                      menuId: 'm-doc-c' + c.id, icoIr: icoIr, icoDots: icoDots
+                    }) %>
+                  <% }); %>
+                  <!-- Paz y salvo (solo cuando el préstamo está pagado) -->
+                  <% if (p.estado === 'pagado') { %>
+                    <%- include('partial-fila', {
+                      href: '/admin/prestamos/' + p.id + '/paz-y-salvo',
+                      icono: icoFolder, titulo: 'Paz y salvo', subtitulo: 'Documento de paz y salvo',
+                      menuId: 'm-doc-paz-' + p.id, icoIr: icoIr, icoDots: icoDots
+                    }) %>
+                  <% } %>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+</div>
+
+
+<script>
+  // Devuelve el contenedor de hijos de un botón de carpeta (cliente o préstamo).
+  function contenedorHijos(btn) {
+    var p = btn.parentElement;
+    if (p.classList.contains('flex')) return p.parentElement.querySelector(':scope > [data-hijos]');
+    return p.querySelector(':scope > [data-hijos]');
+  }
+  document.querySelectorAll('[data-folder]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var c = contenedorHijos(btn);
+      if (!c) return;
+      c.classList.toggle('hidden');
+      var ch = btn.querySelector('[data-chevron]');
+      if (ch) ch.classList.toggle('-rotate-90');
+    });
+  });
+
+  // Estado inicial: todo colapsado (chevrons a la derecha) y luego se expande
+  // solo el primer nivel (clientes) para que se vean de entrada.
+  document.querySelectorAll('[data-chevron]').forEach(function (c) { c.classList.add('-rotate-90'); });
+  document.querySelectorAll('[data-cliente] > [data-hijos]').forEach(function (h) {
+    h.classList.remove('hidden');
+    var b = h.parentElement.querySelector(':scope > [data-folder]');
+    var ch = b && b.querySelector('[data-chevron]');
+    if (ch) ch.classList.remove('-rotate-90');
+  });
+
+  // Expandir / contraer todo
+  document.getElementById('btn-expandir')?.addEventListener('click', function () {
+    document.querySelectorAll('[data-hijos]').forEach(function (h) { h.classList.remove('hidden'); });
+    document.querySelectorAll('[data-chevron]').forEach(function (c) { c.classList.remove('-rotate-90'); });
+  });
+  document.getElementById('btn-contraer')?.addEventListener('click', function () {
+    document.querySelectorAll('[data-hijos]').forEach(function (h) { h.classList.add('hidden'); });
+    document.querySelectorAll('[data-chevron]').forEach(function (c) { c.classList.add('-rotate-90'); });
+  });
+
+  // Búsqueda por cliente
+  var inputBuscar = document.getElementById('buscar-archivo');
+  if (inputBuscar) {
+    inputBuscar.addEventListener('input', function () {
+      var q = this.value.trim().toLowerCase();
+      var algun = false;
+      document.querySelectorAll('[data-cliente]').forEach(function (cli) {
+        var match = !q || (cli.getAttribute('data-busqueda') || '').indexOf(q) !== -1;
+        cli.classList.toggle('hidden', !match);
+        if (match) algun = true;
+        if (q && match) {
+          var hijos = cli.querySelector(':scope > [data-hijos]');
+          if (hijos) hijos.classList.remove('hidden');
+        }
+      });
+      var sr = document.getElementById('sin-resultados');
+      if (sr) sr.classList.toggle('hidden', algun);
+    });
+  }
+
+  // Menú (⋮) por fila — posición fija para que no lo recorte ningún contenedor.
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.action-menu-btn');
+    var abiertos = document.querySelectorAll('.action-menu:not(.hidden)');
+    if (btn) {
+      e.stopPropagation();
+      var menu = document.getElementById(btn.dataset.menuId);
+      var estaba = !menu.classList.contains('hidden');
+      abiertos.forEach(function (m) { m.classList.add('hidden'); });
+      if (!estaba) {
+        menu.classList.remove('hidden');
+        var r = btn.getBoundingClientRect();
+        menu.style.top = (r.bottom + 4) + 'px';
+        menu.style.left = (r.right - menu.offsetWidth) + 'px';
+      }
+    } else if (!e.target.closest('.action-menu')) {
+      abiertos.forEach(function (m) { m.classList.add('hidden'); });
+    }
+  });
+</script>

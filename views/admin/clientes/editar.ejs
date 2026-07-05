@@ -1,0 +1,79 @@
+<div class="max-w-lg mx-auto">
+  <div class="card">
+    <div class="flex flex-col items-center text-center mb-6">
+      <span class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 mb-3">
+        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </span>
+      <h1 class="font-semibold text-slate-800">Editar cliente</h1>
+      <p class="text-xs text-slate-400">Actualiza la información del cliente.</p>
+    </div>
+
+    <form action="/admin/clientes/<%= cliente.id %>/editar" method="POST" class="space-y-4" data-loading-title="Guardando cambios…">
+      <div>
+        <label class="label-field text-center" for="nombre_completo">Nombre completo <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          <input class="input-field pl-10 text-center" type="text" id="nombre_completo" name="nombre_completo" placeholder="Ej: Juan Pérez González" value="<%= cliente.nombre_completo || '' %>" required />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="label-field text-center" for="numero_documento">Cédula <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+            </span>
+            <input class="input-field pl-10 text-center" type="text" id="numero_documento" name="numero_documento" placeholder="Ej: 12345678" value="<%= cliente.numero_documento || '' %>" required />
+          </div>
+        </div>
+        <div>
+          <label class="label-field text-center" for="telefono">Teléfono <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </span>
+            <input class="input-field pl-10 text-center" type="text" id="telefono" name="telefono" placeholder="Ej: 300 123 4567" value="<%= cliente.telefono || '' %>" required />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="label-field text-center" for="direccion">Dirección</label>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          </span>
+          <input class="input-field pl-10 text-center" type="text" id="direccion" name="direccion" placeholder="Ej: Calle 123 # 45-67, Barrio" value="<%= cliente.direccion || '' %>" />
+        </div>
+      </div>
+
+      <div>
+        <label class="label-field text-center" for="email">Correo electrónico <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          </span>
+          <input class="input-field pl-10 text-center" type="email" id="email" name="email" placeholder="Ej: juan@correo.com" value="<%= cliente.email || '' %>" required />
+        </div>
+      </div>
+
+      <hr class="border-slate-100" />
+
+      <div class="flex gap-3 justify-center pt-2">
+        <a href="/admin/clientes/<%= cliente.id %>" class="btn-secondary">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M6 18 18 6M6 6l12 12" /></svg>
+          Cancelar
+        </a>
+        <button type="submit" class="btn-primary">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+          Guardar cambios
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../../partials/flash-script', { flashError: error, flashExito: null }) %>

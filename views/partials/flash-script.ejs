@@ -1,0 +1,26 @@
+<%
+  var _exito = typeof flashExito !== 'undefined' ? flashExito : null;
+  var _error = typeof flashError !== 'undefined' ? flashError : null;
+  var _mensajeJs = JSON.stringify(_error || _exito || '').replace(/<\//g, '<\\/');
+%>
+<% if (_exito || _error) { %>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    // Quita ?ok / ?error de la URL para que al recargar NO se repita el mensaje.
+    if (window.history.replaceState) {
+      var _u = new URL(window.location.href);
+      _u.searchParams.delete('ok');
+      _u.searchParams.delete('error');
+      window.history.replaceState({}, '', _u.toString());
+    }
+    Swal.fire({
+      icon: '<%= _error ? "error" : "success" %>',
+      title: '<%= _error ? "Algo salió mal" : "Listo" %>',
+      text: <%- _mensajeJs %>,
+      background: '#FFFFFF',
+      color: '#1e293b',
+      confirmButtonColor: '#2563EB',
+    });
+  });
+</script>
+<% } %>

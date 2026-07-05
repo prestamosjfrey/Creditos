@@ -1,0 +1,13 @@
+<div class="mb-6">
+  <h1 class="text-xl font-semibold text-slate-800">Mora</h1>
+  <p class="text-sm text-slate-400"><%= mora.length %> cuota<%= mora.length === 1 ? '' : 's' %> vencida<%= mora.length === 1 ? '' : 's' %>.</p>
+</div>
+
+<div class="space-y-3">
+  <% if (mora.length === 0) { %>
+    <p class="card text-center text-sm text-slate-400">No hay cuotas en mora. Tu cartera está al día.</p>
+  <% } %>
+  <% mora.forEach(function(cuota) { %>
+    <%- include('../../partials/alerta-mora', { cuota }) %>
+  <% }); %>
+</div>

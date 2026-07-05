@@ -1,0 +1,21 @@
+<header class="sticky top-0 z-30 bg-slate-50/90 backdrop-blur-sm">
+  <div class="mx-auto max-w-lg px-4 sm:px-6 pt-5 pb-3 flex items-center justify-between">
+    <button type="button" class="icon-btn" aria-label="Menú">
+      <svg class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+
+    <div class="text-center">
+      <p class="font-semibold text-slate-800">¡Hola, <%= (usuario.nombre_completo || 'Cliente').split(' ')[0] %>!</p>
+      <p class="text-xs text-slate-400">Gestiona tus préstamos de forma rápida y segura</p>
+    </div>
+
+    <button type="button" class="icon-btn relative" aria-label="Notificaciones">
+      <svg class="h-5 w-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" />
+      </svg>
+      <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500"></span>
+    </button>
+  </div>
+</header>

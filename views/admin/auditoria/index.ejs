@@ -1,0 +1,94 @@
+<%
+  // Estilo (color) + etiqueta legible por tipo de evento.
+  function estiloEvento(tipo) {
+    var m = {
+      prestamo_creado:     'bg-blue-100 text-blue-700',
+      prestamo_pagado:     'bg-emerald-100 text-emerald-700',
+      abono_registrado:    'bg-emerald-100 text-emerald-700',
+      cuota_pagada:        'bg-emerald-100 text-emerald-700',
+      pago_interes:        'bg-amber-100 text-amber-700',
+      cuota_mora:          'bg-red-100 text-red-700',
+      cliente_creado:      'bg-violet-100 text-violet-700',
+      cliente_editado:     'bg-slate-100 text-slate-600',
+      cliente_activado:    'bg-emerald-100 text-emerald-700',
+      cliente_desactivado: 'bg-amber-100 text-amber-700',
+      documento_subido:    'bg-blue-100 text-blue-700',
+      documento_eliminado: 'bg-red-100 text-red-700',
+      caja_ingreso:        'bg-emerald-100 text-emerald-700',
+      caja_egreso:         'bg-amber-100 text-amber-700',
+    };
+    return m[tipo] || 'bg-slate-100 text-slate-600';
+  }
+  var LABELS = {
+    prestamo_creado: 'Préstamo creado', prestamo_pagado: 'Préstamo pagado',
+    abono_registrado: 'Abono', cuota_pagada: 'Cuota pagada', pago_interes: 'Pago de interés',
+    cuota_mora: 'Cuota en mora',
+    cliente_creado: 'Cliente creado', cliente_editado: 'Cliente editado',
+    cliente_activado: 'Cliente activado', cliente_desactivado: 'Cliente desactivado',
+    documento_subido: 'Documento subido', documento_eliminado: 'Documento eliminado',
+    caja_ingreso: 'Ingreso a caja', caja_egreso: 'Egreso de caja',
+  };
+  function etiqueta(tipo) { return LABELS[tipo] || tipo; }
+  function fechaHora(iso) {
+    var d = new Date(iso);
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' · ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  var cats = [['todos', 'Todos'], ['prestamos', 'Préstamos'], ['pagos', 'Pagos'], ['mora', 'Mora'], ['caja', 'Caja'], ['clientes', 'Clientes']];
+%>
+
+<%- include('../../partials/header-admin', {
+  tituloHeader: 'Auditoría',
+  subtituloHeader: 'Bitácora inmutable de todo lo que ocurre en tu cartera.',
+  mostrarVolver: false,
+}) %>
+
+<!-- Filtro por categoría -->
+<div class="mb-4 flex flex-wrap gap-2">
+  <% cats.forEach(function(c) { var activo = (cat || 'todos') === c[0]; %>
+    <a href="/admin/auditoria?cat=<%= c[0] %>"
+       class="rounded-full px-4 py-1.5 text-sm font-medium transition <%= activo ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50' %>">
+      <%= c[1] %>
+    </a>
+  <% }); %>
+</div>
+
+<div class="card p-0">
+  <% if (eventos.length === 0) { %>
+    <p class="text-center text-sm text-slate-400 py-12">No hay eventos en esta categoría. Cada acción sobre préstamos, pagos, caja y clientes aparecerá aquí.</p>
+  <% } else { %>
+    <table class="table-base" data-datatable>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Evento</th>
+          <th>Descripción</th>
+          <th>Cliente</th>
+          <th>Cédula</th>
+          <th>Registrado por</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% eventos.forEach(function(ev) {
+          var cli = ev.cliente || (ev.prestamo && ev.prestamo.perfiles) || null;
+          var nombre = cli ? cli.nombre_completo : '';
+          var doc = cli ? (cli.numero_documento || '') : '';
+          var enlace = ev.prestamo_id ? ('/admin/prestamos/' + ev.prestamo_id) : (ev.cliente_id ? ('/admin/clientes/' + ev.cliente_id) : null);
+        %>
+          <tr>
+            <td class="whitespace-nowrap text-slate-500 num"><%= fechaHora(ev.creado_en) %></td>
+            <td><span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <%= estiloEvento(ev.tipo) %>"><%= etiqueta(ev.tipo) %></span></td>
+            <td class="text-slate-700"><%= ev.descripcion %></td>
+            <td>
+              <% if (nombre && enlace) { %><a href="<%= enlace %>" class="font-medium text-slate-700 hover:text-blue-600 hover:underline"><%= nombre %></a>
+              <% } else if (nombre) { %><span class="font-medium text-slate-700"><%= nombre %></span>
+              <% } else { %><span class="text-slate-300">—</span><% } %>
+            </td>
+            <td class="num text-slate-500"><%= doc || '—' %></td>
+            <td class="text-slate-500"><%= ev.actor ? ev.actor.nombre_completo : 'Sistema' %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>

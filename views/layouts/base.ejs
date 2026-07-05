@@ -1,0 +1,59 @@
+<% var esCliente = typeof usuario !== 'undefined' && usuario && usuario.rol === 'cliente'; %>
+<% var esAdmin = typeof usuario !== 'undefined' && usuario && usuario.rol === 'admin'; %>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= typeof titulo !== 'undefined' ? titulo + ' · Cartera' : 'Cartera' %></title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="icon" href="/icons/icon-192.png" />
+  <link rel="stylesheet" href="/css/output.css" />
+  <link rel="stylesheet" href="/vendor/sweetalert2/sweetalert2.min.css" />
+  <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+  <script src="/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="/js/moneda-input.js"></script>
+  <% if (esAdmin) { %>
+    <link rel="stylesheet" href="/vendor/datatables/style.css" />
+    <script src="/vendor/datatables/umd/simple-datatables.js"></script>
+    <link rel="stylesheet" href="/vendor/tom-select/css/tom-select.css" />
+    <script src="/vendor/tom-select/js/tom-select.complete.min.js"></script>
+    <!-- Aplica la preferencia del sidebar antes de pintar, para evitar parpadeo. -->
+    <script>try { if (localStorage.getItem('sidebar-collapsed') === '1') document.documentElement.classList.add('sidebar-collapsed'); } catch (e) {}</script>
+  <% } %>
+</head>
+<body class="min-h-screen bg-slate-50">
+  <% if (esAdmin) { %>
+    <%- include('../partials/sidebar-admin') %>
+    <div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-slate-900/50"></div>
+    <button type="button" id="btn-abrir-sidebar" class="fixed left-4 top-5 z-50 h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50" aria-label="Abrir menú">
+      <svg class="mx-auto h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+    </button>
+  <% } else if (esCliente) { %>
+    <%- include('../partials/header-cliente') %>
+  <% } %>
+
+  <main class="<%= esAdmin ? 'app-main max-w-[1600px] px-6 sm:px-8' : esCliente ? 'mx-auto max-w-lg px-4 sm:px-6 pb-24' : 'mx-auto max-w-6xl px-4 sm:px-6' %> py-6">
+    <%- body %>
+  </main>
+
+  <% if (esCliente) { %>
+    <%- include('../partials/bottom-nav-cliente') %>
+  <% } else if (!esAdmin) { %>
+    <%- include('../partials/footer') %>
+  <% } %>
+
+  <%- include('../partials/flash-script') %>
+  <script src="/js/main.js"></script>
+  <% if (esAdmin) { %>
+    <script src="/js/tablas.js"></script>
+    <script src="/js/dashboard.js"></script>
+  <% } %>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

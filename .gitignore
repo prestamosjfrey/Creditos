@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno (contiene credenciales de Supabase — NUNCA subir)
+.env
+.env.*
+!.env.example
+
+# Build de Electron
+dist/
+
+# CSS compilado (se regenera con npm run build:css)
+public/css/output.css
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporales
+tmp/
+temp/

@@ -1,0 +1,267 @@
+<%
+  function iniciales(nombre) {
+    var p = (nombre || '').trim().split(/\s+/);
+    return (((p[0] || '')[0] || '') + ((p[1] || '')[0] || '')).toUpperCase() || '?';
+  }
+  var paletas = [
+    ['bg-blue-100', 'text-blue-600'],
+    ['bg-violet-100', 'text-violet-600'],
+    ['bg-emerald-100', 'text-emerald-600'],
+    ['bg-amber-100', 'text-amber-600'],
+    ['bg-rose-100', 'text-rose-600'],
+    ['bg-cyan-100', 'text-cyan-600'],
+  ];
+  function paleta(nombre) {
+    var s = (nombre || 'A');
+    var suma = 0;
+    for (var i = 0; i < s.length; i++) suma += s.charCodeAt(i);
+    return paletas[suma % paletas.length];
+  }
+%>
+
+<style>
+  @keyframes cli-float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-10px); }
+  }
+  @keyframes cli-orbit {
+    from { transform: rotateX(72deg) rotateZ(0deg); }
+    to   { transform: rotateX(72deg) rotateZ(360deg); }
+  }
+  @keyframes cli-orbit2 {
+    from { transform: rotateX(72deg) rotateZ(180deg); }
+    to   { transform: rotateX(72deg) rotateZ(540deg); }
+  }
+  @keyframes cli-shadow {
+    0%, 100% { transform: translateX(-50%) scale(1);   opacity: 0.35; }
+    50%       { transform: translateX(-50%) scale(0.8); opacity: 0.18; }
+  }
+  @keyframes cli-glow {
+    0%, 100% { opacity: 0.6; }
+    50%       { opacity: 1;   }
+  }
+</style>
+
+<div class="mb-8 flex flex-col items-center text-center gap-2">
+  <!-- Contenedor del ícono 3D -->
+  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:0.25rem;">
+
+    <!-- Sombra de suelo sincronizada con el float -->
+    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(37,99,235,0.5) 0%,transparent 70%);border-radius:50%;animation:cli-shadow 3s ease-in-out infinite;"></div>
+
+    <!-- Contenedor flotante -->
+    <div style="animation:cli-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
+
+      <!-- Halo de brillo detrás -->
+      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.22) 0%,transparent 65%);animation:cli-glow 3s ease-in-out infinite;pointer-events:none;"></div>
+
+      <!-- Anillo orbital 1 -->
+      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(99,102,241,0.85);border-bottom:2px solid rgba(99,102,241,0.2);transform:rotateX(72deg);animation:cli-orbit 3.5s linear infinite;pointer-events:none;"></div>
+
+      <!-- Anillo orbital 2 (más pequeño, sentido contrario) -->
+      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(147,197,253,0.7);border-left:1.5px solid rgba(147,197,253,0.15);transform:rotateX(72deg) rotateZ(180deg);animation:cli-orbit2 5s linear infinite;pointer-events:none;"></div>
+
+      <!-- Esfera 3D principal -->
+      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%, #93c5fd 0%, #3b82f6 28%, #2563eb 52%, #1d4ed8 70%, #1e3a8a 88%, #172554 100%);box-shadow:0 12px 36px rgba(37,99,235,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08);position:relative;display:flex;align-items:center;justify-content:center;cursor:default;transition:transform 0.25s,box-shadow 0.25s;"
+           onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)';this.style.boxShadow='0 18px 48px rgba(37,99,235,0.8),0 6px 16px rgba(0,0,0,0.3),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'"
+           onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)';this.style.boxShadow='0 12px 36px rgba(37,99,235,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'">
+
+        <!-- Destello especular (iluminación 3D) -->
+        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,0.7) 0%,rgba(255,255,255,0.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
+
+        <!-- Brillo secundario inferior -->
+        <div style="position:absolute;bottom:14%;right:14%;width:20%;height:14%;background:radial-gradient(ellipse,rgba(147,197,253,0.4) 0%,transparent 100%);border-radius:50%;filter:blur(2px);pointer-events:none;"></div>
+
+        <!-- Ícono SVG -->
+        <svg style="width:30px;height:30px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <h1 class="text-3xl font-bold text-slate-800">Clientes</h1>
+  <p class="text-sm text-slate-400">Gestiona la información de tus clientes.</p>
+  <div class="mt-1 h-0.5 w-10 rounded-full bg-blue-600"></div>
+</div>
+
+<form method="GET" class="mb-6">
+  <div style="position:relative;">
+    <span style="position:absolute;left:1.25rem;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none;">
+      <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    </span>
+    <input id="cli-search" type="text" name="q" value="<%= busqueda %>"
+           placeholder="Buscar por nombre, cédula o teléfono..."
+           autocomplete="off"
+           style="width:100%;padding:0.875rem 1rem 0.875rem 3rem;border-radius:9999px;border:1.5px solid #e2e8f0;background:#fff;font-size:0.9rem;color:#1e293b;outline:none;box-shadow:0 2px 12px rgba(0,0,0,0.06);transition:border-color 0.2s,box-shadow 0.2s;"
+           onfocus="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 3px rgba(59,130,246,0.12),0 2px 12px rgba(0,0,0,0.06)'"
+           onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'"/>
+    <a id="cli-limpiar" href="/admin/clientes"
+       style="position:absolute;right:1.25rem;top:50%;transform:translateY(-50%);color:#3b82f6;font-size:0.8rem;font-weight:600;text-decoration:none;align-items:center;gap:0.3rem;display:<%= busqueda ? 'flex' : 'none' %>;"
+       onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+      <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      Limpiar
+    </a>
+  </div>
+</form>
+
+<div class="card p-0 mb-6">
+  <table id="tabla-clientes" class="table-base">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Cédula</th>
+        <th>Teléfono</th>
+        <th>Correo</th>
+        <th>Estado</th>
+        <th data-sortable="false" class="text-right">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (clientes.length === 0) { %>
+        <tr><td colspan="6" class="px-3 py-6 text-center text-slate-500">No hay clientes que coincidan.</td></tr>
+      <% } %>
+      <% clientes.forEach(function(cliente) { var col = paleta(cliente.nombre_completo); %>
+        <tr>
+          <td>
+            <div class="flex items-center gap-3">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full <%= col[0] %> <%= col[1] %> text-xs font-semibold"><%= iniciales(cliente.nombre_completo) %></span>
+              <span class="font-medium text-slate-800"><%= cliente.nombre_completo %></span>
+            </div>
+          </td>
+          <td><%= cliente.numero_documento || '—' %></td>
+          <td><%= cliente.telefono || '—' %></td>
+          <td><%= cliente.email || '—' %></td>
+          <td>
+            <% if (cliente.activo) { %>
+              <span class="badge-exito">● Activo</span>
+            <% } else { %>
+              <span class="badge-neutro">● Inactivo</span>
+            <% } %>
+          </td>
+          <td>
+            <div class="flex items-center justify-end gap-1">
+              <a href="/admin/clientes/<%= cliente.id %>" class="action-btn" title="Ver ficha" aria-label="Ver ficha">
+                <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </a>
+              <a href="/admin/clientes/<%= cliente.id %>/editar" class="action-btn" title="Editar" aria-label="Editar">
+                <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </a>
+              <button type="button" class="action-btn action-menu-btn" data-menu-id="menu-<%= cliente.id %>" title="Más" aria-label="Más opciones">
+                <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+              </button>
+              <div id="menu-<%= cliente.id %>" class="action-menu hidden fixed z-50 w-52 rounded-xl border border-slate-100 bg-white py-1 shadow-lg">
+                <a href="/admin/prestamos/nuevo?cliente_id=<%= cliente.id %>" class="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                  <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
+                  Nuevo préstamo
+                </a>
+                <form action="/admin/clientes/<%= cliente.id %>/estado" method="POST">
+                  <button type="submit" class="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                    <% if (cliente.activo) { %>
+                      <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" x2="12" y1="2" y2="12"/></svg>
+                      Desactivar cliente
+                    <% } else { %>
+                      <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                      Activar cliente
+                    <% } %>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+
+<script>
+  // Menú de acciones (⋮) por fila. Se posiciona con position:fixed calculado en
+  // JS para que no lo recorte ningún contenedor del datatable, y usa delegación
+  // de eventos para sobrevivir a los re-renders de paginación/orden.
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.action-menu-btn');
+    var abiertos = document.querySelectorAll('.action-menu:not(.hidden)');
+
+    if (btn) {
+      var menu = document.getElementById(btn.dataset.menuId);
+      var estabaAbierto = !menu.classList.contains('hidden');
+      abiertos.forEach(function (m) { m.classList.add('hidden'); });
+      if (!estabaAbierto) {
+        menu.classList.remove('hidden');
+        var r = btn.getBoundingClientRect();
+        menu.style.top = (r.bottom + 4) + 'px';
+        menu.style.left = (r.right - menu.offsetWidth) + 'px';
+      }
+    } else if (!e.target.closest('.action-menu')) {
+      abiertos.forEach(function (m) { m.classList.add('hidden'); });
+    }
+  });
+
+  // Datatable + búsqueda en tiempo real
+  var dt = new simpleDatatables.DataTable(document.getElementById('tabla-clientes'), {
+    perPage: 10,
+    searchable: false,
+    labels: {
+      perPage: 'filas por página',
+      noRows: 'No hay clientes registrados',
+      noResults: 'Ningún cliente coincide con la búsqueda',
+      info: 'Mostrando {start} a {end} de {rows} registros',
+    },
+  });
+
+  var searchInput = document.getElementById('cli-search');
+  var limpiarLink = document.getElementById('cli-limpiar');
+
+  searchInput.addEventListener('input', function () {
+    var val = this.value.trim();
+    dt.search(val);
+    if (limpiarLink) limpiarLink.style.display = val ? 'flex' : 'none';
+  });
+
+  // Aplicar búsqueda inicial si venía del servidor
+  if (searchInput.value.trim()) dt.search(searchInput.value.trim());
+</script>
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Total clientes</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= stats.total %></p>
+      <p class="text-xs text-slate-400">Todos los registrados</p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Clientes activos</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= stats.activos %></p>
+      <p class="text-xs text-slate-400">Clientes habilitados</p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Nuevos este mes</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= stats.nuevosEsteMes %></p>
+      <p class="text-xs text-slate-400"><%= stats.etiquetaMes %></p>
+    </div>
+  </div>
+</div>
+
+<!-- FAB: Nuevo cliente -->
+<a href="/admin/clientes/nuevo"
+   style="position:fixed;bottom:2rem;right:2rem;z-index:50;display:inline-flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;width:3.5rem;height:3.5rem;border-radius:9999px;box-shadow:0 8px 24px rgba(37,99,235,0.45);text-decoration:none;transition:background 0.15s,transform 0.15s,box-shadow 0.15s;"
+   onmouseover="this.style.background='#1d4ed8';this.style.transform='scale(1.08)';this.style.boxShadow='0 12px 28px rgba(37,99,235,0.55)'"
+   onmouseout="this.style.background='#2563eb';this.style.transform='scale(1)';this.style.boxShadow='0 8px 24px rgba(37,99,235,0.45)'"
+   title="Nuevo cliente">
+  <svg style="width:22px;height:22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+</a>

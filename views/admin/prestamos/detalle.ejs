@@ -1,0 +1,350 @@
+<%
+  // Arma el número para WhatsApp: solo dígitos; si son 10 (celular CO) le
+  // antepone el 57; si ya empieza por 57 lo deja igual.
+  var telDigitos = (prestamo.perfiles?.telefono || '').replace(/\D/g, '');
+  var telWa = telDigitos.length === 10 ? '57' + telDigitos : telDigitos;
+  var tieneTel = telDigitos.length >= 10;
+  var mensajeWa = 'Hola ' + (prestamo.perfiles?.nombre_completo || '') + ', te comparto el comprobante de tu préstamo:\n\n' +
+    '• Capital prestado: ' + formatCOP(prestamo.monto_capital) + '\n' +
+    '• Total a pagar: ' + formatCOP(prestamo.monto_total_a_pagar) + '\n' +
+    '• N° de cuotas: ' + prestamo.numero_cuotas + ' (' + prestamo.frecuencia_pago + ')\n' +
+    '• Valor de cada cuota: ' + formatCOP(prestamo.valor_cuota) + '\n' +
+    '• Primer pago: ' + prestamo.fecha_primer_pago + '\n\n' +
+    'Adjunto el comprobante en PDF. ¡Gracias!';
+  var waUrl = 'https://wa.me/' + telWa + '?text=' + encodeURIComponent(mensajeWa);
+%>
+<div class="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-800"><%= prestamo.perfiles?.nombre_completo %></h1>
+    <p class="text-sm text-slate-400">
+      Préstamo del <%= prestamo.fecha_inicio %> ·
+      <% if (prestamo.estado === 'pagado') { %><span class="badge-exito">Pagado</span>
+      <% } else if (prestamo.estado === 'en_mora') { %><span class="badge-peligro">En mora</span>
+      <% } else if (prestamo.estado === 'cancelado') { %><span class="badge-neutro">Cancelado</span>
+      <% } else { %><span class="badge-neutro">Activo</span><% } %>
+    </p>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    <a href="/admin/clientes/<%= prestamo.cliente_id %>" class="btn-secondary">Ver cliente</a>
+    <a href="/admin/prestamos/<%= prestamo.id %>/comprobante" target="_blank" rel="noopener" class="btn-secondary">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16.5V3m0 13.5-4-4m4 4 4-4M4.5 16.5V18a2.25 2.25 0 0 0 2.25 2.25h10.5A2.25 2.25 0 0 0 19.5 18v-1.5"/></svg>
+      Comprobante PDF
+    </a>
+    <% if (tieneTel) { %>
+      <button type="button" id="btn-compartir-plan" class="inline-flex items-center justify-center gap-2 rounded-xl bg-green-500 px-4 py-2.5 font-medium text-white transition hover:bg-green-600">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/></svg>
+        Enviar plan por WhatsApp
+      </button>
+    <% } else { %>
+      <span class="inline-flex items-center gap-1.5 text-xs text-slate-400">Cliente sin teléfono para WhatsApp</span>
+    <% } %>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+  <%- include('../../partials/kpi-card', { titulo: 'Capital', valor: formatCOP(prestamo.monto_capital) }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'Interés', valor: formatCOP(prestamo.monto_total_a_pagar - prestamo.monto_capital), nota: 'Cobrado en total' }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'Total a pagar', valor: formatCOP(prestamo.monto_total_a_pagar) }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'Cuota', valor: formatCOP(prestamo.valor_cuota), nota: prestamo.frecuencia_pago }) %>
+  <%- include('../../partials/kpi-card', {
+    titulo: 'Saldo pendiente',
+    valor: formatCOP(prestamo.monto_total_a_pagar - pagos.reduce(function(acc, p) { return acc + Number(p.monto); }, 0))
+  }) %>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2">
+    <h2 class="font-medium text-slate-700 mb-3">Plan de cuotas</h2>
+    <%
+      // Mapa cuota → decisión del pago de solo interés (extension | saldo),
+      // para distinguir esas cuotas en el plan.
+      var mapaInteres = {};
+      pagos.forEach(function(p) { if (p.tipo === 'interes' && p.cuota_id) mapaInteres[p.cuota_id] = p.accion; });
+    %>
+    <div class="card overflow-hidden p-0">
+      <%- include('../../partials/tabla-cuotas', { cuotas, formatCOP, mapaInteres }) %>
+    </div>
+
+    <h2 class="font-medium text-slate-700 mb-3 mt-8">Historial de abonos</h2>
+    <div class="card overflow-hidden p-0">
+      <table class="table-base" data-datatable>
+        <thead>
+          <tr><th>Fecha</th><th>Monto</th><th>Método</th><th>Notas</th></tr>
+        </thead>
+        <tbody>
+          <% if (pagos.length === 0) { %>
+            <tr><td colspan="4" class="px-3 py-6 text-center text-slate-500">Aún no se han registrado abonos.</td></tr>
+          <% } %>
+          <% pagos.forEach(function(p) { %>
+            <tr>
+              <td><%= p.fecha_pago %></td>
+              <td class="num"><%= formatCOP(p.monto) %></td>
+              <td><%= p.metodo || '—' %></td>
+              <td class="text-slate-400"><%= p.notas || '—' %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%
+    var interesTotalP = Number(prestamo.monto_total_a_pagar) - Number(prestamo.monto_capital);
+    var interesPorCuota = prestamo.numero_cuotas ? Math.round(interesTotalP / prestamo.numero_cuotas) : 0;
+  %>
+  <div>
+    <h2 class="font-medium text-slate-700 mb-3">Registrar abono</h2>
+    <form action="/admin/prestamos/<%= prestamo.id %>/pagos" method="POST" class="card space-y-4" data-loading-title="Registrando pago…">
+      <div>
+        <label class="label-field" for="tipo_pago">Tipo de pago</label>
+        <select class="input-field" id="tipo_pago" name="tipo">
+          <option value="abono">Abono normal</option>
+          <option value="interes">Solo interés</option>
+        </select>
+      </div>
+      <div>
+        <label class="label-field" for="cuota_id">Aplicar a cuota</label>
+        <select class="input-field" id="cuota_id" name="cuota_id">
+          <option value="">Automático (más antigua pendiente)</option>
+          <% cuotas.filter(function(c) { return c.estado !== 'pagada'; }).forEach(function(c) { %>
+            <option value="<%= c.id %>">Cuota #<%= c.numero_cuota %> · <%= formatCOP(c.monto_esperado - c.monto_pagado) %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div>
+        <label class="label-field" for="monto" id="label-monto">Monto abonado</label>
+        <input class="input-field input-moneda" type="text" inputmode="numeric" id="monto" name="monto" required />
+      </div>
+      <div id="bloque-interes" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+        <p class="text-sm font-medium text-amber-800">¿Qué se hace con el capital de esta cuota?</p>
+        <label class="flex items-start gap-2 text-sm text-slate-600">
+          <input type="radio" name="accion" value="saldo" class="mt-1" checked />
+          <span><span class="font-medium text-slate-700">Dejar saldo pendiente</span> — el capital no pagado se cobra después (renegociación). El plan no cambia.</span>
+        </label>
+        <label class="flex items-start gap-2 text-sm text-slate-600">
+          <input type="radio" name="accion" value="extension" class="mt-1" />
+          <span><span class="font-medium text-slate-700">Extender un periodo</span> — se agrega una cuota más con interés de <%= formatCOP(interesPorCuota) %>; el capital se difiere al final.</span>
+        </label>
+      </div>
+      <div>
+        <label class="label-field" for="fecha_pago">Fecha de pago</label>
+        <input class="input-field" type="date" id="fecha_pago" name="fecha_pago" required />
+      </div>
+      <div>
+        <label class="label-field" for="metodo">Método</label>
+        <select class="input-field" id="metodo" name="metodo">
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="nequi">Nequi</option>
+          <option value="daviplata">Daviplata</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label class="label-field" for="notas">Notas</label>
+        <input class="input-field" type="text" id="notas" name="notas" />
+      </div>
+      <button type="submit" id="btn-registrar-pago" class="btn-primary w-full">Registrar abono</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var tipoSel = document.getElementById('tipo_pago');
+    var bloque = document.getElementById('bloque-interes');
+    var montoInput = document.getElementById('monto');
+    var labelMonto = document.getElementById('label-monto');
+    var btn = document.getElementById('btn-registrar-pago');
+    var interesCuota = <%= interesPorCuota %>;
+    if (!tipoSel) return;
+    tipoSel.addEventListener('change', function () {
+      var esInteres = tipoSel.value === 'interes';
+      bloque.classList.toggle('hidden', !esInteres);
+      if (esInteres) {
+        if ((!montoInput.value || montoInput.value.trim() === '') && interesCuota > 0) {
+          montoInput.value = window.formatearMoneda ? window.formatearMoneda(interesCuota) : String(interesCuota);
+        }
+        if (labelMonto) labelMonto.textContent = 'Interés a pagar';
+        if (btn) btn.textContent = 'Registrar pago de interés';
+      } else {
+        if (labelMonto) labelMonto.textContent = 'Monto abonado';
+        if (btn) btn.textContent = 'Registrar abono';
+      }
+    });
+  })();
+</script>
+
+<script>
+  // Compartir el PLAN DE PAGO (PDF) por WhatsApp de verdad: usa la API de
+  // compartir del dispositivo (navigator.share con archivos), que en celular
+  // abre el menú de compartir → eliges WhatsApp → el PDF queda ADJUNTO.
+  // En equipos que no soportan adjuntar (escritorio), cae a un respaldo:
+  // descarga el PDF y abre el chat del cliente con el texto.
+  (function () {
+    var comprobanteUrl = <%- JSON.stringify('/admin/prestamos/' + prestamo.id + '/comprobante') %>;
+    var nombreArchivo = <%- JSON.stringify('comprobante-' + (prestamo.perfiles && prestamo.perfiles.nombre_completo ? prestamo.perfiles.nombre_completo.replace(/[^\w]+/g, '_') : 'cliente') + '.pdf') %>;
+    var texto = <%- JSON.stringify(mensajeWa) %>;
+    var waUrl = <%- JSON.stringify(waUrl) %>;
+
+    // Compartidor genérico de PDF por WhatsApp (navigator.share con archivo;
+    // respaldo a descargar + abrir chat en equipos sin soporte de adjuntar).
+    window.__compartirPDF = async function (url, nombre, mensaje, chatUrl) {
+      try {
+        var resp = await fetch(url, { credentials: 'same-origin' });
+        var blob = await resp.blob();
+        var archivo = new File([blob], nombre, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
+          await navigator.share({ files: [archivo], text: mensaje });
+          return;
+        }
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
+      window.open(url, '_blank');
+      if (chatUrl) window.open(chatUrl, '_blank');
+      if (window.Swal) {
+        Swal.fire({ icon: 'info', title: 'Comparte el PDF manualmente', text: 'Este dispositivo no permite adjuntar el PDF directo a WhatsApp. Descargué el documento y abrí el chat del cliente: adjunta el PDF ahí.', confirmButtonText: 'Entendido' });
+      }
+    };
+
+    window.__compartirPlan = function () { return window.__compartirPDF(comprobanteUrl, nombreArchivo, texto, waUrl); };
+
+    var btn = document.getElementById('btn-compartir-plan');
+    if (btn) btn.addEventListener('click', window.__compartirPlan);
+  })();
+</script>
+
+<% if (typeof recienCreado !== 'undefined' && recienCreado) { %>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Limpia el parámetro de la URL para que al recargar NO se repita el modal.
+    if (window.history.replaceState) {
+      var _u = new URL(window.location.href);
+      _u.searchParams.delete('creado');
+      window.history.replaceState({}, '', _u.toString());
+    }
+
+    var comprobanteUrl = <%- JSON.stringify('/admin/prestamos/' + prestamo.id + '/comprobante') %>;
+    var tieneTel = <%- tieneTel ? 'true' : 'false' %>;
+
+    var iconoExito =
+      '<div style="position:relative;width:120px;height:120px;margin:4px auto 0;">' +
+        '<svg width="120" height="120" viewBox="0 0 120 120" fill="none">' +
+          '<g stroke="#86efac" stroke-width="3" stroke-linecap="round">' +
+            '<line x1="60" y1="14" x2="60" y2="6"/><line x1="104" y1="60" x2="112" y2="60"/>' +
+            '<line x1="16" y1="60" x2="8" y2="60"/><line x1="60" y1="106" x2="60" y2="114"/>' +
+            '<line x1="91" y1="29" x2="97" y2="23"/><line x1="29" y1="29" x2="23" y2="23"/>' +
+            '<line x1="29" y1="91" x2="23" y2="97"/><line x1="91" y1="91" x2="97" y2="97"/>' +
+          '</g>' +
+          '<circle cx="60" cy="60" r="46" fill="#22c55e" fill-opacity="0.12"/>' +
+          '<circle cx="60" cy="60" r="34" fill="#22c55e"/>' +
+          '<path d="M47 60l9 9 18-18" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>' +
+      '</div>';
+
+    var tarjeta =
+      'display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;text-align:left;' +
+      'padding:14px;border-radius:18px;border:1px solid;cursor:pointer;text-decoration:none;transition:background .15s;';
+    var cajaIcono = 'display:flex;width:48px;height:48px;flex:0 0 48px;align-items:center;justify-content:center;border-radius:14px;';
+    var chevron = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
+
+    var tarjetaWa = tieneTel
+      ? '<button type="button" onclick="window.__compartirPlan()" style="' + tarjeta + 'border-color:#dcfce7;background:#f0fdf480;">' +
+          '<span style="' + cajaIcono + 'background:#dcfce7;color:#16a34a;">' +
+            '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885"/></svg>' +
+          '</span>' +
+          '<span style="flex:1;"><span style="display:block;font-weight:700;color:#15803d;">Enviar por WhatsApp</span>' +
+          '<span style="display:block;font-size:12px;color:#94a3b8;">Envía el comprobante directamente al cliente</span></span>' +
+          '<span style="color:#4ade80;">' + chevron + '</span>' +
+        '</button>'
+      : '<div style="text-align:center;font-size:13px;color:#94a3b8;padding:6px;">Cliente sin teléfono para WhatsApp</div>';
+
+    var notaSeguridad =
+      '<div style="display:flex;align-items:center;gap:10px;margin-top:18px;padding-top:18px;border-top:1px solid #f1f5f9;text-align:left;">' +
+        '<span style="display:flex;width:36px;height:36px;flex:0 0 36px;align-items:center;justify-content:center;border-radius:9999px;background:#eff6ff;color:#3b82f6;">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>' +
+        '</span>' +
+        '<span style="font-size:12px;color:#94a3b8;">El comprobante queda guardado en <b>Comprobantes</b>, disponible cuando lo necesites.</span>' +
+      '</div>';
+
+    var html =
+      iconoExito +
+      '<h2 style="font-size:26px;font-weight:800;color:#0f172a;margin:14px 0 6px;">¡Préstamo creado!</h2>' +
+      '<p style="color:#64748b;font-size:14px;margin:0 0 18px;">Comparte el comprobante con el cliente:</p>' +
+      '<div style="display:flex;flex-direction:column;gap:12px;">' + tarjetaWa + '</div>' +
+      notaSeguridad;
+
+    Swal.fire({
+      html: html,
+      width: 480,
+      padding: '1.5rem 1.5rem 2rem',
+      showConfirmButton: true,
+      showCloseButton: true,
+      confirmButtonText: 'Cerrar',
+      buttonsStyling: false,
+      customClass: {
+        popup: 'rounded-3xl',
+        confirmButton: 'btn-secondary px-10 mt-5',
+      },
+      allowOutsideClick: true,
+    });
+  });
+</script>
+<% } %>
+
+<% if (typeof abonoId !== 'undefined' && abonoId) { var abono = (pagos || []).find(function (x) { return x.id === abonoId; }); %>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Limpia el parámetro de la URL para que al recargar NO se repita el modal.
+    if (window.history.replaceState) {
+      var _u = new URL(window.location.href);
+      _u.searchParams.delete('abono');
+      window.history.replaceState({}, '', _u.toString());
+    }
+
+    var pagoUrl = <%- JSON.stringify('/admin/prestamos/' + prestamo.id + '/pagos/' + abonoId + '/comprobante') %>;
+    var tieneTel = <%- tieneTel ? 'true' : 'false' %>;
+    var waUrl = <%- JSON.stringify(waUrl) %>;
+    var texto = <%- JSON.stringify('Hola ' + (prestamo.perfiles && prestamo.perfiles.nombre_completo ? prestamo.perfiles.nombre_completo : '') + ', te comparto el comprobante de tu pago' + (abono ? ' de ' + formatCOP(abono.monto) : '') + '. ¡Gracias!') %>;
+    window.__compartirAbono = function () { return window.__compartirPDF(pagoUrl, 'comprobante-pago.pdf', texto, waUrl); };
+
+    var tarjeta = 'display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;text-align:left;padding:14px;border-radius:18px;border:1px solid;cursor:pointer;text-decoration:none;';
+    var caja = 'display:flex;width:48px;height:48px;flex:0 0 48px;align-items:center;justify-content:center;border-radius:14px;';
+    var chevron = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
+
+    var tarjetaPdf =
+      '<a href="' + pagoUrl + '" target="_blank" rel="noopener" style="' + tarjeta + 'border-color:#dbeafe;background:#eff6ff80;">' +
+        '<span style="' + caja + 'background:#dbeafe;color:#2563eb;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span>' +
+        '<span style="flex:1;"><span style="display:block;font-weight:700;color:#1d4ed8;">Descargar comprobante de pago</span><span style="display:block;font-size:12px;color:#94a3b8;">Recibo del abono en PDF</span></span>' +
+        '<span style="color:#60a5fa;">' + chevron + '</span></a>';
+
+    var tarjetaWa = tieneTel
+      ? '<button type="button" onclick="window.__compartirAbono()" style="' + tarjeta + 'border-color:#dcfce7;background:#f0fdf480;">' +
+          '<span style="' + caja + 'background:#dcfce7;color:#16a34a;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885"/></svg></span>' +
+          '<span style="flex:1;"><span style="display:block;font-weight:700;color:#15803d;">Enviar por WhatsApp</span><span style="display:block;font-size:12px;color:#94a3b8;">Envía el recibo al cliente</span></span>' +
+          '<span style="color:#4ade80;">' + chevron + '</span></button>'
+      : '<div style="text-align:center;font-size:13px;color:#94a3b8;padding:6px;">Cliente sin teléfono para WhatsApp</div>';
+
+    var icono =
+      '<div style="width:96px;height:96px;margin:0 auto;"><svg width="96" height="96" viewBox="0 0 120 120" fill="none">' +
+        '<circle cx="60" cy="60" r="46" fill="#22c55e" fill-opacity="0.12"/><circle cx="60" cy="60" r="34" fill="#22c55e"/>' +
+        '<path d="M47 60l9 9 18-18" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+
+    Swal.fire({
+      html: icono +
+        '<h2 style="font-size:24px;font-weight:800;color:#0f172a;margin:12px 0 6px;">¡Abono registrado!</h2>' +
+        '<p style="color:#64748b;font-size:14px;margin:0 0 18px;">Comparte el comprobante de pago con el cliente:</p>' +
+        '<div style="display:flex;flex-direction:column;gap:12px;">' + tarjetaPdf + tarjetaWa + '</div>',
+      width: 470,
+      padding: '1.5rem 1.5rem 2rem',
+      showConfirmButton: true,
+      showCloseButton: true,
+      confirmButtonText: 'Cerrar',
+      buttonsStyling: false,
+      customClass: { popup: 'rounded-3xl', confirmButton: 'btn-secondary px-10 mt-5' },
+      allowOutsideClick: true,
+    });
+  });
+</script>
+<% } %>

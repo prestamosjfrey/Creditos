@@ -1,0 +1,267 @@
+<%
+  function iniciales(nombre) {
+    var p = (nombre || '').trim().split(/\s+/);
+    return (((p[0] || '')[0] || '') + ((p[1] || '')[0] || '')).toUpperCase() || '?';
+  }
+  var paletas = [
+    ['bg-blue-100', 'text-blue-600'], ['bg-violet-100', 'text-violet-600'],
+    ['bg-emerald-100', 'text-emerald-600'], ['bg-amber-100', 'text-amber-600'],
+    ['bg-rose-100', 'text-rose-600'], ['bg-cyan-100', 'text-cyan-600'],
+  ];
+  function paleta(nombre) {
+    var s = nombre || 'A', suma = 0;
+    for (var i = 0; i < s.length; i++) suma += s.charCodeAt(i);
+    return paletas[suma % paletas.length];
+  }
+  var MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  function fechaCorta(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso + 'T00:00:00');
+    return d.getDate() + ' ' + MESES[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  var METODO = {
+    efectivo: ['bg-emerald-50 text-emerald-600', 'Efectivo'],
+    transferencia: ['bg-blue-50 text-blue-600', 'Transferencia'],
+    nequi: ['bg-violet-50 text-violet-600', 'Nequi'],
+    daviplata: ['bg-rose-50 text-rose-600', 'Daviplata'],
+    otro: ['bg-slate-100 text-slate-500', 'Otro'],
+  };
+  var LABELS = { hoy: 'Hoy', ayer: 'Ayer', esta_semana: 'Esta semana', este_mes: 'Este mes', este_anio: 'Este año', personalizado: 'Personalizado' };
+  var opciones = [['hoy', 'Hoy'], ['ayer', 'Ayer'], ['esta_semana', 'Esta semana'], ['este_mes', 'Este mes'], ['este_anio', 'Este año']];
+%>
+
+<div class="mb-6 flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-800">Pagos</h1>
+    <p class="text-sm text-slate-400">Consulta y gestión de pagos registrados.</p>
+  </div>
+  <a href="/admin/prestamos" class="btn-primary">
+    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
+    Registrar pago
+  </a>
+</div>
+
+<!-- Filtro de periodo -->
+<div class="mb-6 flex flex-wrap items-center gap-3">
+  <div class="relative">
+    <button type="button" id="btn-periodo" class="btn-secondary">
+      <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
+      <%= LABELS[periodo] || 'Rango' %>
+      <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="m6 9 6 6 6-6" /></svg>
+    </button>
+    <div id="menu-periodo" class="hidden absolute left-0 top-full mt-2 w-48 rounded-xl border border-slate-100 bg-white py-1 shadow-lg z-50">
+      <% opciones.forEach(function(o) { var act = periodo === o[0]; %>
+        <a href="/admin/pagos?periodo=<%= o[0] %>" class="flex items-center justify-between px-4 py-2 text-sm <%= act ? 'text-blue-600 font-medium' : 'text-slate-600' %> hover:bg-slate-50">
+          <%= o[1] %>
+          <% if (act) { %><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg><% } %>
+        </a>
+      <% }); %>
+      <div class="my-1 border-t border-slate-100"></div>
+      <button type="button" id="btn-personalizado" class="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+        <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25M3 18.75A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75M3 11.25h18" /></svg>
+        Seleccionar rango
+      </button>
+    </div>
+  </div>
+
+  <span class="rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700"><%= fechaCorta(desde) %> &ndash; <%= fechaCorta(hasta) %></span>
+
+  <form id="form-rango" method="GET" action="/admin/pagos" class="<%= periodo === 'personalizado' ? '' : 'hidden' %> flex flex-wrap items-end gap-2">
+    <div>
+      <label class="label-field" for="desde">Desde</label>
+      <input class="input-field" type="date" id="desde" name="desde" value="<%= periodo === 'personalizado' ? (desde || '') : '' %>" />
+    </div>
+    <div>
+      <label class="label-field" for="hasta">Hasta</label>
+      <input class="input-field" type="date" id="hasta" name="hasta" value="<%= periodo === 'personalizado' ? (hasta || '') : '' %>" />
+    </div>
+    <button type="submit" class="btn-secondary">Aplicar</button>
+  </form>
+</div>
+
+<!-- Tarjetas -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Total en el período</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= formatCOP(stats.total) %></p>
+      <% if (stats.cambioPct !== null) { %>
+        <p class="text-xs <%= stats.cambioPct >= 0 ? 'text-emerald-600' : 'text-red-500' %>"><%= stats.cambioPct >= 0 ? '↑' : '↓' %> <%= Math.abs(stats.cambioPct) %>% vs período anterior</p>
+      <% } else { %>
+        <p class="text-xs text-slate-400">Sin período anterior</p>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Pagos recibidos</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= stats.count %></p>
+      <p class="text-xs text-slate-400">Transacciones</p>
+    </div>
+  </div>
+
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Promedio por día</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= formatCOP(stats.promedioDia) %></p>
+    </div>
+  </div>
+
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Mayor pago</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= stats.masAlto ? formatCOP(stats.masAlto.monto) : '—' %></p>
+      <p class="text-xs text-slate-400"><%= stats.masAlto ? fechaCorta(stats.masAlto.fecha_pago) : '' %></p>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfica -->
+<div class="card mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="font-semibold text-slate-800">Resumen de pagos</h2>
+    <div class="flex gap-1 rounded-lg bg-slate-100 p-1">
+      <% [['dia','Día'],['semana','Semana'],['mes','Mes']].forEach(function(gg) { %>
+        <button type="button" data-gran="<%= gg[0] %>" class="periodo-btn <%= granularidad === gg[0] ? 'periodo-btn-activo' : '' %>"><%= gg[1] %></button>
+      <% }); %>
+    </div>
+  </div>
+  <canvas id="chart-pagos" height="90"></canvas>
+</div>
+
+<!-- Tabla -->
+<div class="card p-0">
+  <table class="table-base" data-datatable>
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Fecha</th>
+        <th class="text-right">Monto</th>
+        <th>Método</th>
+        <th>Notas</th>
+        <th data-sortable="false" class="text-right">Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (pagos.length === 0) { %>
+        <tr><td colspan="6" class="px-3 py-6 text-center text-slate-500">No hay pagos en este período.</td></tr>
+      <% } %>
+      <% pagos.forEach(function(p) { var col = paleta(p.prestamos?.perfiles?.nombre_completo); var met = METODO[p.metodo] || METODO.otro; %>
+        <tr>
+          <td>
+            <div class="flex items-center gap-3">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full <%= col[0] %> <%= col[1] %> text-xs font-semibold"><%= iniciales(p.prestamos?.perfiles?.nombre_completo) %></span>
+              <span class="font-medium text-slate-800"><%= p.prestamos?.perfiles?.nombre_completo || 'Cliente' %></span>
+            </div>
+          </td>
+          <td class="text-slate-500"><%= fechaCorta(p.fecha_pago) %></td>
+          <td class="num text-right font-semibold text-emerald-600"><%= formatCOP(p.monto) %></td>
+          <td><span class="badge <%= met[0] %>"><%= met[1] %></span></td>
+          <td class="text-slate-400"><%= p.notas || '—' %></td>
+          <td class="text-right">
+            <a href="/admin/prestamos/<%= p.prestamo_id %>" class="inline-flex items-center gap-1.5 text-blue-600 hover:underline text-sm">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              Ver préstamo
+            </a>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  window.__PAGOS__ = {
+    pagos: <%- JSON.stringify(chartPagos).replace(/<\//g, '<\\/') %>,
+    desde: <%- JSON.stringify(desde) %>,
+    hasta: <%- JSON.stringify(hasta) %>,
+    gran: <%- JSON.stringify(granularidad) %>,
+  };
+  (function () {
+    var D = window.__PAGOS__;
+    var MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    var DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    var fmt = function (v) { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v || 0); };
+    function parse(iso) { return new Date(iso + 'T00:00:00'); }
+    function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    function lunIdx(d) { return (d.getDay() + 6) % 7; }
+
+    function bucketsDia() {
+      var mapa = {}; D.pagos.forEach(function (p) { mapa[p.f] = (mapa[p.f] || 0) + p.m; });
+      var dias = [], d = parse(D.desde), fin = parse(D.hasta);
+      while (d <= fin) { dias.push(new Date(d)); d.setDate(d.getDate() + 1); }
+      var conDS = dias.length <= 8, labels = [], valores = [];
+      dias.forEach(function (dd) { labels.push((conDS ? DIAS[lunIdx(dd)] + ' ' : '') + dd.getDate() + ' ' + MESES[dd.getMonth()]); valores.push(mapa[isoOf(dd)] || 0); });
+      return { labels: labels, valores: valores };
+    }
+    function bucketsSemana() {
+      var mapa = {}; D.pagos.forEach(function (p) { var x = parse(p.f); x.setDate(x.getDate() - lunIdx(x)); var k = isoOf(x); mapa[k] = (mapa[k] || 0) + p.m; });
+      var ini = parse(D.desde), fin = parse(D.hasta); var d = new Date(ini); d.setDate(d.getDate() - lunIdx(d));
+      var labels = [], valores = [];
+      while (d <= fin) { labels.push('Sem ' + d.getDate() + ' ' + MESES[d.getMonth()]); valores.push(mapa[isoOf(d)] || 0); d.setDate(d.getDate() + 7); }
+      return { labels: labels, valores: valores };
+    }
+    function bucketsMes() {
+      var mapa = {}; D.pagos.forEach(function (p) { var x = parse(p.f); var k = x.getFullYear() + '-' + x.getMonth(); mapa[k] = (mapa[k] || 0) + p.m; });
+      var ini = parse(D.desde), fin = parse(D.hasta); var d = new Date(ini.getFullYear(), ini.getMonth(), 1);
+      var labels = [], valores = [];
+      while (d <= fin) { labels.push(MESES[d.getMonth()] + ' ' + d.getFullYear()); valores.push(mapa[d.getFullYear() + '-' + d.getMonth()] || 0); d.setMonth(d.getMonth() + 1); }
+      return { labels: labels, valores: valores };
+    }
+    function buckets(g) { return g === 'mes' ? bucketsMes() : g === 'semana' ? bucketsSemana() : bucketsDia(); }
+
+    var canvas = document.getElementById('chart-pagos');
+    if (canvas && window.Chart) {
+      var labelPlugin = {
+        id: 'vlabels',
+        afterDatasetsDraw: function (c) {
+          var meta = c.getDatasetMeta(0); if (meta.data.length > 14) return;
+          var ctx = c.ctx, ds = c.data.datasets[0];
+          meta.data.forEach(function (bar, i) { var v = ds.data[i]; if (!v) return; ctx.save(); ctx.fillStyle = '#475569'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(fmt(v), bar.x, bar.y - 6); ctx.restore(); });
+        },
+      };
+      var d0 = buckets(D.gran || 'dia');
+      var chart = new Chart(canvas, {
+        type: 'bar',
+        data: { labels: d0.labels, datasets: [{ data: d0.valores, backgroundColor: '#2563EB', borderRadius: 6, maxBarThickness: 46 }] },
+        options: {
+          responsive: true, maintainAspectRatio: true,
+          layout: { padding: { top: 18 } },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (it) { return fmt(it.raw); } } } },
+          scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return v >= 1000000 ? '$' + (v / 1000000) + 'M' : '$' + v.toLocaleString('es-CO'); } } }, x: { grid: { display: false } } },
+        },
+        plugins: [labelPlugin],
+      });
+      document.querySelectorAll('[data-gran]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          document.querySelectorAll('[data-gran]').forEach(function (x) { x.classList.remove('periodo-btn-activo'); });
+          b.classList.add('periodo-btn-activo');
+          var dd = buckets(b.dataset.gran);
+          chart.data.labels = dd.labels; chart.data.datasets[0].data = dd.valores; chart.update();
+        });
+      });
+    }
+
+    // Dropdown de periodo
+    var bp = document.getElementById('btn-periodo'), mp = document.getElementById('menu-periodo');
+    if (bp && mp) {
+      bp.addEventListener('click', function (e) { e.stopPropagation(); mp.classList.toggle('hidden'); });
+      document.addEventListener('click', function () { mp.classList.add('hidden'); });
+    }
+    var bpe = document.getElementById('btn-personalizado'), fr = document.getElementById('form-rango');
+    if (bpe && fr) { bpe.addEventListener('click', function () { fr.classList.remove('hidden'); if (mp) mp.classList.add('hidden'); }); }
+  })();
+</script>

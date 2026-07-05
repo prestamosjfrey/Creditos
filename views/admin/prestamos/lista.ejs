@@ -1,0 +1,204 @@
+<%
+  function iniciales(nombre) {
+    var p = (nombre || '').trim().split(/\s+/);
+    return (((p[0] || '')[0] || '') + ((p[1] || '')[0] || '')).toUpperCase() || '?';
+  }
+  var paletas = [
+    ['bg-blue-100', 'text-blue-600'], ['bg-violet-100', 'text-violet-600'],
+    ['bg-emerald-100', 'text-emerald-600'], ['bg-amber-100', 'text-amber-600'],
+    ['bg-rose-100', 'text-rose-600'], ['bg-cyan-100', 'text-cyan-600'],
+  ];
+  function paleta(nombre) {
+    var s = nombre || 'A', suma = 0;
+    for (var i = 0; i < s.length; i++) suma += s.charCodeAt(i);
+    return paletas[suma % paletas.length];
+  }
+  var MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  function fechaCorta(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso + 'T00:00:00');
+    return d.getDate() + ' ' + MESES[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  var tabs = [['todos', 'Todos'], ['activos', 'Activos'], ['pagados', 'Pagados'], ['vencidos', 'Vencidos'], ['proximos', 'Próximos a vencer']];
+  var presets = [['todos', 'Todos'], ['hoy', 'Hoy'], ['esta_semana', 'Esta semana'], ['este_mes', 'Este mes'], ['este_anio', 'Este año']];
+  var extra = (periodo === 'personalizado' && desde && hasta) ? ('&desde=' + desde + '&hasta=' + hasta) : '';
+%>
+
+<div class="mb-6 flex items-center gap-4">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-800">Préstamos</h1>
+    <p class="text-sm text-slate-400"><%= prestamos.length %> <%= filtro === 'todos' && periodo === 'todos' ? 'en total' : 'en esta vista' %></p>
+  </div>
+</div>
+
+<!-- Resumen de cartera -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Capital en la calle</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= formatCOP(stats.capitalCalle) %></p>
+      <p class="text-xs text-slate-400">Préstamos activos</p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182.553-.439 1.278-.659 2.003-.659.725 0 1.45.22 2.003.659l.659.5"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Por cobrar</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= formatCOP(stats.porCobrar) %></p>
+      <p class="text-xs text-slate-400">Saldo pendiente</p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">Recuperado</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= formatCOP(stats.recuperado) %></p>
+      <p class="text-xs text-slate-400">Total abonado</p>
+    </div>
+  </div>
+  <div class="card flex items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
+    </span>
+    <div>
+      <p class="text-sm text-slate-400">En mora</p>
+      <p class="num text-xl font-semibold text-slate-800"><%= stats.enMora %></p>
+      <p class="text-xs text-slate-400">Con cuotas vencidas</p>
+    </div>
+  </div>
+</div>
+
+<!-- Pestañas -->
+<div class="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
+  <% tabs.forEach(function(tab) { var act = (filtro || 'todos') === tab[0]; %>
+    <a href="/admin/prestamos?estado=<%= tab[0] %>&periodo=<%= periodo %><%= extra %>"
+       class="-mb-px border-b-2 px-4 py-2 text-sm font-medium transition <%= act ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600' %>">
+      <%= tab[1] %>
+    </a>
+  <% }); %>
+</div>
+
+<!-- Periodo (fecha de inicio) -->
+<div class="mb-4 card py-3 px-4">
+  <div class="flex flex-wrap items-center justify-center gap-2">
+    <% presets.forEach(function(pr) { var act = (periodo || 'todos') === pr[0]; %>
+      <a href="/admin/prestamos?estado=<%= filtro %>&periodo=<%= pr[0] %>"
+         class="rounded-lg px-3 py-1.5 text-sm font-medium transition <%= act ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100' %>">
+        <%= pr[1] %>
+      </a>
+    <% }); %>
+    <span class="mx-1 h-5 w-px bg-slate-200"></span>
+    <form method="GET" action="/admin/prestamos" class="flex items-center gap-2">
+      <input type="hidden" name="estado" value="<%= filtro %>" />
+      <input type="hidden" name="periodo" value="personalizado" />
+      <input class="input-field py-1.5 text-sm" type="date" name="desde" value="<%= periodo === 'personalizado' ? (desde || '') : '' %>" />
+      <span class="text-slate-300 text-sm">–</span>
+      <input class="input-field py-1.5 text-sm" type="date" name="hasta" value="<%= periodo === 'personalizado' ? (hasta || '') : '' %>" />
+      <button type="submit" class="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 transition">Aplicar</button>
+    </form>
+  </div>
+</div>
+
+<div class="card p-0">
+  <table class="table-base" data-datatable>
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Fecha inicio</th>
+        <th class="text-right">Capital</th>
+        <th class="text-right">Total a pagar</th>
+        <th class="text-right">Saldo</th>
+        <th>Progreso</th>
+        <th>Estado</th>
+        <th data-sortable="false" class="text-right">Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (prestamos.length === 0) { %>
+        <tr><td colspan="8" class="px-3 py-6 text-center text-slate-500">No hay préstamos en esta vista.</td></tr>
+      <% } %>
+      <% prestamos.forEach(function(p) {
+        var col = paleta(p.perfiles?.nombre_completo);
+        var tel = (p.perfiles?.telefono || '').replace(/\D/g, '');
+        var telWa = tel.length === 10 ? '57' + tel : tel;
+        var waUrl = 'https://wa.me/' + telWa + '?text=' + encodeURIComponent('Hola ' + (p.perfiles?.nombre_completo || '') + ', te escribo por tu préstamo.');
+      %>
+        <tr>
+          <td>
+            <div class="flex items-center gap-3">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full <%= col[0] %> <%= col[1] %> text-xs font-semibold"><%= iniciales(p.perfiles?.nombre_completo) %></span>
+              <span class="font-medium text-slate-800"><%= p.perfiles?.nombre_completo || 'Cliente' %></span>
+            </div>
+          </td>
+          <td class="text-slate-500"><%= fechaCorta(p.fecha_inicio) %></td>
+          <td class="num text-right"><%= formatCOP(p.monto_capital) %></td>
+          <td class="num text-right text-slate-500"><%= formatCOP(p.monto_total_a_pagar) %></td>
+          <td class="num text-right font-medium <%= p.saldo_pendiente > 0 ? 'text-orange-500' : 'text-emerald-600' %>"><%= formatCOP(p.saldo_pendiente) %></td>
+          <td>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500 num whitespace-nowrap"><%= p.cuotas_pagadas %> / <%= p.cuotas_total %></span>
+              <div class="h-1.5 w-16 rounded-full bg-slate-100 overflow-hidden">
+                <div class="h-full rounded-full <%= p.pct_pagado >= 100 ? 'bg-emerald-500' : 'bg-amber-500' %>" style="width: <%= p.pct_pagado %>%"></div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <% if (p.en_mora) { %><span class="badge-peligro">● Vencido</span>
+            <% } else if (p.estado === 'pagado') { %><span class="badge-exito">● Pagado</span>
+            <% } else if (p.estado === 'cancelado') { %><span class="badge-neutro">● Cancelado</span>
+            <% } else { %><span class="badge-exito">● Activo</span><% } %>
+          </td>
+          <td class="text-right">
+            <button type="button" class="action-menu-btn action-btn ml-auto" data-menu-id="m-<%= p.id %>" aria-label="Acciones">
+              <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+            </button>
+            <div id="m-<%= p.id %>" class="action-menu hidden fixed z-50 w-52 rounded-xl border border-slate-100 bg-white py-1 shadow-lg text-left">
+              <a href="/admin/prestamos/<%= p.id %>" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Ver préstamo</a>
+              <a href="/admin/prestamos/<%= p.id %>/comprobante" target="_blank" rel="noopener" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Descargar comprobante</a>
+              <% if (tel.length >= 10) { %>
+                <a href="<%= waUrl %>" target="_blank" rel="noopener" class="block px-4 py-2 text-sm text-green-600 hover:bg-slate-50">Enviar por WhatsApp</a>
+              <% } %>
+            </div>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.action-menu-btn');
+    var abiertos = document.querySelectorAll('.action-menu:not(.hidden)');
+    if (btn) {
+      e.stopPropagation();
+      var menu = document.getElementById(btn.dataset.menuId);
+      var estaba = !menu.classList.contains('hidden');
+      abiertos.forEach(function (m) { m.classList.add('hidden'); });
+      if (!estaba) {
+        menu.classList.remove('hidden');
+        var r = btn.getBoundingClientRect();
+        menu.style.top = (r.bottom + 4) + 'px';
+        menu.style.left = (r.right - menu.offsetWidth) + 'px';
+      }
+    } else if (!e.target.closest('.action-menu')) {
+      abiertos.forEach(function (m) { m.classList.add('hidden'); });
+    }
+  });
+</script>
+
+<!-- FAB: Nuevo préstamo -->
+<a href="/admin/prestamos/nuevo"
+   style="position:fixed;bottom:2rem;right:2rem;z-index:50;display:inline-flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;width:3.5rem;height:3.5rem;border-radius:9999px;box-shadow:0 8px 24px rgba(37,99,235,0.45);text-decoration:none;transition:background 0.15s,transform 0.15s,box-shadow 0.15s;"
+   onmouseover="this.style.background='#1d4ed8';this.style.transform='scale(1.08)';this.style.boxShadow='0 12px 28px rgba(37,99,235,0.55)'"
+   onmouseout="this.style.background='#2563eb';this.style.transform='scale(1)';this.style.boxShadow='0 8px 24px rgba(37,99,235,0.45)'"
+   title="Nuevo préstamo">
+  <svg style="width:22px;height:22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+</a>

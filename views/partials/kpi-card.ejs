@@ -1,0 +1,12 @@
+<div class="card">
+  <div class="flex items-center justify-between gap-2">
+    <p class="text-sm text-slate-400"><%= titulo %></p>
+    <% if (typeof verTodoHref !== 'undefined' && verTodoHref) { %>
+      <a href="<%= verTodoHref %>" class="text-xs font-medium text-blue-600 hover:underline whitespace-nowrap">Ver todo</a>
+    <% } %>
+  </div>
+  <p class="num mt-2 text-2xl font-semibold text-slate-800"><%= valor %></p>
+  <% if (typeof nota !== 'undefined' && nota) { %>
+    <p class="mt-1 text-xs text-slate-400"><%= nota %></p>
+  <% } %>
+</div>

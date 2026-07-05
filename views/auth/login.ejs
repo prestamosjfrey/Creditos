@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar sesión · Cartera</title>
+  <link rel="stylesheet" href="/css/output.css" />
+  <link rel="stylesheet" href="/vendor/sweetalert2/sweetalert2.min.css" />
+  <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+</head>
+<body class="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+  <div class="w-full max-w-[22rem]">
+    <div class="mb-5 flex flex-col items-center text-center">
+      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
+        <svg class="h-5 w-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 1.5v21M17.5 5.5H9.75a3.25 3.25 0 0 0 0 6.5h4.5a3.25 3.25 0 0 1 0 6.5H6.5" />
+        </svg>
+      </div>
+      <p class="mt-2.5 text-lg font-semibold text-slate-800 tracking-tight">Cartera</p>
+      <p class="text-xs text-slate-400">Gestión de préstamos</p>
+    </div>
+
+    <form action="/auth/login" method="POST" class="card space-y-3.5 py-6">
+      <div>
+        <label class="label-field" for="email">Correo</label>
+        <input class="input-field" type="email" id="email" name="email" required autofocus />
+      </div>
+
+      <div>
+        <label class="label-field" for="password">Contraseña</label>
+        <input class="input-field" type="password" id="password" name="password" required />
+      </div>
+
+      <button type="submit" class="btn-primary w-full mt-1">Iniciar sesión</button>
+    </form>
+  </div>
+
+  <%- include('../partials/flash-script', { flashError: error, flashExito: null }) %>
+</body>
+</html>

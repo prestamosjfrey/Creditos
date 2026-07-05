@@ -1,0 +1,8 @@
+<div class="flex flex-col items-center justify-center py-24 text-center">
+  <p class="text-5xl font-semibold text-slate-800">500</p>
+  <p class="mt-2 text-slate-400">Ocurrió un error inesperado.</p>
+  <% if (typeof mensaje !== 'undefined' && mensaje) { %>
+    <p class="mt-2 text-xs text-slate-400"><%= mensaje %></p>
+  <% } %>
+  <a href="/" class="btn-secondary mt-6">Volver al inicio</a>
+</div>

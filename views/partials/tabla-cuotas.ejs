@@ -1,0 +1,49 @@
+<div class="overflow-x-auto">
+  <table class="table-base">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Vence</th>
+        <th>Monto</th>
+        <th>Pagado</th>
+        <th>Saldo</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% var _mapaInteres = (typeof mapaInteres !== 'undefined' && mapaInteres) ? mapaInteres : {}; %>
+      <% cuotas.forEach(function(cuota) {
+        var accionInt = _mapaInteres[cuota.id];
+        var esExtension = cuota.origen === 'extension';
+      %>
+        <tr class="<%= esExtension ? 'bg-violet-50/50' : (accionInt ? 'bg-amber-50/40' : '') %>">
+          <td class="num"><%= cuota.numero_cuota %></td>
+          <td><%= cuota.fecha_vencimiento %></td>
+          <td class="num"><%= formatCOP(cuota.monto_esperado) %></td>
+          <td class="num"><%= formatCOP(cuota.monto_pagado) %></td>
+          <td class="num"><%= formatCOP(cuota.monto_esperado - cuota.monto_pagado) %></td>
+          <td>
+            <div class="flex flex-col items-start gap-1">
+              <% if (accionInt === 'extension') { %>
+                <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Pago solo interés · extendida</span>
+              <% } else if (accionInt === 'saldo') { %>
+                <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Pago solo interés · saldo pendiente</span>
+              <% } else if (cuota.estado === 'pagada') { %>
+                <span class="badge-exito">Pagada</span>
+              <% } else if (cuota.estado === 'vencida') { %>
+                <span class="badge-peligro">Vencida</span>
+              <% } else if (cuota.estado === 'parcial') { %>
+                <span class="badge-mora">Parcial</span>
+              <% } else { %>
+                <span class="badge-neutro">Pendiente</span>
+              <% } %>
+              <% if (esExtension) { %>
+                <span class="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">Cuota por extensión</span>
+              <% } %>
+            </div>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>

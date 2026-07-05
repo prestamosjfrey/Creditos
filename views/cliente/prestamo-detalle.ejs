@@ -1,0 +1,36 @@
+<div class="mb-6">
+  <a href="/cliente/panel" class="text-sm text-blue-600 hover:underline">&larr; Volver a mis préstamos</a>
+  <h1 class="text-xl font-semibold text-slate-800 mt-2">Detalle del préstamo</h1>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+  <%- include('../partials/kpi-card', { titulo: 'Capital', valor: formatCOP(prestamo.monto_capital) }) %>
+  <%- include('../partials/kpi-card', { titulo: 'Total a pagar', valor: formatCOP(prestamo.monto_total_a_pagar) }) %>
+  <%- include('../partials/kpi-card', { titulo: 'Cuota', valor: formatCOP(prestamo.valor_cuota), nota: prestamo.frecuencia_pago }) %>
+</div>
+
+<h2 class="font-medium text-slate-700 mb-3">Plan de cuotas</h2>
+<div class="card overflow-hidden p-0 mb-8">
+  <%- include('../partials/tabla-cuotas', { cuotas }) %>
+</div>
+
+<h2 class="font-medium text-slate-700 mb-3">Historial de pagos</h2>
+<div class="card overflow-hidden p-0">
+  <table class="table-base">
+    <thead>
+      <tr><th>Fecha</th><th>Monto</th><th>Método</th></tr>
+    </thead>
+    <tbody>
+      <% if (pagos.length === 0) { %>
+        <tr><td colspan="3" class="px-3 py-6 text-center text-slate-500">Aún no tienes pagos registrados en este préstamo.</td></tr>
+      <% } %>
+      <% pagos.forEach(function(p) { %>
+        <tr>
+          <td><%= p.fecha_pago %></td>
+          <td class="num"><%= formatCOP(p.monto) %></td>
+          <td><%= p.metodo || '—' %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>

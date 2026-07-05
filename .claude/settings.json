@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -b /tmp/cookies.txt -o /dev/null -w \"prestamo-form.js: %{http_code}\\\\n\" http://localhost:3000/js/prestamo-form.js)",
+      "Bash(curl -s -b /tmp/cookies.txt -X POST http://localhost:3000/admin/clientes --data-urlencode \"nombre_completo=Cliente Prueba Sin Password\" --data-urlencode \"numero_documento=999888777\" --data-urlencode \"telefono=3001112233\" --data-urlencode \"email=clienteprueba999@correo.com\" -i -o /tmp/post-cliente.txt -w \"status: %{http_code}\\\\n\")"
+    ]
+  }
+}
