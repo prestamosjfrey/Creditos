@@ -30,57 +30,103 @@
   var opciones = [['hoy', 'Hoy'], ['ayer', 'Ayer'], ['esta_semana', 'Esta semana'], ['este_mes', 'Este mes'], ['este_anio', 'Este año']];
 %>
 
-<div class="mb-6 flex items-center justify-between gap-4">
-  <div>
-    <h1 class="text-xl font-semibold text-slate-800">Pagos</h1>
-    <p class="text-sm text-slate-400">Consulta y gestión de pagos registrados.</p>
+<style>
+  @keyframes pag-float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-10px); }
+  }
+  @keyframes pag-orbit {
+    from { transform: rotateX(72deg) rotateZ(0deg); }
+    to   { transform: rotateX(72deg) rotateZ(360deg); }
+  }
+  @keyframes pag-orbit2 {
+    from { transform: rotateX(72deg) rotateZ(180deg); }
+    to   { transform: rotateX(72deg) rotateZ(540deg); }
+  }
+  @keyframes pag-shadow {
+    0%, 100% { transform: translateX(-50%) scale(1);   opacity: 0.35; }
+    50%       { transform: translateX(-50%) scale(0.8); opacity: 0.18; }
+  }
+  @keyframes pag-glow {
+    0%, 100% { opacity: 0.6; }
+    50%       { opacity: 1;   }
+  }
+</style>
+
+<div class="mb-8 flex flex-col items-center text-center gap-2">
+  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:0.25rem;">
+
+    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(124,58,237,0.5) 0%,transparent 70%);border-radius:50%;animation:pag-shadow 3s ease-in-out infinite;"></div>
+
+    <div style="animation:pag-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
+
+      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,0.22) 0%,transparent 65%);animation:pag-glow 3s ease-in-out infinite;pointer-events:none;"></div>
+
+      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(167,139,250,0.85);border-bottom:2px solid rgba(167,139,250,0.2);transform:rotateX(72deg);animation:pag-orbit 3.5s linear infinite;pointer-events:none;"></div>
+
+      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(196,181,253,0.7);border-left:1.5px solid rgba(196,181,253,0.15);transform:rotateX(72deg) rotateZ(180deg);animation:pag-orbit2 5s linear infinite;pointer-events:none;"></div>
+
+      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%, #c4b5fd 0%, #8b5cf6 28%, #7c3aed 52%, #6d28d9 70%, #4c1d95 88%, #2e1065 100%);box-shadow:0 12px 36px rgba(124,58,237,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08);position:relative;display:flex;align-items:center;justify-content:center;cursor:default;transition:transform 0.25s,box-shadow 0.25s;"
+           onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)';this.style.boxShadow='0 18px 48px rgba(124,58,237,0.8),0 6px 16px rgba(0,0,0,0.3),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'"
+           onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)';this.style.boxShadow='0 12px 36px rgba(124,58,237,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'">
+
+        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,0.7) 0%,rgba(255,255,255,0.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
+
+        <div style="position:absolute;bottom:14%;right:14%;width:20%;height:14%;background:radial-gradient(ellipse,rgba(196,181,253,0.4) 0%,transparent 100%);border-radius:50%;filter:blur(2px);pointer-events:none;"></div>
+
+        <svg style="width:30px;height:30px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
+        </svg>
+      </div>
+    </div>
   </div>
-  <a href="/admin/prestamos" class="btn-primary">
-    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
-    Registrar pago
-  </a>
+
+  <h1 class="text-3xl font-bold text-slate-800">Pagos</h1>
+  <p class="text-sm text-slate-400">Consulta y gestión de pagos registrados.</p>
+  <div class="mt-1 h-0.5 w-10 rounded-full bg-violet-600"></div>
 </div>
 
 <!-- Filtro de periodo -->
-<div class="mb-6 flex flex-wrap items-center gap-3">
-  <div class="relative">
-    <button type="button" id="btn-periodo" class="btn-secondary">
-      <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
-      <%= LABELS[periodo] || 'Rango' %>
-      <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="m6 9 6 6 6-6" /></svg>
-    </button>
-    <div id="menu-periodo" class="hidden absolute left-0 top-full mt-2 w-48 rounded-xl border border-slate-100 bg-white py-1 shadow-lg z-50">
-      <% opciones.forEach(function(o) { var act = periodo === o[0]; %>
-        <a href="/admin/pagos?periodo=<%= o[0] %>" class="flex items-center justify-between px-4 py-2 text-sm <%= act ? 'text-blue-600 font-medium' : 'text-slate-600' %> hover:bg-slate-50">
-          <%= o[1] %>
-          <% if (act) { %><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg><% } %>
-        </a>
-      <% }); %>
-      <div class="my-1 border-t border-slate-100"></div>
-      <button type="button" id="btn-personalizado" class="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
-        <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25M3 18.75A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75M3 11.25h18" /></svg>
-        Seleccionar rango
-      </button>
-    </div>
+<div class="mb-6 card py-3 px-4">
+  <div class="flex flex-wrap items-center justify-center gap-2">
+    <% opciones.forEach(function(o) { var act = periodo === o[0]; %>
+      <a href="/admin/pagos?periodo=<%= o[0] %>"
+         class="rounded-lg px-3 py-1.5 text-sm font-medium transition <%= act ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100' %>">
+        <%= o[1] %>
+      </a>
+    <% }); %>
+    <span class="mx-1 h-5 w-px bg-slate-200"></span>
+    <form method="GET" action="/admin/pagos" class="flex items-center gap-2">
+      <input class="input-field py-1.5 text-sm" type="date" name="desde" value="<%= periodo === 'personalizado' ? (desde || '') : '' %>" />
+      <span class="text-slate-300 text-sm">–</span>
+      <input class="input-field py-1.5 text-sm" type="date" name="hasta" value="<%= periodo === 'personalizado' ? (hasta || '') : '' %>" />
+      <button type="submit" class="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 transition">Aplicar</button>
+    </form>
+    <% if (periodo === 'personalizado' && desde && hasta) { %>
+      <a href="/admin/pagos?periodo=esta_semana"
+         class="inline-flex items-center justify-center rounded-lg text-white transition" title="Limpiar filtros"
+         style="width:32px;height:32px;background:#ef4444;flex-shrink:0;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+        <svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </a>
+    <% } %>
   </div>
-
-  <span class="rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700"><%= fechaCorta(desde) %> &ndash; <%= fechaCorta(hasta) %></span>
-
-  <form id="form-rango" method="GET" action="/admin/pagos" class="<%= periodo === 'personalizado' ? '' : 'hidden' %> flex flex-wrap items-end gap-2">
-    <div>
-      <label class="label-field" for="desde">Desde</label>
-      <input class="input-field" type="date" id="desde" name="desde" value="<%= periodo === 'personalizado' ? (desde || '') : '' %>" />
-    </div>
-    <div>
-      <label class="label-field" for="hasta">Hasta</label>
-      <input class="input-field" type="date" id="hasta" name="hasta" value="<%= periodo === 'personalizado' ? (hasta || '') : '' %>" />
-    </div>
-    <button type="submit" class="btn-secondary">Aplicar</button>
-  </form>
 </div>
 
+<!-- Script anti-flash: aplica estado colapsado antes de pintar -->
+<script>
+  if (localStorage.getItem('pagos-stats-v') === '1') document.write('<style>#pagos-stats{display:none}</style>');
+  if (localStorage.getItem('pagos-chart-v') === '1') document.write('<style>#pagos-chart-body{display:none}</style>');
+</script>
+
 <!-- Tarjetas -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div class="flex items-center justify-between mb-2">
+  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Estadísticas</span>
+  <button id="btn-toggle-stats" title="Mostrar / ocultar" class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 transition">
+    <svg id="ico-stats" style="width:14px;height:14px;transition:transform .25s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 15-6-6-6 6"/></svg>
+    <span id="lbl-stats">Ocultar</span>
+  </button>
+</div>
+<div id="pagos-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   <div class="card flex items-center gap-3">
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
@@ -129,19 +175,6 @@
   </div>
 </div>
 
-<!-- Gráfica -->
-<div class="card mb-6">
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="font-semibold text-slate-800">Resumen de pagos</h2>
-    <div class="flex gap-1 rounded-lg bg-slate-100 p-1">
-      <% [['dia','Día'],['semana','Semana'],['mes','Mes']].forEach(function(gg) { %>
-        <button type="button" data-gran="<%= gg[0] %>" class="periodo-btn <%= granularidad === gg[0] ? 'periodo-btn-activo' : '' %>"><%= gg[1] %></button>
-      <% }); %>
-    </div>
-  </div>
-  <canvas id="chart-pagos" height="90"></canvas>
-</div>
-
 <!-- Tabla -->
 <div class="card p-0">
   <table class="table-base" data-datatable>
@@ -183,9 +216,44 @@
   </table>
 </div>
 
+<!-- Gráfica -->
+<div class="flex items-center justify-between mt-6 mb-2">
+  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Gráfica</span>
+  <button id="btn-toggle-chart" title="Mostrar / ocultar" class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 transition">
+    <svg id="ico-chart" style="width:14px;height:14px;transition:transform .25s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 15-6-6-6 6"/></svg>
+    <span id="lbl-chart">Ocultar</span>
+  </button>
+</div>
+<div id="pagos-chart-body">
+<div class="card">
+  <h2 class="font-semibold text-slate-800 mb-3">Resumen de pagos</h2>
+  <div class="flex flex-wrap items-center gap-1 mb-4">
+      <% [['hoy','Hoy'],['ayer','Ayer'],['esta_semana','Esta semana'],['este_mes','Este mes'],['este_anio','Este año']].forEach(function(gg) { %>
+        <button type="button" data-chartperiodo="<%= gg[0] %>"
+          class="chart-periodo-btn rounded-lg px-3 py-1.5 text-sm font-medium transition <%= (gg[0] === periodo) ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100' %>">
+          <%= gg[1] %>
+        </button>
+      <% }); %>
+      <span class="mx-1 h-5 w-px bg-slate-200"></span>
+      <input id="chart-desde" class="input-field py-1.5 text-sm" type="date" style="width:140px;" />
+      <span class="text-slate-300 text-sm">–</span>
+      <input id="chart-hasta" class="input-field py-1.5 text-sm" type="date" style="width:140px;" />
+      <button type="button" id="chart-aplicar" class="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 transition">Aplicar</button>
+      <button type="button" id="chart-limpiar" title="Limpiar filtros"
+        class="hidden inline-flex items-center justify-center rounded-lg text-white transition flex-shrink-0"
+        style="width:32px;height:32px;background:#ef4444;"
+        onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+        <svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <canvas id="chart-pagos" height="90"></canvas>
+  </div><!-- /card -->
+</div><!-- /pagos-chart-body -->
+
 <script>
   window.__PAGOS__ = {
     pagos: <%- JSON.stringify(chartPagos).replace(/<\//g, '<\\/') %>,
+    pagosAll: <%- JSON.stringify(chartPagosAll).replace(/<\//g, '<\\/') %>,
     desde: <%- JSON.stringify(desde) %>,
     hasta: <%- JSON.stringify(hasta) %>,
     gran: <%- JSON.stringify(granularidad) %>,
@@ -233,7 +301,8 @@
           meta.data.forEach(function (bar, i) { var v = ds.data[i]; if (!v) return; ctx.save(); ctx.fillStyle = '#475569'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(fmt(v), bar.x, bar.y - 6); ctx.restore(); });
         },
       };
-      var d0 = buckets(D.gran || 'dia');
+      var granActiva = D.gran || 'dia';
+      var d0 = buckets(granActiva);
       var chart = new Chart(canvas, {
         type: 'bar',
         data: { labels: d0.labels, datasets: [{ data: d0.valores, backgroundColor: '#2563EB', borderRadius: 6, maxBarThickness: 46 }] },
@@ -245,23 +314,124 @@
         },
         plugins: [labelPlugin],
       });
-      document.querySelectorAll('[data-gran]').forEach(function (b) {
+
+      function rangoDePeriodo(p) {
+        var hoy = new Date(); hoy.setHours(0,0,0,0);
+        var iso = function(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+        var lunes = function(d) { var x=new Date(d); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; };
+        if (p==='hoy') return { desde: iso(hoy), hasta: iso(hoy) };
+        if (p==='ayer') { var a=new Date(hoy); a.setDate(a.getDate()-1); return { desde: iso(a), hasta: iso(a) }; }
+        if (p==='esta_semana') { var s=lunes(hoy),e=new Date(s); e.setDate(s.getDate()+6); return { desde: iso(s), hasta: iso(e) }; }
+        if (p==='este_mes') return { desde: iso(new Date(hoy.getFullYear(),hoy.getMonth(),1)), hasta: iso(new Date(hoy.getFullYear(),hoy.getMonth()+1,0)) };
+        if (p==='este_anio') return { desde: iso(new Date(hoy.getFullYear(),0,1)), hasta: iso(new Date(hoy.getFullYear(),11,31)) };
+        return { desde: D.desde, hasta: D.hasta };
+      }
+
+      function aplicarRangoChart(desde, hasta, gran) {
+        var filtrado = D.pagosAll.filter(function(p) { return p.f >= desde && p.f <= hasta; });
+        var tempD = D.desde, tempH = D.hasta, tempP = D.pagos;
+        D.desde = desde; D.hasta = hasta; D.pagos = filtrado;
+        var dd = buckets(gran || 'dia');
+        D.desde = tempD; D.hasta = tempH; D.pagos = tempP;
+        chart.data.labels = dd.labels;
+        chart.data.datasets[0].data = dd.valores;
+        chart.update();
+      }
+
+      var btnAplicar = document.getElementById('chart-aplicar');
+      var btnLimpiar = document.getElementById('chart-limpiar');
+      var claseActiva = 'chart-periodo-btn rounded-lg px-3 py-1.5 text-sm font-medium transition bg-blue-600 text-white';
+      var claseInactiva = 'chart-periodo-btn rounded-lg px-3 py-1.5 text-sm font-medium transition text-slate-500 hover:bg-slate-100';
+
+      if (btnAplicar) {
+        btnAplicar.addEventListener('click', function () {
+          var d = document.getElementById('chart-desde').value;
+          var h = document.getElementById('chart-hasta').value;
+          if (!d || !h) return;
+          document.querySelectorAll('.chart-periodo-btn').forEach(function (x) { x.className = claseInactiva; });
+          if (btnLimpiar) btnLimpiar.classList.remove('hidden');
+          aplicarRangoChart(d, h, 'dia');
+        });
+      }
+
+      if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', function () {
+          btnLimpiar.classList.add('hidden');
+          document.getElementById('chart-desde').value = '';
+          document.getElementById('chart-hasta').value = '';
+          aplicarRangoChart(D.desde, D.hasta, D.gran || 'dia');
+        });
+      }
+
+      document.querySelectorAll('.chart-periodo-btn').forEach(function (b) {
         b.addEventListener('click', function () {
-          document.querySelectorAll('[data-gran]').forEach(function (x) { x.classList.remove('periodo-btn-activo'); });
-          b.classList.add('periodo-btn-activo');
-          var dd = buckets(b.dataset.gran);
-          chart.data.labels = dd.labels; chart.data.datasets[0].data = dd.valores; chart.update();
+          document.querySelectorAll('.chart-periodo-btn').forEach(function (x) { x.className = claseInactiva; });
+          b.className = claseActiva;
+          if (btnLimpiar) btnLimpiar.classList.add('hidden');
+          var rango = rangoDePeriodo(b.dataset.chartperiodo);
+          var gran = b.dataset.chartperiodo === 'este_anio' ? 'mes' : 'dia';
+          aplicarRangoChart(rango.desde, rango.hasta, gran);
         });
       });
     }
 
-    // Dropdown de periodo
-    var bp = document.getElementById('btn-periodo'), mp = document.getElementById('menu-periodo');
-    if (bp && mp) {
-      bp.addEventListener('click', function (e) { e.stopPropagation(); mp.classList.toggle('hidden'); });
-      document.addEventListener('click', function () { mp.classList.add('hidden'); });
+    // Toggles persistidos en localStorage
+    var TOGGLE_DUR = 280;
+    function initToggle(btnId, sectionId, icoId, lblId, key, displayVal) {
+      var btn = document.getElementById(btnId);
+      var sec = document.getElementById(sectionId);
+      var ico = document.getElementById(icoId);
+      var lbl = document.getElementById(lblId);
+      if (!btn || !sec) return;
+      var collapsed = false;
+      var busy = false;
+      sec.style.transition = 'opacity ' + TOGGLE_DUR + 'ms ease';
+
+      function setBusy(on) {
+        busy = on;
+        btn.disabled = on;
+        btn.style.opacity = on ? '0.45' : '';
+        btn.style.cursor = on ? 'not-allowed' : '';
+        // spinner: swap label text momentáneamente
+        if (lbl) lbl.textContent = on ? '...' : (collapsed ? 'Mostrar' : 'Ocultar');
+      }
+
+      function aplicar(col, animate) {
+        collapsed = col;
+        localStorage.setItem(key, col ? '1' : '0');
+        if (ico) ico.style.transform = col ? 'rotate(180deg)' : 'rotate(0deg)';
+        if (!animate) {
+          sec.style.display = col ? 'none' : (displayVal || 'block');
+          if (lbl) lbl.textContent = col ? 'Mostrar' : 'Ocultar';
+          return;
+        }
+        setBusy(true);
+        if (col) {
+          sec.style.opacity = '0';
+          setTimeout(function () {
+            sec.style.display = 'none';
+            sec.style.opacity = '';
+            setBusy(false);
+          }, TOGGLE_DUR);
+        } else {
+          sec.style.opacity = '0';
+          sec.style.display = displayVal || 'block';
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              sec.style.opacity = '1';
+              setTimeout(function () {
+                sec.style.opacity = '';
+                setBusy(false);
+              }, TOGGLE_DUR);
+            });
+          });
+        }
+      }
+
+      aplicar(localStorage.getItem(key) === '1', false);
+      btn.addEventListener('click', function () { if (!busy) aplicar(!collapsed, true); });
     }
-    var bpe = document.getElementById('btn-personalizado'), fr = document.getElementById('form-rango');
-    if (bpe && fr) { bpe.addEventListener('click', function () { fr.classList.remove('hidden'); if (mp) mp.classList.add('hidden'); }); }
+    initToggle('btn-toggle-stats', 'pagos-stats', 'ico-stats', 'lbl-stats', 'pagos-stats-v', 'grid');
+    initToggle('btn-toggle-chart', 'pagos-chart-body', 'ico-chart', 'lbl-chart', 'pagos-chart-v', 'block');
   })();
 </script>

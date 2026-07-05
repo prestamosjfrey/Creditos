@@ -22,10 +22,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/vendor/sweetalert2', express.static(path.join(__dirname, 'node_modules/sweetalert2/dist')));
-app.use('/vendor/chartjs', express.static(path.join(__dirname, 'node_modules/chart.js/dist')));
-app.use('/vendor/datatables', express.static(path.join(__dirname, 'node_modules/simple-datatables/dist')));
-app.use('/vendor/tom-select', express.static(path.join(__dirname, 'node_modules/tom-select/dist')));
 
 // Disponible en todas las vistas sin tener que pasarlo en cada render.
 app.use((req, res, next) => {

@@ -66,7 +66,15 @@ async function listarTodos(req, res, next) {
     const chartPagos = pagos.map((p) => ({ f: p.fecha_pago, m: Number(p.monto) }));
     const granularidad = periodo === 'este_anio' ? 'mes' : 'dia';
 
-    res.render('admin/pagos/lista', { titulo: 'Pagos', pagos, stats, periodo, desde, hasta, chartPagos, granularidad });
+    // Todos los pagos del año en curso para el filtro independiente de la gráfica
+    const anoActual = new Date().getFullYear();
+    const { data: todosPagosAnio } = await supabaseAdmin
+      .from('pagos').select('fecha_pago, monto')
+      .gte('fecha_pago', `${anoActual}-01-01`)
+      .lte('fecha_pago', `${anoActual}-12-31`);
+    const chartPagosAll = (todosPagosAnio || []).map((p) => ({ f: p.fecha_pago, m: Number(p.monto) }));
+
+    res.render('admin/pagos/lista', { titulo: 'Pagos', pagos, stats, periodo, desde, hasta, chartPagos, chartPagosAll, granularidad });
   } catch (err) {
     next(err);
   }

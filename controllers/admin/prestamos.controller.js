@@ -88,13 +88,13 @@ async function obtenerListaFiltrada(query) {
   if (desde) tabla = tabla.filter((l) => l.fecha_inicio >= desde);
   if (hasta) tabla = tabla.filter((l) => l.fecha_inicio <= hasta);
 
-  return { tabla, stats, filtro, periodo, desde, hasta };
+  return { tabla, lista, stats, filtro, periodo, desde, hasta };
 }
 
 async function listarTodos(req, res, next) {
   try {
-    const { tabla, stats, filtro, periodo, desde, hasta } = await obtenerListaFiltrada(req.query);
-    res.render('admin/prestamos/lista', { titulo: 'Préstamos', prestamos: tabla, stats, filtro, periodo, desde, hasta });
+    const { tabla, lista, stats, filtro, periodo, desde, hasta } = await obtenerListaFiltrada(req.query);
+    res.render('admin/prestamos/lista', { titulo: 'Préstamos', prestamos: tabla, todosPrestamos: lista, stats, filtro, periodo, desde, hasta });
   } catch (err) {
     next(err);
   }
