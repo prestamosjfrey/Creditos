@@ -1,0 +1,201 @@
+<%
+  var hoy = new Date().toISOString().slice(0, 10);
+  var pagado = cuotas.filter(function(c){ return c.estado === 'pagada'; }).reduce(function(a,c){ return a + Number(c.monto); }, 0);
+  var saldo = Number(credito.monto_total_a_pagar) - pagado;
+  var cuotasPend = cuotas.filter(function(c){ return c.estado !== 'pagada'; });
+  var proxCuota = cuotasPend.sort(function(a,b){ return a.fecha_vencimiento.localeCompare(b.fecha_vencimiento); })[0];
+  var enMora = cuotasPend.some(function(c){ return c.fecha_vencimiento < hoy; });
+%>
+
+<%- include('../../partials/header-admin', {
+  tituloHeader: credito.acreedor,
+  subtituloHeader: 'Crédito tomado · ' + credito.fecha_inicio,
+  mostrarVolver: true,
+  volverUrl: '/admin/creditos-tomados',
+}) %>
+
+<% if (recienCreado) { %>
+  <div class="mb-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700 flex items-center gap-2">
+    <svg class="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+    Crédito registrado correctamente. El capital entró a tu caja disponible.
+  </div>
+<% } %>
+<% if (typeof req !== 'undefined' && req.query && req.query.pago === '1') { %>
+  <div class="mb-4 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">Cuota registrada como pagada.</div>
+<% } %>
+
+<!-- Estado y badge -->
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="flex items-center gap-3">
+    <% if (credito.estado === 'pagado') { %>
+      <span class="badge-exito text-sm px-3 py-1">Pagado</span>
+    <% } else if (enMora) { %>
+      <span class="badge-peligro text-sm px-3 py-1">En mora</span>
+    <% } else { %>
+      <span class="badge-neutro text-sm px-3 py-1">Activo</span>
+    <% } %>
+    <span class="text-sm text-slate-400"><%= credito.frecuencia_pago %> · <%= credito.numero_cuotas %> cuotas</span>
+  </div>
+  <% if (credito.estado === 'activo' && proxCuota) { %>
+    <button type="button" id="btn-abrir-pago"
+      class="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 font-medium text-white transition hover:bg-orange-700 shadow-sm">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125h17.25c.621 0 1.125.504 1.125 1.125v.375m-19.5 0v8.25a1.125 1.125 0 0 0 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-8.25"/></svg>
+      Registrar pago de cuota
+    </button>
+  <% } %>
+</div>
+
+<!-- KPIs -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+  <%- include('../../partials/kpi-card', { titulo: 'Capital recibido', valor: formatCOP(credito.monto_capital) }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'Total a pagar', valor: formatCOP(credito.monto_total_a_pagar) }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'Pagado hasta ahora', valor: formatCOP(pagado) }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'Saldo por pagar', valor: formatCOP(saldo) }) %>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Plan de cuotas -->
+  <div class="lg:col-span-2">
+    <h2 class="font-medium text-slate-700 mb-3">Plan de cuotas</h2>
+    <div class="card overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <th class="pb-3 pr-4">N°</th>
+            <th class="pb-3 pr-4">Vencimiento</th>
+            <th class="pb-3 pr-4">Monto</th>
+            <th class="pb-3 pr-4">Estado</th>
+            <th class="pb-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          <% cuotas.forEach(function(c) {
+            var vencida = c.estado !== 'pagada' && c.fecha_vencimiento < hoy;
+          %>
+            <tr class="<%= c.estado === 'pagada' ? 'opacity-60' : '' %>">
+              <td class="py-3 pr-4 font-mono text-xs text-slate-400"><%= String(c.numero_cuota).padStart(2,'0') %></td>
+              <td class="py-3 pr-4 text-slate-700 <%= vencida ? 'text-red-600 font-medium' : '' %>"><%= c.fecha_vencimiento %></td>
+              <td class="py-3 pr-4 font-semibold text-slate-800"><%= formatCOP(c.monto) %></td>
+              <td class="py-3 pr-4">
+                <% if (c.estado === 'pagada') { %>
+                  <span class="badge-exito">Pagada</span>
+                <% } else if (vencida) { %>
+                  <span class="badge-peligro">Vencida</span>
+                <% } else { %>
+                  <span class="badge-neutro">Pendiente</span>
+                <% } %>
+              </td>
+              <td class="py-3">
+                <% if (c.estado !== 'pagada' && credito.estado === 'activo') { %>
+                  <button type="button"
+                    class="text-xs text-blue-600 hover:underline btn-pagar-cuota"
+                    data-cuota-id="<%= c.id %>"
+                    data-monto="<%= c.monto %>"
+                    data-numero="<%= c.numero_cuota %>">
+                    Pagar
+                  </button>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Info del crédito -->
+  <div class="space-y-4">
+    <div class="card">
+      <h3 class="font-semibold text-slate-700 mb-3 text-sm">Detalles del crédito</h3>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between"><dt class="text-slate-400">Acreedor</dt><dd class="font-medium text-slate-800"><%= credito.acreedor %></dd></div>
+        <div class="flex justify-between"><dt class="text-slate-400">N° crédito</dt><dd class="font-mono text-slate-600"><%= String(credito.numero).padStart(3,'0') %></dd></div>
+        <div class="flex justify-between"><dt class="text-slate-400">Fecha inicio</dt><dd class="text-slate-600"><%= credito.fecha_inicio %></dd></div>
+        <div class="flex justify-between"><dt class="text-slate-400">Primer pago</dt><dd class="text-slate-600"><%= credito.fecha_primer_pago %></dd></div>
+        <div class="flex justify-between"><dt class="text-slate-400">Frecuencia</dt><dd class="text-slate-600 capitalize"><%= credito.frecuencia_pago %></dd></div>
+        <div class="flex justify-between"><dt class="text-slate-400">Cuotas</dt><dd class="text-slate-600"><%= cuotas.filter(function(c){return c.estado==='pagada';}).length %> / <%= credito.numero_cuotas %> pagadas</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-400">Valor cuota</dt><dd class="font-semibold text-slate-800"><%= formatCOP(credito.valor_cuota) %></dd></div>
+        <% if (credito.notas) { %>
+          <div class="pt-2 border-t border-slate-100"><dt class="text-slate-400 text-xs mb-1">Notas</dt><dd class="text-slate-600 text-xs"><%= credito.notas %></dd></div>
+        <% } %>
+      </dl>
+    </div>
+
+    <% if (proxCuota && credito.estado === 'activo') { %>
+      <div class="card <%= enMora ? 'bg-red-50 border border-red-200' : 'bg-orange-50 border border-orange-100' %>">
+        <p class="text-xs font-semibold uppercase tracking-wide <%= enMora ? 'text-red-500' : 'text-orange-500' %> mb-1">Próxima cuota</p>
+        <p class="text-xl font-bold <%= enMora ? 'text-red-700' : 'text-orange-700' %>"><%= formatCOP(proxCuota.monto) %></p>
+        <p class="text-sm <%= enMora ? 'text-red-600' : 'text-orange-600' %> mt-1"><%= proxCuota.fecha_vencimiento %></p>
+        <% if (enMora) { %>
+          <p class="text-xs text-red-500 mt-1 font-medium">Cuota(s) vencida(s)</p>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Modal pago cuota -->
+<div id="modal-pago" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+    <h2 class="font-semibold text-slate-800 text-lg mb-4">Registrar pago — Cuota <span id="modal-num-cuota"></span></h2>
+    <form action="/admin/creditos-tomados/<%= credito.id %>/cuotas" method="POST" id="form-pago-cuota">
+      <input type="hidden" name="cuota_id" id="modal-cuota-id" />
+      <div class="space-y-4">
+        <div>
+          <label class="label-field" for="modal-monto">Monto a pagar</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+            <input class="input-field pl-7 input-moneda" type="text" inputmode="numeric" id="modal-monto" name="monto" required />
+          </div>
+        </div>
+        <div>
+          <label class="label-field" for="modal-fecha">Fecha de pago</label>
+          <input class="input-field" type="date" id="modal-fecha" name="fecha_pago" value="<%= new Date().toISOString().slice(0,10) %>" required />
+        </div>
+        <div>
+          <label class="label-field" for="modal-notas">Notas (opcional)</label>
+          <input class="input-field" type="text" id="modal-notas" name="notas" maxlength="200" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button type="button" id="btn-cerrar-modal" class="btn-secondary">Cancelar</button>
+        <button type="submit" class="btn-primary bg-orange-600 hover:bg-orange-700">Confirmar pago</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  var modal = document.getElementById('modal-pago');
+  var fmt = function(v) { return window.formatearMoneda ? window.formatearMoneda(v) : String(Math.round(v||0)); };
+
+  function abrirModal(cuotaId, monto, numero) {
+    document.getElementById('modal-cuota-id').value = cuotaId;
+    document.getElementById('modal-num-cuota').textContent = numero;
+    var montoEl = document.getElementById('modal-monto');
+    montoEl.value = fmt(monto);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function cerrarModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  document.getElementById('btn-abrir-pago')?.addEventListener('click', function () {
+    var proxCuota = document.querySelector('.btn-pagar-cuota');
+    if (proxCuota) proxCuota.click();
+  });
+
+  document.querySelectorAll('.btn-pagar-cuota').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      abrirModal(btn.dataset.cuotaId, btn.dataset.monto, btn.dataset.numero);
+    });
+  });
+
+  document.getElementById('btn-cerrar-modal')?.addEventListener('click', cerrarModal);
+  modal?.addEventListener('click', function (e) { if (e.target === modal) cerrarModal(); });
+})();
+</script>

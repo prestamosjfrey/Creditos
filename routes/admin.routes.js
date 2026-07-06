@@ -19,6 +19,7 @@ const cajaController = require('../controllers/admin/caja.controller');
 const auditoriaController = require('../controllers/admin/auditoria.controller');
 const archivoController = require('../controllers/admin/archivo.controller');
 const renegociadosController = require('../controllers/admin/renegociados.controller');
+const creditosTomadosController = require('../controllers/admin/creditos-tomados.controller');
 const dashboardService = require('../services/dashboard.service');
 
 router.use(requireAuth, requireAdmin);
@@ -68,6 +69,12 @@ router.get('/pagos', pagosController.listarTodos);
 
 router.get('/caja', cajaController.mostrarCaja);
 router.post('/caja', cajaController.registrarMovimientoManual);
+
+router.get('/creditos-tomados', creditosTomadosController.listarTodos);
+router.get('/creditos-tomados/nuevo', creditosTomadosController.mostrarFormularioNuevo);
+router.post('/creditos-tomados', creditosTomadosController.crearCredito);
+router.get('/creditos-tomados/:id', creditosTomadosController.mostrarDetalle);
+router.post('/creditos-tomados/:id/cuotas', creditosTomadosController.pagarCuota);
 
 router.get('/cobros', cobrosController.mostrarCobros);
 router.post('/cobros/notificar', cobrosController.notificarCobrosHoy);
