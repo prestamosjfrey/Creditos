@@ -27,6 +27,8 @@ async function crearCredito(req, res, next) {
     fecha_inicio, fecha_primer_pago, notas,
   } = req.body;
 
+  const esAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.accepts('json');
+
   try {
     const credito = await creditosService.crearCreditoConPlan({
       acreedor: acreedor?.trim(),
@@ -43,8 +45,14 @@ async function crearCredito(req, res, next) {
       notas: notas || null,
       creado_por: req.usuario.id,
     });
+    if (esAjax) {
+      return res.json({ ok: true, redirigir: `/admin/creditos-tomados/${credito.id}?creado=1` });
+    }
     res.redirect(`/admin/creditos-tomados/${credito.id}?creado=1`);
   } catch (err) {
+    if (esAjax) {
+      return res.status(400).json({ ok: false, mensaje: err.message || 'No se pudo crear el crédito.' });
+    }
     res.status(400).render('admin/creditos-tomados/crear', {
       titulo: 'Nuevo crédito tomado',
       error: err.message || 'No se pudo crear el crédito.',

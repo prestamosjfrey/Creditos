@@ -1,9 +1,17 @@
 <div class="card">
   <div class="flex items-center justify-between gap-2">
     <p class="text-sm text-slate-400"><%= titulo %></p>
-    <% if (typeof verTodoHref !== 'undefined' && verTodoHref) { %>
-      <a href="<%= verTodoHref %>" class="text-xs font-medium text-blue-600 hover:underline whitespace-nowrap">Ver todo</a>
-    <% } %>
+    <div class="flex items-center gap-1.5 shrink-0">
+      <% if (typeof verTodoHref !== 'undefined' && verTodoHref) { %>
+        <a href="<%= verTodoHref %>" class="text-xs font-medium text-blue-600 hover:underline whitespace-nowrap">Ver todo</a>
+      <% } %>
+      <% if (typeof explicaHtml !== 'undefined' && explicaHtml) { %>
+        <button type="button" class="explica-btn text-slate-300 transition hover:text-blue-500" data-explica-titulo="<%= typeof explicaTitulo !== 'undefined' && explicaTitulo ? explicaTitulo : titulo %>" aria-label="¿Cómo se calcula?" title="¿Cómo se calcula?">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-4M12 8h.01"/></svg>
+          <template class="explica-contenido"><%- explicaHtml %></template>
+        </button>
+      <% } %>
+    </div>
   </div>
   <p class="num mt-2 text-2xl font-semibold text-slate-800"><%= valor %></p>
   <% if (typeof nota !== 'undefined' && nota) { %>

@@ -11,10 +11,41 @@
   }
 %>
 
+<style>
+  @keyframes cmp-float  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes cmp-orbit  { from{transform:rotateX(72deg) rotateZ(0deg)}   to{transform:rotateX(72deg) rotateZ(360deg)} }
+  @keyframes cmp-orbit2 { from{transform:rotateX(72deg) rotateZ(180deg)} to{transform:rotateX(72deg) rotateZ(540deg)} }
+  @keyframes cmp-shadow { 0%,100%{transform:translateX(-50%) scale(1);opacity:.35} 50%{transform:translateX(-50%) scale(.8);opacity:.18} }
+  @keyframes cmp-glow   { 0%,100%{opacity:.6} 50%{opacity:1} }
+</style>
+<div class="mb-4 flex flex-col items-center text-center gap-1">
+  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:.25rem">
+    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(37,99,235,.5) 0%,transparent 70%);border-radius:50%;animation:cmp-shadow 3s ease-in-out infinite;"></div>
+    <div style="animation:cmp-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
+      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.22) 0%,transparent 65%);animation:cmp-glow 3s ease-in-out infinite;pointer-events:none;"></div>
+      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(96,165,250,.85);border-bottom:2px solid rgba(96,165,250,.2);transform:rotateX(72deg);animation:cmp-orbit 3.5s linear infinite;pointer-events:none;"></div>
+      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(147,197,253,.7);border-left:1.5px solid rgba(147,197,253,.15);transform:rotateX(72deg) rotateZ(180deg);animation:cmp-orbit2 5s linear infinite;pointer-events:none;"></div>
+      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%,#bfdbfe 0%,#3b82f6 28%,#2563eb 52%,#1d4ed8 70%,#1e3a8a 88%,#172554 100%);box-shadow:0 12px 36px rgba(37,99,235,.65),0 4px 12px rgba(0,0,0,.25),inset 0 -8px 16px rgba(0,0,0,.35),inset 2px 2px 6px rgba(255,255,255,.08);position:relative;display:flex;align-items:center;justify-content:center;"
+        onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)'"
+        onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)'">
+        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,.7) 0%,rgba(255,255,255,.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
+        <svg style="width:32px;height:32px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none">
+          <path d="M6 20V4.5A1.5 1.5 0 0 1 7.5 3H14L17 6V20l-1.375-1-1.375 1-1.375-1-1.375 1-1.375-1-1.375 1-1.375-1-1.375 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M14 3v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="9.4" y="11" text-anchor="middle" font-size="6.2" font-weight="700" font-family="Arial, Helvetica, sans-serif" fill="currentColor">$</text>
+          <path d="M12.3 8.2h2.4M12.3 10.4h2.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M8.3 15l1.4 1.4 2.8-3" stroke="#4ade80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
 <%- include('../../partials/header-admin', {
   tituloHeader: 'Comprobantes',
   subtituloHeader: 'Documentos por cliente: plan de pago, cuotas y paz y salvo de cada préstamo.',
   mostrarVolver: false,
+  centrado: true,
 }) %>
 
 <div class="card">
@@ -91,11 +122,12 @@
                     icono: icoFile, titulo: 'Plan de pago', subtitulo: 'Plan de amortización del préstamo',
                     menuId: 'm-doc-plan-' + p.id, icoIr: icoIr, icoDots: icoDots
                   }) %>
-                  <!-- Cuotas (solo las pagadas tienen comprobante) -->
-                  <% p.cuotas.filter(function(c){ return c.estado === 'pagada'; }).forEach(function(c) { %>
+                  <!-- Cuotas con algún pago (pagadas o parciales) -->
+                  <% p.cuotas.filter(function(c){ return c.estado === 'pagada' || c.estado === 'parcial'; }).forEach(function(c) { %>
                     <%- include('partial-fila', {
                       href: '/admin/prestamos/' + p.id + '/cuotas/' + c.id + '/comprobante',
-                      icono: icoFolder, titulo: 'Cuota ' + c.numero_cuota, subtitulo: 'Comprobante de pago',
+                      icono: icoFolder, titulo: 'Cuota ' + c.numero_cuota,
+                      subtitulo: c.estado === 'parcial' ? 'Comprobante · pago parcial' : 'Comprobante de pago',
                       menuId: 'm-doc-c' + c.id, icoIr: icoIr, icoDots: icoDots
                     }) %>
                   <% }); %>

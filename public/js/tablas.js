@@ -2,7 +2,7 @@
 // orden y paginación), usando simple-datatables (vanilla JS, sin jQuery).
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('table[data-datatable]').forEach((tabla) => {
-    new simpleDatatables.DataTable(tabla, {
+    tabla.datatableInstance = new simpleDatatables.DataTable(tabla, {
       perPage: 10,
       // Algunas tablas tienen su propia barra de búsqueda (servidor); en ese
       // caso se marca con data-no-search para no duplicar el buscador.

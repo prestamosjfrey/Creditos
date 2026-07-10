@@ -194,25 +194,23 @@
      cajón con fondo oscuro. */
 #sidebar-admin { transition: transform 0.2s ease; }
 .app-main { transition: margin-left 0.2s ease; }
-#btn-abrir-sidebar { display: none; }
 #sidebar-backdrop { display: none; }
+/* La barra pegajosa con el botón solo aparece cuando hace falta abrir el menú;
+   el contenido usa todo el ancho (sin carril desperdiciado). */
+#barra-toggle { display: none; }
 
 @media (min-width: 1024px) {
   .app-main { margin-left: 16rem; }
   html.sidebar-collapsed #sidebar-admin { transform: translateX(-100%); }
   html.sidebar-collapsed .app-main { margin-left: 0; }
-  /* Solo el header (primer bloque) se corre para dejar el hamburguesa a su lado. */
-  html.sidebar-collapsed .app-main > :first-child { padding-left: 3.5rem; }
-  html.sidebar-collapsed #btn-abrir-sidebar { display: inline-flex; }
+  html.sidebar-collapsed #barra-toggle { display: block; }
 }
 
 @media (max-width: 1023px) {
   .app-main { margin-left: 0; }
-  /* El hamburguesa flota a la izquierda del header, en la misma línea. */
-  .app-main > :first-child { padding-left: 3.5rem; }
   #sidebar-admin { transform: translateX(-100%); }
-  #btn-abrir-sidebar { display: inline-flex; }
+  #barra-toggle { display: block; }
   html.sidebar-mobile-open #sidebar-admin { transform: translateX(0); }
-  html.sidebar-mobile-open #btn-abrir-sidebar { display: none; }
+  html.sidebar-mobile-open #barra-toggle { display: none; }
   html.sidebar-mobile-open #sidebar-backdrop { display: block; }
 }

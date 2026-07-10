@@ -27,14 +27,23 @@
   <% if (esAdmin) { %>
     <%- include('../partials/sidebar-admin') %>
     <div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-slate-900/50"></div>
-    <button type="button" id="btn-abrir-sidebar" class="fixed left-4 top-5 z-50 h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50" aria-label="Abrir menú">
-      <svg class="mx-auto h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
-    </button>
   <% } else if (esCliente) { %>
     <%- include('../partials/header-cliente') %>
   <% } %>
 
   <main class="<%= esAdmin ? 'app-main max-w-[1600px] px-6 sm:px-8' : esCliente ? 'mx-auto max-w-lg px-4 sm:px-6 pb-24' : 'mx-auto max-w-6xl px-4 sm:px-6' %> py-6">
+    <% if (esAdmin) { %>
+      <!-- Barra pegajosa con el botón para abrir el menú. Se queda arriba al
+           hacer scroll y su fondo evita que el contenido quede por debajo. -->
+      <div id="barra-toggle" class="sticky top-0 z-40 -mx-6 sm:-mx-8 -mt-6 mb-4 border-b border-slate-100 bg-slate-50/85 px-6 sm:px-8 py-2.5 backdrop-blur">
+        <button type="button" id="btn-abrir-sidebar" aria-label="Abrir menú"
+          style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:.75rem;background:linear-gradient(145deg,#f8fafc 0%,#e2e8f0 60%,#cbd5e1 100%);color:#475569;border:1px solid rgba(255,255,255,.9);box-shadow:0 4px 10px rgba(100,116,139,.25),0 1px 3px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.95);transition:transform .15s ease,box-shadow .15s ease;"
+          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(100,116,139,.35),0 2px 6px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.95)'"
+          onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 10px rgba(100,116,139,.25),0 1px 3px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.95)'">
+          <svg style="width:18px;height:18px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.15))" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    <% } %>
     <%- body %>
   </main>
 
@@ -45,6 +54,9 @@
   <% } %>
 
   <%- include('../partials/flash-script') %>
+  <% if (esAdmin) { %>
+    <%- include('../partials/modal-explica') %>
+  <% } %>
   <script src="/js/main.js"></script>
   <% if (esAdmin) { %>
     <script src="/js/tablas.js"></script>

@@ -52,6 +52,11 @@ async function registrarAbono({ prestamoId, cuotaId, monto, fechaPago, metodo, n
     cuotas = await obtenerCuotasPendientesOrdenadas(prestamoId);
   }
 
+  // Reparto real de este abono entre las cuotas (FIFO). Se guarda en el pago
+  // para que el comprobante muestre exactamente a qué cuotas fue el dinero y
+  // quede como registro auditable (no se recalcula al vuelo).
+  const distribucion = [];
+
   for (const cuota of cuotas) {
     if (restante <= 0) break;
     const saldoCuota = Number(cuota.monto_esperado) - Number(cuota.monto_pagado);
@@ -73,6 +78,14 @@ async function registrarAbono({ prestamoId, cuotaId, monto, fechaPago, metodo, n
 
     await supabaseAdmin.from('cuotas').update(cambios).eq('id', cuota.id);
 
+    distribucion.push({
+      cuota_id: cuota.id,
+      cuota_numero: cuota.numero_cuota,
+      monto_aplicado: aplicado,
+      saldo_cuota: Math.round((Number(cuota.monto_esperado) - nuevoPagado) * 100) / 100,
+      estado_resultante: nuevoEstado,
+    });
+
     if (nuevoEstado === 'pagada') {
       await auditoria.registrar({
         tipo: 'cuota_pagada',
@@ -85,6 +98,16 @@ async function registrarAbono({ prestamoId, cuotaId, monto, fechaPago, metodo, n
 
     restante -= aplicado;
   }
+
+  // Excedente que no se pudo aplicar (el préstamo ya estaba saldado): queda a
+  // favor y se refleja en el comprobante.
+  const excedente = Math.round(restante * 100) / 100;
+
+  // Guardar el reparto (y el excedente si lo hubo) en el pago.
+  await supabaseAdmin
+    .from('pagos')
+    .update({ distribucion: { aplicaciones: distribucion, excedente } })
+    .eq('id', pago.id);
 
   await actualizarEstadoPrestamoSiCompletado(prestamoId, registradoPor);
 
@@ -233,6 +256,25 @@ async function registrarPagoInteres({ prestamoId, cuotaId, monto, fechaPago, met
       .update({ monto_pagado: nuevoPagado, estado: nuevoEstado })
       .eq('id', cuota.id);
   }
+
+  // Reparto del pago de interés (una sola cuota) para el comprobante.
+  const estadoResultante = accion === 'extension' ? 'pagada' : (nuevoPagado >= esperado ? 'pagada' : 'parcial');
+  await supabaseAdmin
+    .from('pagos')
+    .update({
+      distribucion: {
+        aplicaciones: [{
+          cuota_id: cuota.id,
+          cuota_numero: cuota.numero_cuota,
+          monto_aplicado: aplicado,
+          saldo_cuota: accion === 'extension' ? 0 : saldoCapitalCuota,
+          estado_resultante: estadoResultante,
+        }],
+        excedente: 0,
+        tipo: 'interes',
+      },
+    })
+    .eq('id', pago.id);
 
   // El interés recibido es efectivo real → entra a la caja disponible.
   await cajaService.registrarMovimiento({

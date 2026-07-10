@@ -1,0 +1,61 @@
+<!-- Modal reutilizable "¿Cómo se calcula?" — estilo tipo SweetAlert.
+     Lo dispara cualquier botón .explica-btn que lleve dentro un
+     <template class="explica-contenido"> con el HTML a mostrar. -->
+<div id="modal-explica" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" data-cerrar-explica></div>
+  <div id="modal-explica-dialog" class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
+    <button type="button" class="absolute right-4 top-4 text-slate-300 transition hover:text-slate-500" data-cerrar-explica aria-label="Cerrar">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="px-6 pt-8 pb-6">
+      <!-- Ícono grande centrado -->
+      <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-lg shadow-blue-500/30 ring-8 ring-blue-50">
+        <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-4M12 8h.01"/></svg>
+      </div>
+      <h3 id="modal-explica-titulo" class="text-center text-lg font-bold text-slate-800 mb-4"></h3>
+      <div id="modal-explica-cuerpo" class="text-sm text-slate-600 leading-relaxed space-y-3 max-h-[60vh] overflow-y-auto"></div>
+    </div>
+  </div>
+</div>
+<style>
+  @keyframes modal-explica-in {
+    from { opacity: 0; transform: scale(.92) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes modal-explica-fade { from { opacity: 0; } to { opacity: 1; } }
+  #modal-explica:not(.hidden) #modal-explica-dialog { animation: modal-explica-in .22s cubic-bezier(.16,1,.3,1); }
+  #modal-explica:not(.hidden) { animation: modal-explica-fade .15s ease-out; }
+  /* Las tablas de desglose se leen mejor alineadas a la izquierda. */
+  #modal-explica-cuerpo table td:first-child { text-align: left; }
+</style>
+<script>
+  (function () {
+    var modal = document.getElementById('modal-explica');
+    if (!modal) return;
+    var titulo = document.getElementById('modal-explica-titulo');
+    var cuerpo = document.getElementById('modal-explica-cuerpo');
+
+    function abrir(t, html) {
+      titulo.textContent = t || 'Detalle del cálculo';
+      cuerpo.innerHTML = html || '';
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    function cerrar() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.explica-btn');
+      if (btn) {
+        e.preventDefault();
+        var tpl = btn.querySelector('.explica-contenido');
+        abrir(btn.getAttribute('data-explica-titulo'), tpl ? tpl.innerHTML : '');
+        return;
+      }
+      if (e.target.closest('[data-cerrar-explica]')) cerrar();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') cerrar(); });
+  })();
+</script>

@@ -14,6 +14,33 @@
   function fmtFecha(iso) { if(!iso) return '—'; var d=new Date(iso+'T00:00:00'); return d.getDate().toString().padStart(2,'0')+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getFullYear(); }
 %>
 
+<!-- Icono 3D -->
+<style>
+  @keyframes cob-float  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes cob-orbit  { from{transform:rotateX(72deg) rotateZ(0deg)}   to{transform:rotateX(72deg) rotateZ(360deg)} }
+  @keyframes cob-orbit2 { from{transform:rotateX(72deg) rotateZ(180deg)} to{transform:rotateX(72deg) rotateZ(540deg)} }
+  @keyframes cob-shadow { 0%,100%{transform:translateX(-50%) scale(1);opacity:.35} 50%{transform:translateX(-50%) scale(.8);opacity:.18} }
+  @keyframes cob-glow   { 0%,100%{opacity:.6} 50%{opacity:1} }
+</style>
+<div class="mb-4 flex flex-col items-center text-center gap-1">
+  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:.25rem">
+    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(8,145,178,.5) 0%,transparent 70%);border-radius:50%;animation:cob-shadow 3s ease-in-out infinite;"></div>
+    <div style="animation:cob-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
+      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(8,145,178,.22) 0%,transparent 65%);animation:cob-glow 3s ease-in-out infinite;pointer-events:none;"></div>
+      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(34,211,238,.85);border-bottom:2px solid rgba(34,211,238,.2);transform:rotateX(72deg);animation:cob-orbit 3.5s linear infinite;pointer-events:none;"></div>
+      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(103,232,249,.7);border-left:1.5px solid rgba(103,232,249,.15);transform:rotateX(72deg) rotateZ(180deg);animation:cob-orbit2 5s linear infinite;pointer-events:none;"></div>
+      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%,#a5f3fc 0%,#22d3ee 28%,#06b6d4 52%,#0891b2 70%,#0e7490 88%,#083344 100%);box-shadow:0 12px 36px rgba(8,145,178,.65),0 4px 12px rgba(0,0,0,.25),inset 0 -8px 16px rgba(0,0,0,.35),inset 2px 2px 6px rgba(255,255,255,.08);position:relative;display:flex;align-items:center;justify-content:center;"
+        onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)'"
+        onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)'">
+        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,.7) 0%,rgba(255,255,255,.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
+        <svg style="width:30px;height:30px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Header -->
 <div class="mb-6 flex items-start justify-between gap-4">
   <div>

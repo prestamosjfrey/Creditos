@@ -265,15 +265,27 @@ async function generarComprobantePago(req, res, next) {
 async function generarComprobanteCuota(req, res, next) {
   try {
     const { id, cuotaId } = req.params;
-    const { prestamo, cuotas } = await prestamosService.obtenerPrestamoConCuotas(id);
+    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id);
     if (!prestamo) return res.status(404).render('errores/404');
     const cuota = cuotas.find((c) => c.id === cuotaId);
     if (!cuota) return res.status(404).render('errores/404');
 
+    // Método(s) de pago de los abonos que aplicaron a esta cuota (según la
+    // distribución guardada). Si son varios distintos → "Varios".
+    const METODOS = { efectivo: 'Efectivo', transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', otro: 'Otro' };
+    const metodosSet = new Set();
+    (pagos || []).forEach((p) => {
+      const aplic = p.distribucion && Array.isArray(p.distribucion.aplicaciones) ? p.distribucion.aplicaciones : [];
+      if (aplic.some((a) => a.cuota_id === cuotaId) && p.metodo) {
+        metodosSet.add(METODOS[p.metodo] || p.metodo);
+      }
+    });
+    const metodoPago = metodosSet.size === 0 ? null : (metodosSet.size === 1 ? [...metodosSet][0] : 'Varios');
+
     const disp = req.query.ver === '1' ? 'inline' : 'attachment';
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `${disp}; filename="cuota-${cuota.numero_cuota}.pdf"`);
-    comprobanteService.generarComprobanteCuotaPDF({ prestamo, cuota }, res);
+    comprobanteService.generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago }, res);
   } catch (err) {
     next(err);
   }

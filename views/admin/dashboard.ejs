@@ -9,26 +9,60 @@
 }) %>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-  <div class="hero-card lg:col-span-2 flex items-center justify-between">
-    <div>
-      <p class="text-sm text-white/80">Disponible para préstamo</p>
-      <p class="num mt-2 text-3xl font-semibold"><%= formatCOP(saldoDisponible) %></p>
-      <% if (saldoDisponible < 0) { %>
-        <span class="badge bg-white/20 text-white mt-3 inline-flex">⚠ Saldo en negativo</span>
+  <%
+    var capitalPropio = saldoDisponible - creditosTomados.capitalRecibido;
+    var tieneDeuda = creditosTomados.activos > 0;
+  %>
+  <div class="hero-card lg:col-span-2">
+    <!-- Fila superior: saldo y deuda -->
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-white/60">Saldo en caja</p>
+        <p class="num mt-1 text-3xl font-bold">
+          <%= formatCOP(saldoDisponible) %>
+        </p>
+        <span class="mt-2 inline-flex items-center gap-1 text-xs text-white/70">
+          👥 <%= resumenDestacado.clientesActivos %> cliente<%= resumenDestacado.clientesActivos !== 1 ? 's' : '' %> activo<%= resumenDestacado.clientesActivos !== 1 ? 's' : '' %>
+        </span>
+      </div>
+      <% if (tieneDeuda) { %>
+      <a href="/admin/creditos-tomados" class="flex flex-col items-end text-right hover:opacity-80 transition shrink-0">
+        <p class="text-xs font-semibold uppercase tracking-wide text-orange-300">Deuda propia</p>
+        <p class="num text-xl font-bold text-orange-200 mt-0.5"><%= formatCOP(creditosTomados.totalDeuda) %></p>
+        <p class="text-[11px] text-white/50 mt-0.5">
+          <%= creditosTomados.activos %> crédito<%= creditosTomados.activos > 1 ? 's' : '' %> tomado<%= creditosTomados.activos > 1 ? 's' : '' %> activo<%= creditosTomados.activos > 1 ? 's' : '' %>
+        </p>
+      </a>
       <% } else { %>
-        <span class="badge bg-white/20 text-white mt-3 inline-flex">👥 <%= resumenDestacado.clientesActivos %> clientes activos</span>
+      <div class="flex flex-col items-end text-right shrink-0">
+        <p class="text-xs text-white/60">Este mes</p>
+        <p class="text-sm font-semibold">+<%= formatCOP(resumenDestacado.interesesEsteMes) %></p>
+        <p class="text-[11px] text-white/50">Intereses generados</p>
+      </div>
       <% } %>
     </div>
-    <div class="hidden sm:flex flex-col items-center gap-2">
-      <span class="flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
-        <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3" /></svg>
-      </span>
-      <div class="text-center">
-        <p class="text-xs text-white/70">Este mes</p>
-        <p class="text-sm font-semibold">+<%= formatCOP(resumenDestacado.interesesEsteMes) %></p>
-        <p class="text-[11px] text-white/60">Intereses generados</p>
+
+    <!-- Fila inferior: descomposición del saldo -->
+    <% if (tieneDeuda) { %>
+    <div class="mt-4 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+      <div class="rounded-xl bg-white/10 px-3 py-2.5">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-white/50">Capital propio en caja</p>
+        <p class="num text-base font-bold mt-0.5 <%= capitalPropio < 0 ? 'text-red-300' : 'text-white' %>">
+          <%= formatCOP(capitalPropio) %>
+        </p>
+        <% if (capitalPropio < 0) { %>
+          <p class="text-[11px] text-red-300/70 mt-0.5">Todo tu capital está en cartera</p>
+        <% } else { %>
+          <p class="text-[11px] text-white/40 mt-0.5">Sin deuda de acreedores</p>
+        <% } %>
+      </div>
+      <div class="rounded-xl bg-white/10 px-3 py-2.5">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-white/50">Capital de acreedores</p>
+        <p class="num text-base font-bold mt-0.5 text-orange-200"><%= formatCOP(creditosTomados.capitalRecibido) %></p>
+        <p class="text-[11px] text-white/40 mt-0.5">Debes pagar <%= formatCOP(creditosTomados.totalDeuda) %></p>
       </div>
     </div>
+    <% } %>
   </div>
 
   <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3">
@@ -59,8 +93,37 @@
   </div>
 </div>
 
+<%
+  // Botón de ayuda reutilizable para las tarjetas del dashboard.
+  function btnExplica(titulo, contenidoHtml) {
+    return '<button type="button" class="explica-btn absolute top-3 right-3 text-slate-300 transition hover:text-blue-500" data-explica-titulo="' + titulo + '" aria-label="¿Cómo se calcula?" title="¿Cómo se calcula?">' +
+      '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-4M12 8h.01"/></svg>' +
+      '<template class="explica-contenido">' + contenidoHtml + '</template></button>';
+  }
+
+  // Tabla de desglose por préstamo: muestra de dónde sale el total.
+  // valorFn devuelve el aporte de cada préstamo (o null para omitirlo).
+  var _desglose = (kpis && kpis.desglose) ? kpis.desglose : [];
+  function tablaDesglose(valorFn, total) {
+    var filas = '';
+    _desglose.forEach(function (it) {
+      var v = valorFn(it);
+      if (v === null || v === undefined) return;
+      filas += '<tr>' +
+        '<td class="py-0.5 pr-2 text-slate-500">N° ' + String(it.numero || 0).padStart(5, '0') + ' · ' + it.cliente + '</td>' +
+        '<td class="py-0.5 text-right num text-slate-700 whitespace-nowrap">' + formatCOP(v) + '</td></tr>';
+    });
+    if (!filas) filas = '<tr><td colspan="2" class="py-1 text-slate-400">Aún no hay préstamos que sumen aquí.</td></tr>';
+    return '<div class="rounded-lg border border-slate-100 bg-slate-50/60 p-2 mt-1">' +
+      '<p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Desglose por préstamo</p>' +
+      '<table class="w-full text-xs"><tbody>' + filas + '</tbody>' +
+      '<tfoot><tr><td class="pt-1.5 border-t border-slate-200 font-semibold text-slate-700">Total</td>' +
+      '<td class="pt-1.5 border-t border-slate-200 text-right num font-semibold text-slate-800 whitespace-nowrap">' + formatCOP(total) + '</td></tr></tfoot></table></div>';
+  }
+%>
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  <div class="card flex items-start gap-3">
+  <div class="card flex items-start gap-3 relative">
+    <%- btnExplica('Capital prestado', '<p><strong>Capital prestado (histórico)</strong></p><p>Suma del capital de <strong>todos</strong> los préstamos creados: <strong>' + formatCOP(kpis.capitalPrestado) + '</strong>.</p><p class="text-slate-400">Es cuánto dinero has entregado en total, sin importar si ya te lo pagaron.</p>' + tablaDesglose(function(it){ return it.capital; }, kpis.capitalPrestado)) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3" /></svg>
     </span>
@@ -71,7 +134,8 @@
     </div>
   </div>
 
-  <div class="card flex items-start gap-3">
+  <div class="card flex items-start gap-3 relative">
+    <%- btnExplica('Total recuperado', '<p><strong>Total recuperado</strong></p><p>Suma de <strong>todos los abonos</strong> registrados en todos los préstamos: <strong>' + formatCOP(kpis.totalRecuperado) + '</strong>.</p><p class="text-slate-400">Es todo el dinero que ha vuelto a la caja (capital + interés juntos).</p>' + tablaDesglose(function(it){ return it.pagado; }, kpis.totalRecuperado)) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182.553-.439 1.278-.659 2.003-.659.725 0 1.45.22 2.003.659l.659.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
     </span>
@@ -82,7 +146,8 @@
     </div>
   </div>
 
-  <div class="card flex items-start gap-3">
+  <div class="card flex items-start gap-3 relative">
+    <%- btnExplica('Interés cobrado', '<p><strong>Interés cobrado (aproximado)</strong></p><p>Por cada préstamo se toma su interés pactado y se multiplica por el <strong>% ya pagado</strong>. Ejemplo: si un préstamo va al 60% de su total, se cuenta el 60% de su interés.</p><p>La suma de todos da <strong>' + formatCOP(kpis.interesesCobrados) + '</strong>.</p><p class="text-slate-400">Es una estimación del interés real que ya entró a caja.</p>' + tablaDesglose(function(it){ return it.interesCobrado; }, kpis.interesesCobrados)) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
         <line x1="19" y1="5" x2="5" y2="19" stroke-linecap="round" />
@@ -97,7 +162,8 @@
     </div>
   </div>
 
-  <div class="card flex items-start gap-3">
+  <div class="card flex items-start gap-3 relative">
+    <%- btnExplica('Pendiente por cobrar', '<p><strong>Pendiente por cobrar = Total − Abonado</strong></p><p>Suma de los saldos pendientes (Total a pagar menos lo abonado) de todos los préstamos que aún deben: <strong>' + formatCOP(kpis.carteraActiva) + '</strong>.</p><p class="text-slate-400">Es el dinero que todavía te falta por recibir de la cartera activa.</p>' + tablaDesglose(function(it){ return it.saldo > 0 ? it.saldo : null; }, kpis.carteraActiva)) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3" /></svg>
     </span>

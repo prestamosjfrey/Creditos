@@ -46,7 +46,9 @@ function generarComprobantePDF({ prestamo, cuotas, pagos }, stream) {
   const interesTotal = Math.max(0, total - capital);
   const interesPorCuota = Math.round(interesTotal / Number(prestamo.numero_cuotas || 1));
   const capitalPorCuota = Number(prestamo.valor_cuota) - interesPorCuota;
-  const pct = capital > 0 ? Math.round((interesTotal / capital) * 100) : 0;
+  const nCuotas = Number(prestamo.numero_cuotas || 1);
+  const pctTotal = capital > 0 ? (interesTotal / capital) * 100 : 0;
+  const pct = nCuotas > 0 ? Math.round((pctTotal / nCuotas) * 10) / 10 : 0;
   const pagadas = (cuotas || []).filter((c) => c.estado === 'pagada').length;
   const abonado = (pagos || []).reduce((a, p) => a + Number(p.monto), 0);
   const saldo = total - abonado;
@@ -75,7 +77,7 @@ function generarComprobantePDF({ prestamo, cuotas, pagos }, stream) {
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26).text('C', L, 47, { width: 50, align: 'center' });
   doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cartera', 96, 42);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Gestión de préstamos', 96, 62);
-  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('ESTADO DE CUENTA', 250, 40);
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('PLAN DE PAGO', 250, 40);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Resumen de tu préstamo', 250, 57);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('N° de préstamo:', 250, 70, { continued: true });
   doc.fillColor(AZUL).font('Helvetica-Bold').text(' ' + numeroMostrar);
@@ -201,124 +203,386 @@ function encabezado(doc, titulo) {
 }
 
 // Comprobante de pago de UNA cuota.
-function generarComprobanteCuotaPDF({ prestamo, cuota }, stream) {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+function generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago }, stream) {
+  const doc = new PDFDocument({ size: 'A4', margin: 36 });
   doc.pipe(stream);
+
   const cliente = prestamo.perfiles || {};
   const { capital, interes } = calcularDesglose(prestamo)(cuota);
 
-  encabezado(doc, 'Comprobante de pago — Cuota #' + cuota.numero_cuota);
+  const NAVY = '#0f172a';
+  const AZUL = '#2563eb';
+  const GRIS = '#94a3b8';
+  const VERDE = '#16a34a';
+  const L = 36, R = 559;
 
-  let y = 125;
-  doc.fontSize(10).fillColor('#64748b').text('Cliente: ', 50, y, { continued: true }).fillColor('#0f172a').text(cliente.nombre_completo || '—');
-  doc.fillColor('#64748b').text('Cédula: ', 50, y + 16, { continued: true }).fillColor('#0f172a').text(cliente.numero_documento || '—');
+  const ahora = new Date();
+  const fechaEmision = ahora.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+  const hora = ahora.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  const numeroMostrar = prestamo.numero != null ? String(prestamo.numero).padStart(5, '0') : numeroPrestamo(prestamo.id);
+  const estaPagada = cuota.estado === 'pagada';
 
-  y += 50;
-  const filas = [
-    ['Cuota número', String(cuota.numero_cuota)],
-    ['Fecha de vencimiento', fechaLegible(cuota.fecha_vencimiento)],
-    ['Abono a capital', formatCOP(capital)],
-    ['Interés de la cuota', formatCOP(interes)],
-    ['Valor de la cuota', formatCOP(cuota.monto_esperado)],
-    ['Estado', ESTADO_CUOTA[cuota.estado] || cuota.estado],
-    ['Días de atraso al pagar', cuota.dias_atraso === null || cuota.dias_atraso === undefined ? '—' : String(cuota.dias_atraso)],
+  // ---------- ENCABEZADO ----------
+  doc.roundedRect(L, 34, 50, 50, 10).fill(NAVY);
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26).text('C', L, 47, { width: 50, align: 'center' });
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cartera', 96, 42);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Gestión de préstamos', 96, 62);
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('COMPROBANTE DE CUOTA', 250, 40);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Cuota N° ' + cuota.numero_cuota, 250, 57);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('N° de préstamo:', 250, 70, { continued: true });
+  doc.fillColor(AZUL).font('Helvetica-Bold').text(' ' + numeroMostrar);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(7).text('Fecha de emisión', 430, 38, { width: 129 });
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(8).text(fechaEmision, 430, 48, { width: 129 });
+  doc.fillColor(GRIS).font('Helvetica').fontSize(7).text('Hora', 430, 62, { width: 129 });
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(8).text(hora, 430, 72, { width: 129 });
+  doc.moveTo(L, 96).lineTo(R, 96).lineWidth(1).strokeColor('#e2e8f0').stroke();
+
+  // ---------- TARJETA CLIENTE ----------
+  doc.roundedRect(L, 106, 523, 86, 10).lineWidth(0.8).strokeColor('#e2e8f0').stroke();
+  doc.circle(70, 142, 22).fill('#dbeafe');
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(15).text(iniciales(cliente.nombre_completo), 48, 134, { width: 44, align: 'center' });
+
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('NOMBRE', 104, 122);
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(12).text((cliente.nombre_completo || '—') + ' (' + (prestamo.frecuencia_pago || '').toUpperCase() + ')', 104, 132, { width: 230 });
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('DOCUMENTO', 348, 122);
+  doc.fillColor(NAVY).font('Helvetica').fontSize(11).text(cliente.numero_documento || '—', 348, 132);
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('TELÉFONO', 458, 122);
+  doc.fillColor(NAVY).font('Helvetica').fontSize(11).text(cliente.telefono || '—', 458, 132);
+
+  doc.moveTo(52, 164).lineTo(543, 164).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('DIRECCIÓN', 52, 173);
+  doc.fillColor(NAVY).font('Helvetica').fontSize(10).text(cliente.direccion || '—', 120, 172, { width: 420 });
+
+  // ---------- TABLA AZUL (desglose de la cuota) ----------
+  const tablaY = 206;
+  const cols = [
+    { t: 'CUOTA N°',      w: 70,  v: String(cuota.numero_cuota) },
+    { t: 'VENCIMIENTO',   w: 100, v: fechaLegible(cuota.fecha_vencimiento) },
+    { t: 'ABONO CAPITAL', w: 100, v: formatCOP(capital) },
+    { t: 'INTERÉS',       w: 90,  v: formatCOP(interes) },
+    { t: 'VALOR CUOTA',   w: 100, v: formatCOP(cuota.monto_esperado) },
+    { t: 'ESTADO',        w: 63,  v: ESTADO_CUOTA[cuota.estado] || cuota.estado, color: estaPagada ? VERDE : (cuota.estado === 'parcial' ? '#d97706' : NAVY) },
   ];
-  doc.fontSize(11);
-  filas.forEach((f, i) => {
-    const fy = y + i * 22;
-    doc.fillColor('#64748b').text(f[0], 50, fy);
-    doc.fillColor('#0f172a').text(f[1], 300, fy);
+  doc.rect(L, tablaY, 523, 28).fill(AZUL);
+  doc.rect(L, tablaY + 28, 523, 32).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+  let cx = L;
+  cols.forEach((c) => {
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(6.5).text(c.t, cx + 2, tablaY + 9, { width: c.w - 4, align: 'center' });
+    doc.fillColor(c.color || NAVY).font('Helvetica-Bold').fontSize(9).text(c.v, cx + 2, tablaY + 28 + 11, { width: c.w - 4, align: 'center' });
+    cx += c.w;
   });
 
-  y += filas.length * 22 + 30;
-  doc.fontSize(8).fillColor('#64748b').text(
+  // Estado real de pago de la cuota (para reflejar pagos parciales).
+  const montoPagado = Number(cuota.monto_pagado || 0);
+  const saldoCuota = Math.round((Number(cuota.monto_esperado) - montoPagado) * 100) / 100;
+  const esParcial = cuota.estado === 'parcial';
+
+  // ---------- CAJA DE ESTADO DE PAGO ----------
+  const cajaY = tablaY + 78;
+  if (estaPagada) {
+    doc.roundedRect(L, cajaY, 523, 70, 10).fill('#ecfdf5');
+    doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(9).text('CUOTA PAGADA', L, cajaY + 14, { width: 523, align: 'center' });
+    doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(28).text(formatCOP(cuota.monto_esperado), L, cajaY + 28, { width: 523, align: 'center' });
+    if (metodoPago) {
+      doc.fillColor('#15803d').font('Helvetica-Bold').fontSize(8).text('MÉTODO', R - 150, cajaY + 20, { width: 130, align: 'right' });
+      doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text(metodoPago, R - 150, cajaY + 33, { width: 130, align: 'right' });
+    }
+  } else if (esParcial) {
+    doc.roundedRect(L, cajaY, 523, 70, 10).fill('#fffbeb');
+    doc.fillColor('#d97706').font('Helvetica-Bold').fontSize(9).text('PAGO PARCIAL', L + 20, cajaY + 12);
+    doc.fillColor('#d97706').font('Helvetica-Bold').fontSize(22).text(formatCOP(montoPagado), L + 20, cajaY + 26);
+    doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('pagado de ' + formatCOP(cuota.monto_esperado) + (metodoPago ? '  ·  ' + metodoPago : ''), L + 20, cajaY + 52);
+    doc.fillColor('#dc2626').font('Helvetica-Bold').fontSize(9).text('PENDIENTE', 340, cajaY + 16, { width: 200, align: 'right' });
+    doc.fillColor('#dc2626').font('Helvetica-Bold').fontSize(22).text(formatCOP(saldoCuota), 340, cajaY + 30, { width: 200, align: 'right' });
+  } else {
+    doc.roundedRect(L, cajaY, 523, 70, 10).fill('#f8fafc');
+    doc.fillColor(GRIS).font('Helvetica-Bold').fontSize(9).text('PENDIENTE DE PAGO', L, cajaY + 14, { width: 523, align: 'center' });
+    doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(28).text(formatCOP(cuota.monto_esperado), L, cajaY + 28, { width: 523, align: 'center' });
+  }
+
+  // ---------- DETALLES ----------
+  const detY = cajaY + 90;
+  doc.moveTo(L, detY).lineTo(R, detY).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(10).text('DETALLE DE LA CUOTA', L, detY + 12);
+  doc.moveTo(L, detY + 26).lineTo(R, detY + 26).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+
+  const detalles = [
+    ['Cuota número',         String(cuota.numero_cuota)],
+    ['Fecha de vencimiento', fechaLegible(cuota.fecha_vencimiento)],
+    ['Abono a capital',      formatCOP(capital)],
+    ['Interés de la cuota',  formatCOP(interes)],
+    ['Valor de la cuota',    formatCOP(cuota.monto_esperado)],
+    ['Pagado hasta ahora',   formatCOP(montoPagado)],
+    ['Saldo pendiente de la cuota', formatCOP(saldoCuota)],
+    ['Estado',               ESTADO_CUOTA[cuota.estado] || cuota.estado],
+    ['Días de atraso al pagar', cuota.dias_atraso === null || cuota.dias_atraso === undefined ? '—' : String(cuota.dias_atraso)],
+  ];
+  detalles.forEach((f, i) => {
+    const fy = detY + 36 + i * 22;
+    const esPar = i % 2 === 0;
+    if (esPar) doc.rect(L, fy - 4, 523, 22).fill('#f8fafc');
+    doc.fillColor(GRIS).font('Helvetica').fontSize(9).text(f[0], L + 12, fy);
+    doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(9).text(f[1], 0, fy, { align: 'right', width: R - 12 });
+  });
+
+  // ---------- PIE ----------
+  const pieY = detY + 36 + detalles.length * 22 + 20;
+  doc.moveTo(L, pieY).lineTo(R, pieY).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+  doc.fontSize(7.5).fillColor(GRIS).text(
     'Comprobante generado por el sistema Cartera con base en los registros del préstamo.',
-    50, y, { width: 495, align: 'center' }
+    L, pieY + 10, { width: 523, align: 'center' }
   );
   doc.end();
 }
 
 // Certificado de Paz y Salvo (préstamo pagado en su totalidad).
 function generarPazYSalvoPDF({ prestamo, pagos }, stream) {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const doc = new PDFDocument({ size: 'A4', margin: 36 });
   doc.pipe(stream);
-  const cliente = prestamo.perfiles || {};
 
+  const cliente = prestamo.perfiles || {};
   const fechas = (pagos || []).map((p) => p.fecha_pago).filter(Boolean).sort();
   const fechaFin = fechas.length ? fechas[fechas.length - 1] : null;
 
-  encabezado(doc, 'Certificado de Paz y Salvo');
+  const NAVY = '#0f172a';
+  const AZUL = '#2563eb';
+  const GRIS = '#94a3b8';
+  const VERDE = '#16a34a';
+  const L = 36, R = 559;
 
-  doc.moveDown(4);
-  doc.fontSize(26).fillColor('#16a34a').text('PAZ Y SALVO', { align: 'center' });
-  doc.moveDown(2);
+  const ahora = new Date();
+  const fechaEmision = ahora.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+  const hora = ahora.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  const numeroMostrar = prestamo.numero != null ? String(prestamo.numero).padStart(5, '0') : numeroPrestamo(prestamo.id);
 
-  doc.fontSize(12).fillColor('#0f172a').text(
+  // ---------- SELLO PAZ Y SALVO (centrado) ----------
+  const selloY = 44;
+  doc.roundedRect(L, selloY, 523, 72, 10).fill('#ecfdf5');
+  doc.roundedRect(L, selloY, 523, 72, 10).lineWidth(1).strokeColor('#bbf7d0').stroke();
+
+  // Se centra como grupo: ícono de check + título "PAZ Y SALVO".
+  const tituloSello = 'PAZ Y SALVO';
+  doc.font('Helvetica-Bold').fontSize(22);
+  const tituloW = doc.widthOfString(tituloSello);
+  const circR = 18, gap = 14;
+  const grupoW = circR * 2 + gap + tituloW;
+  const startX = L + (523 - grupoW) / 2;
+  const cxCirc = startX + circR;
+  const cyCirc = selloY + 30;
+
+  doc.circle(cxCirc, cyCirc, circR).fill('#16a34a');
+  doc.lineWidth(3).strokeColor('#ffffff')
+    .moveTo(cxCirc - 8, cyCirc).lineTo(cxCirc - 2, cyCirc + 6).lineTo(cxCirc + 9, cyCirc - 6).stroke();
+  doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(22).text(tituloSello, startX + circR * 2 + gap, selloY + 20, { lineBreak: false });
+  doc.fillColor('#15803d').font('Helvetica').fontSize(9).text('Préstamo pagado en su totalidad', L, selloY + 52, { width: 523, align: 'center' });
+
+  // ---------- CUERPO / CERTIFICACIÓN ----------
+  const txtY = selloY + 92;
+  doc.fillColor(NAVY).font('Helvetica').fontSize(10.5).text(
     'Se certifica que ' + (cliente.nombre_completo || 'el cliente') +
     (cliente.numero_documento ? ', identificado(a) con cédula ' + cliente.numero_documento + ',' : '') +
-    ' ha cumplido en su totalidad con el pago del préstamo registrado en el sistema, ' +
-    'por un capital de ' + formatCOP(prestamo.monto_capital) + ' y un total pagado de ' +
-    formatCOP(prestamo.monto_total_a_pagar) + ', distribuido en ' + prestamo.numero_cuotas + ' cuotas.',
-    { align: 'justify', lineGap: 4 }
+    ' ha cumplido en su totalidad con el pago del préstamo N° ' + numeroMostrar + ' registrado en el sistema, por un capital de ' +
+    formatCOP(prestamo.monto_capital) + ' y un total pagado de ' + formatCOP(prestamo.monto_total_a_pagar) +
+    ', distribuido en ' + prestamo.numero_cuotas + ' cuotas.',
+    L, txtY, { width: 523, align: 'justify', lineGap: 4 }
+  );
+  doc.moveDown(0.8);
+  doc.fillColor(NAVY).font('Helvetica').fontSize(10.5).text(
+    'Por lo anterior, el cliente se encuentra a PAZ Y SALVO por todo concepto relacionado con este préstamo.',
+    { width: 523, align: 'justify', lineGap: 4 }
   );
 
-  doc.moveDown(1.5);
-  doc.text('Por lo anterior, el cliente se encuentra a PAZ Y SALVO por todo concepto relacionado con este préstamo.', { align: 'justify', lineGap: 4 });
+  // ---------- TABLA DE DATOS ----------
+  const datosY = doc.y + 18;
+  const datos = [
+    ['N° de préstamo',        numeroMostrar],
+    ['Capital del préstamo',  formatCOP(prestamo.monto_capital)],
+    ['Total pagado',          formatCOP(prestamo.monto_total_a_pagar)],
+    ['N° de cuotas',          String(prestamo.numero_cuotas)],
+    ['Fecha de inicio',       fechaLegible(prestamo.fecha_inicio)],
+    ['Fecha del último pago',  fechaFin ? fechaLegible(fechaFin) : '—'],
+    ['Fecha de expedición',   fechaEmision],
+  ];
+  datos.forEach((f, i) => {
+    const fy = datosY + i * 22;
+    if (i % 2 === 0) doc.rect(L, fy - 4, 523, 22).fill('#f8fafc');
+    doc.fillColor(GRIS).font('Helvetica').fontSize(9).text(f[0], L + 12, fy);
+    doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(9).text(f[1], 0, fy, { align: 'right', width: R - 12 });
+  });
 
-  doc.moveDown(2);
-  doc.fillColor('#64748b').fontSize(11);
-  doc.text('Fecha de inicio del préstamo: ' + fechaLegible(prestamo.fecha_inicio));
-  doc.text('Fecha del último pago: ' + (fechaFin ? fechaLegible(fechaFin) : '—'));
-  doc.text('Fecha de expedición: ' + new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }));
+  // ---------- FIRMA ----------
+  const firmaY = datosY + datos.length * 22 + 50;
+  doc.strokeColor('#94a3b8').lineWidth(0.8).moveTo(180, firmaY).lineTo(415, firmaY).stroke();
+  doc.fillColor(GRIS).font('Helvetica').fontSize(9).text('Firma del prestamista', 180, firmaY + 6, { width: 235, align: 'center' });
 
-  doc.moveDown(5);
-  doc.strokeColor('#94a3b8').moveTo(180, doc.y).lineTo(415, doc.y).stroke();
-  doc.fontSize(10).fillColor('#64748b').text('Firma del prestamista', 180, doc.y + 6, { width: 235, align: 'center' });
+  // ---------- PIE ----------
+  const pieY = firmaY + 44;
+  doc.moveTo(L, pieY).lineTo(R, pieY).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+  doc.fontSize(7.5).fillColor(GRIS).font('Helvetica').text(
+    'Documento generado por el sistema Cartera con base en los registros del préstamo.',
+    L, pieY + 10, { width: 523, align: 'center' }
+  );
 
   doc.end();
 }
 
 // Comprobante de pago (recibo de un abono específico).
 function generarComprobantePagoPDF({ prestamo, pago, saldo, cuotasPagadas, cuotasTotal }, stream) {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const doc = new PDFDocument({ size: 'A4', margin: 36 });
   doc.pipe(stream);
+
   const cliente = prestamo.perfiles || {};
   const METODOS = { efectivo: 'Efectivo', transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', otro: 'Otro' };
   const pagadas = Number(cuotasPagadas || 0);
   const totalCuotas = Number(cuotasTotal || 0);
   const faltan = Math.max(0, totalCuotas - pagadas);
 
-  encabezado(doc, 'Comprobante de pago');
+  const NAVY = '#0f172a';
+  const AZUL = '#2563eb';
+  const GRIS = '#94a3b8';
+  const VERDE = '#16a34a';
+  const L = 36, R = 559;
 
-  let y = 125;
-  doc.fontSize(10).fillColor('#64748b').text('Cliente: ', 50, y, { continued: true }).fillColor('#0f172a').text(cliente.nombre_completo || '—');
-  doc.fillColor('#64748b').text('Cédula: ', 50, y + 16, { continued: true }).fillColor('#0f172a').text(cliente.numero_documento || '—');
-  doc.fillColor('#64748b').text('Préstamo N°: ', 320, y, { continued: true }).fillColor('#0f172a').text(prestamo.numero != null ? String(prestamo.numero).padStart(5, '0') : numeroPrestamo(prestamo.id));
+  const ahora = new Date();
+  const fechaEmision = ahora.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+  const hora = ahora.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  const numeroMostrar = prestamo.numero != null ? String(prestamo.numero).padStart(5, '0') : numeroPrestamo(prestamo.id);
 
-  y += 48;
-  doc.roundedRect(50, y, 495, 64, 10).fill('#ecfdf5');
-  doc.fillColor('#16a34a').font('Helvetica-Bold').fontSize(9).text('MONTO ABONADO', 66, y + 14);
-  doc.fillColor('#16a34a').font('Helvetica-Bold').fontSize(24).text(formatCOP(pago.monto), 66, y + 28);
-  doc.font('Helvetica');
+  // ---------- ENCABEZADO ----------
+  doc.roundedRect(L, 34, 50, 50, 10).fill(NAVY);
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26).text('C', L, 47, { width: 50, align: 'center' });
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cartera', 96, 42);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Gestión de préstamos', 96, 62);
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('COMPROBANTE DE PAGO', 250, 40);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Recibo de abono registrado', 250, 57);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('N° de préstamo:', 250, 70, { continued: true });
+  doc.fillColor(AZUL).font('Helvetica-Bold').text(' ' + numeroMostrar);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(7).text('Fecha de emisión', 430, 38, { width: 129 });
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(8).text(fechaEmision, 430, 48, { width: 129 });
+  doc.fillColor(GRIS).font('Helvetica').fontSize(7).text('Hora', 430, 62, { width: 129 });
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(8).text(hora, 430, 72, { width: 129 });
+  doc.moveTo(L, 96).lineTo(R, 96).lineWidth(1).strokeColor('#e2e8f0').stroke();
 
-  y += 88;
-  const filas = [
-    ['Fecha de pago', fechaLegible(pago.fecha_pago)],
-    ['Método', METODOS[pago.metodo] || pago.metodo || '—'],
-    ['Notas', pago.notas || '—'],
-    ['Cuotas pagadas', `${pagadas} de ${totalCuotas}`],
-    ['Cuotas por pagar', String(faltan)],
-    ['Saldo pendiente del préstamo', formatCOP(saldo)],
+  // ---------- TARJETA CLIENTE ----------
+  doc.roundedRect(L, 106, 523, 86, 10).lineWidth(0.8).strokeColor('#e2e8f0').stroke();
+  doc.circle(70, 142, 22).fill('#dbeafe');
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(15).text(iniciales(cliente.nombre_completo), 48, 134, { width: 44, align: 'center' });
+
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('NOMBRE', 104, 122);
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(12).text((cliente.nombre_completo || '—') + ' (' + (prestamo.frecuencia_pago || '').toUpperCase() + ')', 104, 132, { width: 230 });
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('DOCUMENTO', 348, 122);
+  doc.fillColor(NAVY).font('Helvetica').fontSize(11).text(cliente.numero_documento || '—', 348, 132);
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('TELÉFONO', 458, 122);
+  doc.fillColor(NAVY).font('Helvetica').fontSize(11).text(cliente.telefono || '—', 458, 132);
+
+  doc.moveTo(52, 164).lineTo(543, 164).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+  doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('DIRECCIÓN', 52, 173);
+  doc.fillColor(NAVY).font('Helvetica').fontSize(10).text(cliente.direccion || '—', 120, 172, { width: 420 });
+
+  // ---------- TABLA AZUL (resumen del abono) ----------
+  const tablaY = 206;
+  const cols = [
+    { t: 'FECHA DE PAGO',   w: 90,  v: fechaLegible(pago.fecha_pago) },
+    { t: 'MÉTODO',          w: 80,  v: METODOS[pago.metodo] || pago.metodo || '—' },
+    { t: 'MONTO ABONADO',   w: 100, v: formatCOP(pago.monto), color: VERDE },
+    { t: 'CUOTAS PAGADAS',  w: 85,  v: `${pagadas} de ${totalCuotas}` },
+    { t: 'POR PAGAR',       w: 75,  v: String(faltan) },
+    { t: 'SALDO PENDIENTE', w: 93,  v: formatCOP(saldo) },
   ];
-  doc.fontSize(11);
-  filas.forEach((f, i) => {
-    const fy = y + i * 24;
-    doc.fillColor('#64748b').text(f[0], 50, fy);
-    doc.fillColor('#0f172a').text(f[1], 320, fy);
+  doc.rect(L, tablaY, 523, 28).fill(AZUL);
+  doc.rect(L, tablaY + 28, 523, 32).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+  let cx = L;
+  cols.forEach((c) => {
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(6.5).text(c.t, cx + 2, tablaY + 9, { width: c.w - 4, align: 'center' });
+    doc.fillColor(c.color || NAVY).font('Helvetica-Bold').fontSize(9).text(c.v, cx + 2, tablaY + 28 + 11, { width: c.w - 4, align: 'center' });
+    cx += c.w;
   });
 
-  y += filas.length * 24 + 30;
-  doc.fontSize(8).fillColor('#64748b').text('Comprobante del abono registrado en el sistema Cartera. Conserva este recibo como soporte del pago.', 50, y, { width: 495, align: 'center' });
+  // ---------- CAJA VERDE MONTO ----------
+  const cajaY = tablaY + 78;
+  doc.roundedRect(L, cajaY, 523, 70, 10).fill('#ecfdf5');
+  doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(9).text('MONTO ABONADO', L, cajaY + 14, { width: 523, align: 'center' });
+  doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(28).text(formatCOP(pago.monto), L, cajaY + 28, { width: 523, align: 'center' });
+  // Método de pago a la derecha de la caja.
+  doc.fillColor('#15803d').font('Helvetica-Bold').fontSize(8).text('MÉTODO', R - 150, cajaY + 20, { width: 130, align: 'right' });
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text(METODOS[pago.metodo] || pago.metodo || '—', R - 150, cajaY + 33, { width: 130, align: 'right' });
+  if (pago.notas) {
+    doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Nota: ' + pago.notas, L, cajaY + 58, { width: 523, align: 'center' });
+  }
+
+  // ---------- REPARTO DEL PAGO ----------
+  // Muestra a qué cuota(s) se aplicó el dinero de este abono. Se lee del
+  // registro guardado; si un pago viejo no lo tiene, se omite la tabla.
+  const aplicaciones = (pago.distribucion && Array.isArray(pago.distribucion.aplicaciones))
+    ? pago.distribucion.aplicaciones
+    : [];
+  const excedente = Number(pago.distribucion?.excedente || 0);
+
+  const detY = cajaY + 90;
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(10).text('REPARTO DEL PAGO', L, detY);
+
+  const repY = detY + 18;
+  const rcols = [
+    { t: 'CUOTA', w: 90 },
+    { t: 'APLICADO A LA CUOTA', w: 160 },
+    { t: 'SALDO DE LA CUOTA', w: 150 },
+    { t: 'ESTADO', w: 123 },
+  ];
+  doc.rect(L, repY, 523, 22).fill(AZUL);
+  let rx = L;
+  rcols.forEach((c) => {
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(7).text(c.t, rx + 6, repY + 7, { width: c.w - 12, align: 'left' });
+    rx += c.w;
+  });
+
+  let filaY = repY + 22;
+  if (aplicaciones.length === 0) {
+    doc.rect(L, filaY, 523, 24).fill('#f8fafc');
+    doc.fillColor(GRIS).font('Helvetica-Oblique').fontSize(8.5).text(
+      'Este pago no tiene reparto detallado guardado.', L + 6, filaY + 8, { width: 511 }
+    );
+    filaY += 24;
+  } else {
+    aplicaciones.forEach((a, i) => {
+      if (i % 2 === 0) doc.rect(L, filaY, 523, 24).fill('#f8fafc');
+      const estadoTxt = ESTADO_CUOTA[a.estado_resultante] || a.estado_resultante || '—';
+      const estadoColor = a.estado_resultante === 'pagada' ? VERDE : (a.estado_resultante === 'parcial' ? '#d97706' : NAVY);
+      let cxr = L;
+      doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(9).text('Cuota #' + a.cuota_numero, cxr + 6, filaY + 8, { width: rcols[0].w - 12 }); cxr += rcols[0].w;
+      doc.fillColor(NAVY).font('Helvetica').fontSize(9).text(formatCOP(a.monto_aplicado), cxr + 6, filaY + 8, { width: rcols[1].w - 12 }); cxr += rcols[1].w;
+      doc.fillColor(NAVY).font('Helvetica').fontSize(9).text(formatCOP(a.saldo_cuota || 0), cxr + 6, filaY + 8, { width: rcols[2].w - 12 }); cxr += rcols[2].w;
+      doc.fillColor(estadoColor).font('Helvetica-Bold').fontSize(9).text(estadoTxt, cxr + 6, filaY + 8, { width: rcols[3].w - 12 });
+      filaY += 24;
+    });
+    if (excedente > 0) {
+      doc.rect(L, filaY, 523, 24).fill('#fffbeb');
+      doc.fillColor('#d97706').font('Helvetica-Bold').fontSize(9).text('Saldo a favor', L + 6, filaY + 8, { width: rcols[0].w + rcols[1].w - 12 });
+      doc.fillColor('#d97706').font('Helvetica-Bold').fontSize(9).text(formatCOP(excedente), L + rcols[0].w + rcols[1].w + 6, filaY + 8, { width: rcols[2].w - 12 });
+      filaY += 24;
+    }
+  }
+  doc.rect(L, repY, 523, filaY - repY).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+
+  // ---------- RESUMEN DEL PRÉSTAMO ----------
+  filaY += 14;
+  const resumen = [
+    ['Cuotas pagadas',  `${pagadas} de ${totalCuotas}`],
+    ['Saldo pendiente del préstamo', formatCOP(saldo)],
+  ];
+  resumen.forEach((f, i) => {
+    const fy = filaY + i * 22;
+    if (i % 2 === 0) doc.rect(L, fy - 4, 523, 22).fill('#f8fafc');
+    doc.fillColor(GRIS).font('Helvetica').fontSize(9).text(f[0], L + 12, fy);
+    doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(9).text(f[1], 0, fy, { align: 'right', width: R - 12 });
+  });
+
+  // ---------- PIE ----------
+  const pieY = filaY + resumen.length * 22 + 20;
+  doc.moveTo(L, pieY).lineTo(R, pieY).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
+  doc.fontSize(7.5).fillColor(GRIS).text(
+    'Comprobante del abono registrado en el sistema Cartera. Conserva este recibo como soporte del pago.',
+    L, pieY + 10, { width: 523, align: 'center' }
+  );
 
   doc.end();
 }

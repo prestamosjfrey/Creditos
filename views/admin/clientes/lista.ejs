@@ -40,6 +40,10 @@
     0%, 100% { opacity: 0.6; }
     50%       { opacity: 1;   }
   }
+  #tabla-clientes th,
+  #tabla-clientes th a,
+  #tabla-clientes th button { text-align: center !important; justify-content: center !important; }
+  #tabla-clientes td { text-align: center !important; }
 </style>
 
 <div class="mb-8 flex flex-col items-center text-center gap-2">
@@ -109,12 +113,12 @@
   <table id="tabla-clientes" class="table-base">
     <thead>
       <tr>
-        <th>Cliente</th>
-        <th>Cédula</th>
-        <th>Teléfono</th>
-        <th>Correo</th>
-        <th>Estado</th>
-        <th data-sortable="false" class="text-right">Acciones</th>
+        <th style="text-align:center">Cliente</th>
+        <th style="text-align:center">Cédula</th>
+        <th style="text-align:center">Teléfono</th>
+        <th style="text-align:center">Correo</th>
+        <th style="text-align:center">Estado</th>
+        <th data-sortable="false" style="text-align:center">Acciones</th>
       </tr>
     </thead>
     <tbody>
@@ -123,24 +127,24 @@
       <% } %>
       <% clientes.forEach(function(cliente) { var col = paleta(cliente.nombre_completo); %>
         <tr>
-          <td>
-            <div class="flex items-center gap-3">
+          <td class="text-center">
+            <div class="flex items-center justify-center gap-3">
               <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full <%= col[0] %> <%= col[1] %> text-xs font-semibold"><%= iniciales(cliente.nombre_completo) %></span>
               <span class="font-medium text-slate-800"><%= cliente.nombre_completo %></span>
             </div>
           </td>
-          <td><%= cliente.numero_documento || '—' %></td>
-          <td><%= cliente.telefono || '—' %></td>
-          <td><%= cliente.email || '—' %></td>
-          <td>
+          <td class="text-center"><%= cliente.numero_documento || '—' %></td>
+          <td class="text-center"><%= cliente.telefono || '—' %></td>
+          <td class="text-center"><%= cliente.email || '—' %></td>
+          <td class="text-center">
             <% if (cliente.activo) { %>
               <span class="badge-exito">● Activo</span>
             <% } else { %>
               <span class="badge-neutro">● Inactivo</span>
             <% } %>
           </td>
-          <td>
-            <div class="flex items-center justify-end gap-1">
+          <td class="text-center">
+            <div class="flex items-center justify-center gap-1">
               <a href="/admin/clientes/<%= cliente.id %>" class="action-btn" title="Ver ficha" aria-label="Ver ficha">
                 <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
               </a>
@@ -259,9 +263,9 @@
 
 <!-- FAB: Nuevo cliente -->
 <a href="/admin/clientes/nuevo"
-   style="position:fixed;bottom:2rem;right:2rem;z-index:50;display:inline-flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;width:3.5rem;height:3.5rem;border-radius:9999px;box-shadow:0 8px 24px rgba(37,99,235,0.45);text-decoration:none;transition:background 0.15s,transform 0.15s,box-shadow 0.15s;"
-   onmouseover="this.style.background='#1d4ed8';this.style.transform='scale(1.08)';this.style.boxShadow='0 12px 28px rgba(37,99,235,0.55)'"
-   onmouseout="this.style.background='#2563eb';this.style.transform='scale(1)';this.style.boxShadow='0 8px 24px rgba(37,99,235,0.45)'"
+   style="position:fixed;bottom:2rem;right:2rem;z-index:50;display:inline-flex;align-items:center;justify-content:center;width:3.5rem;height:3.5rem;border-radius:9999px;background:linear-gradient(145deg,#60a5fa 0%,#2563eb 45%,#1d4ed8 100%);color:#fff;text-decoration:none;box-shadow:0 6px 20px rgba(37,99,235,.55),0 2px 6px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .15s ease,box-shadow .15s ease;"
+   onmouseover="this.style.transform='translateY(-3px) scale(1.05)';this.style.boxShadow='0 12px 28px rgba(37,99,235,.65),0 4px 10px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25)'"
+   onmouseout="this.style.transform='translateY(0) scale(1)';this.style.boxShadow='0 6px 20px rgba(37,99,235,.55),0 2px 6px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.25)'"
    title="Nuevo cliente">
-  <svg style="width:22px;height:22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+  <svg style="width:22px;height:22px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.3))" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
 </a>

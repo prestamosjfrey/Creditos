@@ -1,5 +1,15 @@
 const { supabaseAdmin } = require('../config/supabase');
 
+// Categorías de la bitácora -> tipos de evento que agrupan. Fuente única de
+// verdad, usada por el filtro y por el conteo de tarjetas.
+const CATEGORIAS = {
+  prestamos: ['prestamo_creado', 'prestamo_pagado'],
+  pagos: ['abono_registrado', 'cuota_pagada', 'pago_interes'],
+  mora: ['cuota_mora'],
+  caja: ['caja_ingreso', 'caja_egreso'],
+  clientes: ['cliente_creado', 'cliente_editado', 'cliente_activado', 'cliente_desactivado', 'documento_subido', 'documento_eliminado'],
+};
+
 // Registra un evento en la bitácora. FAIL-SOFT a propósito: la auditoría
 // nunca debe tumbar la operación de negocio (registrar un pago no puede
 // fallar porque el log falló). Si algo sale mal, solo se advierte en consola.
@@ -34,4 +44,21 @@ async function listar({ prestamoId, clienteId, tipos, limite = 300 } = {}) {
   return data;
 }
 
-module.exports = { registrar, listar };
+// Conteo de eventos por categoría (todos los registros, no solo la página).
+async function contarPorCategoria() {
+  const { data, error } = await supabaseAdmin.from('bitacora').select('tipo');
+  if (error) throw error;
+
+  const tipoACat = {};
+  Object.keys(CATEGORIAS).forEach((c) => CATEGORIAS[c].forEach((t) => { tipoACat[t] = c; }));
+
+  const conteos = { total: 0, prestamos: 0, pagos: 0, mora: 0, caja: 0, clientes: 0 };
+  (data || []).forEach((r) => {
+    conteos.total++;
+    const c = tipoACat[r.tipo];
+    if (c) conteos[c]++;
+  });
+  return conteos;
+}
+
+module.exports = { registrar, listar, contarPorCategoria, CATEGORIAS };

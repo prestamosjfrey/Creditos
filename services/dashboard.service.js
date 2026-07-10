@@ -12,7 +12,7 @@ async function calcularKpisAlCorte(fechaCorte) {
   const corte = formatoISO(fechaCorte);
 
   const [{ data: prestamos, error: errorPrestamos }, { data: pagos, error: errorPagos }] = await Promise.all([
-    supabaseAdmin.from('prestamos').select('id, monto_capital, monto_total_a_pagar').lte('fecha_inicio', corte),
+    supabaseAdmin.from('prestamos').select('id, numero, monto_capital, monto_total_a_pagar, perfiles:cliente_id(nombre_completo)').lte('fecha_inicio', corte),
     supabaseAdmin.from('pagos').select('prestamo_id, monto').lte('fecha_pago', corte),
   ]);
   if (errorPrestamos) throw errorPrestamos;
@@ -27,6 +27,8 @@ async function calcularKpisAlCorte(fechaCorte) {
   let totalRecuperado = 0;
   let interesesCobrados = 0;
   let carteraActiva = 0;
+  // Detalle por préstamo para poder explicar de dónde sale cada total.
+  const desglose = [];
 
   prestamos.forEach((p) => {
     const capital = Number(p.monto_capital);
@@ -37,14 +39,27 @@ async function calcularKpisAlCorte(fechaCorte) {
     // Esto aproxima cuánto interés real ya entró: si pagó el 60% del total,
     // cobró el 60% del interés pactado.
     const pctCobrado = total > 0 ? Math.min(1, pagado / total) : 0;
+    const interesCobrado = Math.round(interesPorCuota * pctCobrado);
+    const saldo = total - pagado;
     capitalPrestado += capital;
     totalRecuperado += pagado;
-    interesesCobrados += Math.round(interesPorCuota * pctCobrado);
-    const saldo = total - pagado;
+    interesesCobrados += interesCobrado;
     if (saldo > 0.01) carteraActiva += saldo;
+
+    desglose.push({
+      numero: p.numero,
+      cliente: p.perfiles?.nombre_completo || 'Cliente',
+      capital,
+      pagado,
+      interesCobrado,
+      saldo: saldo > 0.01 ? saldo : 0,
+    });
   });
 
-  return { capitalPrestado, totalRecuperado, interesesCobrados, carteraActiva };
+  // Ordenar por número de préstamo para una lectura estable.
+  desglose.sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+  return { capitalPrestado, totalRecuperado, interesesCobrados, carteraActiva, desglose };
 }
 
 function calcularCambioPorcentual(actual, anterior) {
@@ -65,6 +80,7 @@ async function obtenerKpisConTendencia() {
 
   const cambios = {};
   Object.keys(actual).forEach((clave) => {
+    if (clave === 'desglose') return; // el desglose es un detalle, no un número comparable
     cambios[clave] = calcularCambioPorcentual(actual[clave], anterior[clave]);
   });
 
@@ -263,6 +279,31 @@ async function obtenerSerieIngresos(periodo) {
   };
 }
 
+// Resumen de créditos tomados activos (deuda propia pendiente).
+async function obtenerResumenCreditosTomados() {
+  const [{ data: creditos, error: e1 }, { data: cuotas, error: e2 }] = await Promise.all([
+    supabaseAdmin.from('creditos_tomados').select('id, monto_capital, monto_total_a_pagar').eq('estado', 'activo'),
+    supabaseAdmin.from('cuotas_credito_tomado').select('credito_id, monto').eq('estado', 'pagada'),
+  ]);
+  if (e1) throw e1;
+  if (e2) throw e2;
+
+  const pagadoPorCredito = new Map();
+  (cuotas || []).forEach((c) => {
+    pagadoPorCredito.set(c.credito_id, (pagadoPorCredito.get(c.credito_id) || 0) + Number(c.monto));
+  });
+
+  let totalDeuda = 0;
+  let capitalRecibido = 0;
+  (creditos || []).forEach((c) => {
+    const pagado = pagadoPorCredito.get(c.id) || 0;
+    totalDeuda += Number(c.monto_total_a_pagar) - pagado;
+    capitalRecibido += Number(c.monto_capital);
+  });
+
+  return { activos: (creditos || []).length, totalDeuda, capitalRecibido };
+}
+
 // Conteos reales y livianos usados en el header/sidebar de todas las vistas
 // admin: cuotas en mora (badge de la campana) y cuotas que vencen hoy
 // (widget "Resumen rápido" del sidebar).
@@ -284,12 +325,17 @@ async function obtenerConteosNotificacion() {
       .eq('rol', 'cliente').eq('activo', true),
     supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true })
       .eq('estado', 'activo'),
-    supabaseAdmin.from('pagos').select('prestamo_id').eq('tipo', 'interes'),
+    supabaseAdmin.from('pagos').select('prestamo_id, prestamos:prestamo_id(estado)').eq('tipo', 'interes'),
   ]);
   if (errorMora) throw errorMora;
   if (errorHoy) throw errorHoy;
 
-  const renegCount = new Set((renegData || []).map((r) => r.prestamo_id)).size;
+  // Solo se cuentan los renegociados que siguen ACTIVOS (activo o en mora);
+  // los ya pagados o cancelados no suman al badge.
+  const renegActivos = (renegData || []).filter(
+    (r) => r.prestamos && (r.prestamos.estado === 'activo' || r.prestamos.estado === 'en_mora')
+  );
+  const renegCount = new Set(renegActivos.map((r) => r.prestamo_id)).size;
 
   return {
     moraCount: moraCount || 0,
@@ -401,6 +447,7 @@ async function obtenerCapitalPrestadoPorMes({ desde, hasta } = {}) {
 module.exports = {
   obtenerKpisConTendencia,
   obtenerResumenCarteraDestacado,
+  obtenerResumenCreditosTomados,
   obtenerAlertasMora,
   obtenerProximosCobros,
   obtenerConteosNotificacion,

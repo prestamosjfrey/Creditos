@@ -78,9 +78,11 @@ async function crearCliente(req, res, next) {
 
     res.redirect(`/admin/clientes/${creado.user.id}?ok=${encodeURIComponent('Cliente creado correctamente.')}`);
   } catch (err) {
-    res.status(400).render('admin/clientes/form', {
+    const esEmailDuplicado = /already been registered|already exists|email.*exist/i.test(err.message || '');
+    res.status(esEmailDuplicado ? 409 : 400).render('admin/clientes/form', {
       titulo: 'Nuevo cliente',
-      error: err.message || 'No se pudo crear el cliente.',
+      error: esEmailDuplicado ? null : (err.message || 'No se pudo crear el cliente.'),
+      alerta: esEmailDuplicado ? 'Ya existe un usuario registrado con ese correo electrónico. Usa uno diferente.' : null,
       valores: req.body,
     });
   }

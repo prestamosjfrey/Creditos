@@ -1,6 +1,30 @@
-<div class="mb-6">
-  <h1 class="text-xl font-semibold text-slate-800">Mora</h1>
+<style>
+  @keyframes mor-float  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes mor-orbit  { from{transform:rotateX(72deg) rotateZ(0deg)}   to{transform:rotateX(72deg) rotateZ(360deg)} }
+  @keyframes mor-orbit2 { from{transform:rotateX(72deg) rotateZ(180deg)} to{transform:rotateX(72deg) rotateZ(540deg)} }
+  @keyframes mor-shadow { 0%,100%{transform:translateX(-50%) scale(1);opacity:.35} 50%{transform:translateX(-50%) scale(.8);opacity:.18} }
+  @keyframes mor-glow   { 0%,100%{opacity:.6} 50%{opacity:1} }
+</style>
+<div class="mb-6 flex flex-col items-center text-center gap-1">
+  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:.25rem">
+    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(220,38,38,.5) 0%,transparent 70%);border-radius:50%;animation:mor-shadow 3s ease-in-out infinite;"></div>
+    <div style="animation:mor-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
+      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(220,38,38,.22) 0%,transparent 65%);animation:mor-glow 3s ease-in-out infinite;pointer-events:none;"></div>
+      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(248,113,113,.85);border-bottom:2px solid rgba(248,113,113,.2);transform:rotateX(72deg);animation:mor-orbit 3.5s linear infinite;pointer-events:none;"></div>
+      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(252,165,165,.7);border-left:1.5px solid rgba(252,165,165,.15);transform:rotateX(72deg) rotateZ(180deg);animation:mor-orbit2 5s linear infinite;pointer-events:none;"></div>
+      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%,#fecaca 0%,#f87171 28%,#ef4444 52%,#dc2626 70%,#991b1b 88%,#450a0a 100%);box-shadow:0 12px 36px rgba(220,38,38,.65),0 4px 12px rgba(0,0,0,.25),inset 0 -8px 16px rgba(0,0,0,.35),inset 2px 2px 6px rgba(255,255,255,.08);position:relative;display:flex;align-items:center;justify-content:center;"
+        onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)'"
+        onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)'">
+        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,.7) 0%,rgba(255,255,255,.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
+        <svg style="width:30px;height:30px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <h1 class="text-3xl font-bold text-slate-800">Mora</h1>
   <p class="text-sm text-slate-400"><%= mora.length %> cuota<%= mora.length === 1 ? '' : 's' %> vencida<%= mora.length === 1 ? '' : 's' %>.</p>
+  <div class="mt-1 h-0.5 w-10 rounded-full bg-red-500"></div>
 </div>
 
 <div class="space-y-3">

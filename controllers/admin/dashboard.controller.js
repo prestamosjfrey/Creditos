@@ -12,6 +12,7 @@ async function mostrarDashboard(req, res, next) {
       { kpis, cambios },
       resumenDestacado,
       saldoDisponible,
+      creditosTomados,
       proximosCobros,
       actividadReciente,
       ...series
@@ -19,6 +20,7 @@ async function mostrarDashboard(req, res, next) {
       dashboardService.obtenerKpisConTendencia(),
       dashboardService.obtenerResumenCarteraDestacado(),
       cajaService.obtenerSaldoDisponible(),
+      dashboardService.obtenerResumenCreditosTomados(),
       dashboardService.obtenerProximosCobros(30),
       dashboardService.obtenerActividadReciente(6),
       ...PERIODOS.map((p) => dashboardService.obtenerSerieIngresos(p)),
@@ -33,6 +35,7 @@ async function mostrarDashboard(req, res, next) {
       cambios,
       resumenDestacado,
       saldoDisponible,
+      creditosTomados,
       proximosCobros,
       actividadReciente,
       seriesPorPeriodo,

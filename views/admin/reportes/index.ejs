@@ -1,6 +1,30 @@
-<div class="mb-6">
-  <h1 class="text-xl font-semibold text-slate-800">Reportes</h1>
+<style>
+  @keyframes rep-float  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes rep-orbit  { from{transform:rotateX(72deg) rotateZ(0deg)}   to{transform:rotateX(72deg) rotateZ(360deg)} }
+  @keyframes rep-orbit2 { from{transform:rotateX(72deg) rotateZ(180deg)} to{transform:rotateX(72deg) rotateZ(540deg)} }
+  @keyframes rep-shadow { 0%,100%{transform:translateX(-50%) scale(1);opacity:.35} 50%{transform:translateX(-50%) scale(.8);opacity:.18} }
+  @keyframes rep-glow   { 0%,100%{opacity:.6} 50%{opacity:1} }
+</style>
+<div class="mb-6 flex flex-col items-center text-center gap-1">
+  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:.25rem">
+    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(79,70,229,.5) 0%,transparent 70%);border-radius:50%;animation:rep-shadow 3s ease-in-out infinite;"></div>
+    <div style="animation:rep-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
+      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(79,70,229,.22) 0%,transparent 65%);animation:rep-glow 3s ease-in-out infinite;pointer-events:none;"></div>
+      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(129,140,248,.85);border-bottom:2px solid rgba(129,140,248,.2);transform:rotateX(72deg);animation:rep-orbit 3.5s linear infinite;pointer-events:none;"></div>
+      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(165,180,252,.7);border-left:1.5px solid rgba(165,180,252,.15);transform:rotateX(72deg) rotateZ(180deg);animation:rep-orbit2 5s linear infinite;pointer-events:none;"></div>
+      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%,#c7d2fe 0%,#818cf8 28%,#6366f1 52%,#4f46e5 70%,#3730a3 88%,#1e1b4b 100%);box-shadow:0 12px 36px rgba(79,70,229,.65),0 4px 12px rgba(0,0,0,.25),inset 0 -8px 16px rgba(0,0,0,.35),inset 2px 2px 6px rgba(255,255,255,.08);position:relative;display:flex;align-items:center;justify-content:center;"
+        onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)'"
+        onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)'">
+        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,.7) 0%,rgba(255,255,255,.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
+        <svg style="width:30px;height:30px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 13.125c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v6.75c0 .621-.504 1.125-1.125 1.125h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <h1 class="text-3xl font-bold text-slate-800">Reportes</h1>
   <p class="text-sm text-slate-400">Reportes disponibles de tu cartera.</p>
+  <div class="mt-1 h-0.5 w-10 rounded-full bg-indigo-600"></div>
 </div>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

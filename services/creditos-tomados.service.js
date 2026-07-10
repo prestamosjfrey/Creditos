@@ -100,22 +100,25 @@ async function pagarCuota({ creditoId, cuotaId, monto, fechaPago, notas, registr
 }
 
 async function listarTodos() {
-  const { data, error } = await supabaseAdmin
-    .from('creditos_tomados').select('*, cuotas:cuotas_credito_tomado(estado, monto, fecha_vencimiento)')
-    .order('creado_en', { ascending: false });
-  if (error) throw error;
+  const [{ data: creditos, error: e1 }, { data: todasCuotas, error: e2 }] = await Promise.all([
+    supabaseAdmin.from('creditos_tomados').select('*').order('creado_en', { ascending: false }),
+    supabaseAdmin.from('cuotas_credito_tomado').select('credito_id, estado, monto, fecha_vencimiento'),
+  ]);
+  if (e1) throw e1;
+  if (e2) throw e2;
 
   const hoy = formatoISO(new Date());
-  return (data || []).map((c) => {
-    const pagado = (c.cuotas || []).filter((q) => q.estado === 'pagada').reduce((a, q) => a + Number(q.monto), 0);
-    const pendientes = (c.cuotas || []).filter((q) => q.estado === 'pendiente' || q.estado === 'vencida');
+  return (creditos || []).map((c) => {
+    const cuotas = (todasCuotas || []).filter((q) => q.credito_id === c.id);
+    const pagado = cuotas.filter((q) => q.estado === 'pagada').reduce((a, q) => a + Number(q.monto), 0);
+    const pendientes = cuotas.filter((q) => q.estado === 'pendiente' || q.estado === 'vencida');
     const proxVenc = pendientes.sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento))[0];
     const enMora = pendientes.some((q) => q.fecha_vencimiento < hoy);
     return {
       ...c,
       abonado: pagado,
       saldo_pendiente: Number(c.monto_total_a_pagar) - pagado,
-      cuotas_pagadas: (c.cuotas || []).filter((q) => q.estado === 'pagada').length,
+      cuotas_pagadas: cuotas.filter((q) => q.estado === 'pagada').length,
       prox_vencimiento: proxVenc?.fecha_vencimiento || null,
       en_mora: enMora,
     };

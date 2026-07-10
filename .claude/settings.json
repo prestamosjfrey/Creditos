@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(curl -s -b /tmp/cookies.txt -o /dev/null -w \"prestamo-form.js: %{http_code}\\\\n\" http://localhost:3000/js/prestamo-form.js)",
-      "Bash(curl -s -b /tmp/cookies.txt -X POST http://localhost:3000/admin/clientes --data-urlencode \"nombre_completo=Cliente Prueba Sin Password\" --data-urlencode \"numero_documento=999888777\" --data-urlencode \"telefono=3001112233\" --data-urlencode \"email=clienteprueba999@correo.com\" -i -o /tmp/post-cliente.txt -w \"status: %{http_code}\\\\n\")"
+      "Bash(curl -s -b /tmp/cookies.txt -X POST http://localhost:3000/admin/clientes --data-urlencode \"nombre_completo=Cliente Prueba Sin Password\" --data-urlencode \"numero_documento=999888777\" --data-urlencode \"telefono=3001112233\" --data-urlencode \"email=clienteprueba999@correo.com\" -i -o /tmp/post-cliente.txt -w \"status: %{http_code}\\\\n\")",
+      "Bash(node -c services/dashboard.service.js)",
+      "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\);try{ejs.compile\\(fs.readFileSync\\('views/admin/auditoria/index.ejs','utf8'\\),{filename:'views/admin/auditoria/index.ejs'}\\);console.log\\('OK compila'\\);}catch\\(e\\){console.log\\('ERROR',e.message\\);process.exit\\(1\\);}\")",
+      "Bash(node -c services/auditoria.service.js)",
+      "Bash(node -c controllers/admin/auditoria.controller.js)",
+      "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\);ejs.compile\\(fs.readFileSync\\('views/admin/auditoria/index.ejs','utf8'\\),{filename:'views/admin/auditoria/index.ejs'}\\);console.log\\('OK todo compila'\\);\")",
+      "PowerShell(npm run build:css 2>&1)"
     ]
   }
 }

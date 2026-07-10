@@ -173,7 +173,7 @@
         </div>
         <div class="flex justify-between pt-4">
           <button type="button" id="btn-volver-2" class="btn-secondary">← Volver</button>
-          <button type="submit" class="btn-primary bg-orange-600 hover:bg-orange-700">Confirmar y registrar</button>
+          <button type="button" id="btn-confirmar" class="btn-primary bg-orange-600 hover:bg-orange-700">Confirmar y registrar</button>
         </div>
       </div>
 
@@ -298,5 +298,54 @@
     mostrarPaso(3);
   });
   document.getElementById('btn-volver-2')?.addEventListener('click', function () { mostrarPaso(2); });
+
+  // Envío con fetch + SweetAlert
+  document.getElementById('btn-confirmar')?.addEventListener('click', async function () {
+    var btnConf = this;
+    btnConf.disabled = true;
+    btnConf.textContent = 'Registrando…';
+
+    try {
+      var datos = new FormData(form);
+      var resp = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: new URLSearchParams(datos),
+      });
+      var json = await resp.json();
+
+      if (json.ok) {
+        await Swal.fire({
+          icon: 'success',
+          title: '¡Crédito registrado!',
+          text: 'El capital entró a tu caja disponible.',
+          confirmButtonText: 'Ver detalle',
+          confirmButtonColor: '#ea580c',
+          allowOutsideClick: false,
+        });
+        window.location.href = json.redirigir;
+      } else {
+        await Swal.fire({
+          icon: 'error',
+          title: 'No se pudo crear el crédito',
+          text: json.mensaje || 'Ocurrió un error inesperado.',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#ea580c',
+        });
+        btnConf.disabled = false;
+        btnConf.textContent = 'Confirmar y registrar';
+      }
+    } catch (e) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error de conexión',
+        text: 'No se pudo conectar con el servidor. Intenta de nuevo.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ea580c',
+      });
+      btnConf.disabled = false;
+      btnConf.textContent = 'Confirmar y registrar';
+    }
+  });
 })();
 </script>
