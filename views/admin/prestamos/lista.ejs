@@ -48,33 +48,9 @@
 </style>
 
 <div class="mb-8 flex flex-col items-center text-center gap-2">
-  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:0.25rem;">
-
-    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(5,150,105,0.5) 0%,transparent 70%);border-radius:50%;animation:pre-shadow 3s ease-in-out infinite;"></div>
-
-    <div style="animation:pre-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
-
-      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(5,150,105,0.22) 0%,transparent 65%);animation:pre-glow 3s ease-in-out infinite;pointer-events:none;"></div>
-
-      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(16,185,129,0.85);border-bottom:2px solid rgba(16,185,129,0.2);transform:rotateX(72deg);animation:pre-orbit 3.5s linear infinite;pointer-events:none;"></div>
-
-      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(110,231,183,0.7);border-left:1.5px solid rgba(110,231,183,0.15);transform:rotateX(72deg) rotateZ(180deg);animation:pre-orbit2 5s linear infinite;pointer-events:none;"></div>
-
-      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%, #6ee7b7 0%, #10b981 28%, #059669 52%, #047857 70%, #065f46 88%, #022c22 100%);box-shadow:0 12px 36px rgba(5,150,105,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08);position:relative;display:flex;align-items:center;justify-content:center;cursor:default;transition:transform 0.25s,box-shadow 0.25s;"
-           onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)';this.style.boxShadow='0 18px 48px rgba(5,150,105,0.8),0 6px 16px rgba(0,0,0,0.3),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'"
-           onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)';this.style.boxShadow='0 12px 36px rgba(5,150,105,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'">
-
-        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,0.7) 0%,rgba(255,255,255,0.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
-
-        <div style="position:absolute;bottom:14%;right:14%;width:20%;height:14%;background:radial-gradient(ellipse,rgba(110,231,183,0.4) 0%,transparent 100%);border-radius:50%;filter:blur(2px);pointer-events:none;"></div>
-
-        <svg style="width:30px;height:30px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-          <rect width="20" height="14" x="2" y="5" rx="2"/>
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M6 12h.01M18 12h.01"/>
-        </svg>
-      </div>
-    </div>
+  <div style="width:200px;height:124px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto 0.25rem;animation:pre-float 3s ease-in-out infinite;">
+    <img src="/img/icno%20creditos.webp" alt="Préstamos"
+         style="width:224px;height:auto;max-width:none;" />
   </div>
 
   <h1 class="text-3xl font-bold text-slate-800">Préstamos</h1>
@@ -315,7 +291,7 @@ var modalStats = (function () {
       var filas = act.map(function(p) { return [p.nombre, cop(p.capital)]; });
       return {
         title: 'Capital en la calle',
-        color: '#2563eb',
+        color: '#16a34a',
         desc: 'Monto de capital (sin intereses) de cada préstamo <strong>activo</strong>.',
         footer: '<strong>' + act.length + '</strong> préstamo' + (act.length !== 1 ? 's' : '') + ' · Total: <strong>' + cop(total) + '</strong>',
         html: tbl([{l:'Cliente'},{l:'Capital',r:true}], filas, 'No hay préstamos activos'),
@@ -342,7 +318,7 @@ var modalStats = (function () {
       var filas = conAbono.map(function(p) {
         var est = p.estado === 'pagado' ? '<span style="font-size:0.7rem;color:#10b981;">● pagado</span>'
                 : p.en_mora ? '<span style="font-size:0.7rem;color:#ef4444;">● mora</span>'
-                : '<span style="font-size:0.7rem;color:#2563eb;">● activo</span>';
+                : '<span style="font-size:0.7rem;color:#16a34a;">● activo</span>';
         return [p.nombre + ' ' + est, cop(p.abonado)];
       });
       return {
@@ -390,9 +366,9 @@ var modalStats = (function () {
 
 <!-- FAB: Nuevo préstamo -->
 <a href="/admin/prestamos/nuevo"
-   style="position:fixed;bottom:2rem;right:2rem;z-index:50;display:inline-flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;width:3.5rem;height:3.5rem;border-radius:9999px;box-shadow:0 8px 24px rgba(37,99,235,0.45);text-decoration:none;transition:background 0.15s,transform 0.15s,box-shadow 0.15s;"
-   onmouseover="this.style.background='#1d4ed8';this.style.transform='scale(1.08)';this.style.boxShadow='0 12px 28px rgba(37,99,235,0.55)'"
-   onmouseout="this.style.background='#2563eb';this.style.transform='scale(1)';this.style.boxShadow='0 8px 24px rgba(37,99,235,0.45)'"
+   style="position:fixed;bottom:2rem;right:2rem;z-index:50;display:inline-flex;align-items:center;justify-content:center;background:#16a34a;color:#fff;width:3.5rem;height:3.5rem;border-radius:9999px;box-shadow:0 8px 24px rgba(22, 163, 74,0.45);text-decoration:none;transition:background 0.15s,transform 0.15s,box-shadow 0.15s;"
+   onmouseover="this.style.background='#15803d';this.style.transform='scale(1.08)';this.style.boxShadow='0 12px 28px rgba(22, 163, 74,0.55)'"
+   onmouseout="this.style.background='#16a34a';this.style.transform='scale(1)';this.style.boxShadow='0 8px 24px rgba(22, 163, 74,0.45)'"
    title="Nuevo préstamo">
   <svg style="width:22px;height:22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
 </a>

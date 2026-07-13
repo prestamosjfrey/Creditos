@@ -1,12 +1,12 @@
 {
-  "name": "Cartera",
-  "short_name": "Cartera",
-  "description": "Gestión de cartera de préstamos",
+  "name": "Cash R&R",
+  "short_name": "Cash R&R",
+  "description": "Cash R&R — gestión de créditos",
   "start_url": "/admin/dashboard",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#2563eb",
+  "background_color": "#0e3b2b",
+  "theme_color": "#16a34a",
   "icons": [
     {
       "src": "/icons/icon-192.png",

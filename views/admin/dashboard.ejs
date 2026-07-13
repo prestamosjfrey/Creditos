@@ -175,31 +175,31 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
   <div class="card lg:col-span-2">
     <% var opciones = [['hoy', 'Hoy'], ['esta_semana', 'Esta semana'], ['este_mes', 'Este mes'], ['este_anio', 'Este año']]; %>
-    <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <p class="font-medium text-slate-700">Ingresos</p>
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- Chips segmentados -->
-        <div class="inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1">
-          <% opciones.forEach(function(o) { var act = periodo === o[0]; %>
-            <a href="/admin/dashboard?periodo=<%= o[0] %>"
-               class="rounded-lg px-3 py-1.5 text-sm font-medium transition <%= act ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700' %>">
-              <%= o[1] %>
-            </a>
-          <% }); %>
-        </div>
-        <!-- Rango personalizado -->
-        <form method="GET" action="/admin/dashboard" class="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 p-1.5">
-          <input class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700" type="date" name="desde" value="<%= periodo === 'personalizado' ? (desde || '') : '' %>" />
-          <span class="text-slate-400 text-sm">–</span>
-          <input class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700" type="date" name="hasta" value="<%= periodo === 'personalizado' ? (hasta || '') : '' %>" />
-          <button type="submit" class="rounded-lg bg-blue-600 px-3 py-1 text-sm font-medium text-white transition hover:bg-blue-700">Aplicar</button>
-          <% if (periodo === 'personalizado' && desde && hasta) { %>
-            <a href="/admin/dashboard?periodo=este_mes" class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-red-500 text-white transition hover:bg-red-600" title="Limpiar filtros">
-              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </a>
-          <% } %>
-        </form>
+    <div class="mb-5">
+      <p class="font-medium text-slate-700 mb-3">Ingresos</p>
+
+      <!-- Chips segmentados a todo el ancho -->
+      <div class="mb-2 flex items-center gap-1 rounded-xl bg-slate-100 p-1">
+        <% opciones.forEach(function(o) { var act = periodo === o[0]; %>
+          <a href="/admin/dashboard?periodo=<%= o[0] %>"
+             class="flex-1 rounded-lg px-2 py-1.5 text-center text-sm font-medium transition <%= act ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700' %>">
+            <%= o[1] %>
+          </a>
+        <% }); %>
       </div>
+
+      <!-- Rango de fechas -->
+      <form method="GET" action="/admin/dashboard" class="flex flex-wrap items-center gap-2 rounded-xl bg-slate-100 p-1.5">
+        <input class="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700" type="date" name="desde" value="<%= periodo === 'personalizado' ? (desde || '') : '' %>" />
+        <span class="text-slate-400 text-sm">–</span>
+        <input class="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700" type="date" name="hasta" value="<%= periodo === 'personalizado' ? (hasta || '') : '' %>" />
+        <button type="submit" class="shrink-0 rounded-lg bg-blue-600 px-4 py-1 text-sm font-medium text-white transition hover:bg-blue-700">Aplicar</button>
+        <% if (periodo === 'personalizado' && desde && hasta) { %>
+          <a href="/admin/dashboard?periodo=este_mes" class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500 text-white transition hover:bg-red-600" title="Limpiar filtros">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </a>
+        <% } %>
+      </form>
     </div>
     <canvas id="chart-ingresos" height="110"></canvas>
     <%
@@ -208,15 +208,15 @@
     %>
     <div class="mt-5 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-sm">
       <div>
-        <p class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full" style="background:#2563EB"></span>Total ingresos</p>
+        <p class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full" style="background:#16a34a"></span>Total ingresos</p>
         <p id="stat-total" class="num font-semibold text-slate-800"><%= formatCOP(_sum(_s30.valores)) %></p>
       </div>
       <div>
-        <p class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full" style="background:#F97316"></span>Total prestado</p>
+        <p class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full" style="background:#d4af37"></span>Total prestado</p>
         <p id="stat-prestado" class="num font-semibold text-slate-800"><%= formatCOP(_sum(_s30.valoresCapitalPrestado)) %></p>
       </div>
       <div>
-        <p class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full" style="background:#7C3AED"></span>Total + ganancia</p>
+        <p class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full" style="background:#166534"></span>Total + ganancia</p>
         <p id="stat-ganancia" class="num font-semibold text-slate-800"><%= formatCOP(_sum(_s30.valoresTotalConGanancia)) %></p>
       </div>
     </div>

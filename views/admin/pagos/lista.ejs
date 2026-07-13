@@ -54,31 +54,9 @@
 </style>
 
 <div class="mb-8 flex flex-col items-center text-center gap-2">
-  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:0.25rem;">
-
-    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(124,58,237,0.5) 0%,transparent 70%);border-radius:50%;animation:pag-shadow 3s ease-in-out infinite;"></div>
-
-    <div style="animation:pag-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
-
-      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,0.22) 0%,transparent 65%);animation:pag-glow 3s ease-in-out infinite;pointer-events:none;"></div>
-
-      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(167,139,250,0.85);border-bottom:2px solid rgba(167,139,250,0.2);transform:rotateX(72deg);animation:pag-orbit 3.5s linear infinite;pointer-events:none;"></div>
-
-      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(196,181,253,0.7);border-left:1.5px solid rgba(196,181,253,0.15);transform:rotateX(72deg) rotateZ(180deg);animation:pag-orbit2 5s linear infinite;pointer-events:none;"></div>
-
-      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%, #c4b5fd 0%, #8b5cf6 28%, #7c3aed 52%, #6d28d9 70%, #4c1d95 88%, #2e1065 100%);box-shadow:0 12px 36px rgba(124,58,237,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08);position:relative;display:flex;align-items:center;justify-content:center;cursor:default;transition:transform 0.25s,box-shadow 0.25s;"
-           onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)';this.style.boxShadow='0 18px 48px rgba(124,58,237,0.8),0 6px 16px rgba(0,0,0,0.3),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'"
-           onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)';this.style.boxShadow='0 12px 36px rgba(124,58,237,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'">
-
-        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,0.7) 0%,rgba(255,255,255,0.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
-
-        <div style="position:absolute;bottom:14%;right:14%;width:20%;height:14%;background:radial-gradient(ellipse,rgba(196,181,253,0.4) 0%,transparent 100%);border-radius:50%;filter:blur(2px);pointer-events:none;"></div>
-
-        <svg style="width:34px;height:34px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="currentColor">
-          <text x="12" y="18" text-anchor="middle" font-size="20" font-weight="700" font-family="Arial, Helvetica, sans-serif">$</text>
-        </svg>
-      </div>
-    </div>
+  <div style="width:200px;height:124px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto 0.25rem;animation:pag-float 3s ease-in-out infinite;">
+    <img src="/img/icono%20pagos.webp" alt="Pagos"
+         style="width:224px;height:auto;max-width:none;" />
   </div>
 
   <h1 class="text-3xl font-bold text-slate-800">Pagos</h1>
@@ -305,7 +283,7 @@
       var d0 = buckets(granActiva);
       var chart = new Chart(canvas, {
         type: 'bar',
-        data: { labels: d0.labels, datasets: [{ data: d0.valores, backgroundColor: '#2563EB', borderRadius: 6, maxBarThickness: 46 }] },
+        data: { labels: d0.labels, datasets: [{ data: d0.valores, backgroundColor: '#16a34a', borderRadius: 6, maxBarThickness: 46 }] },
         options: {
           responsive: true, maintainAspectRatio: true,
           layout: { padding: { top: 18 } },

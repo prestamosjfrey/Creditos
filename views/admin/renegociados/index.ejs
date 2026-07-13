@@ -16,21 +16,9 @@
   @keyframes ren-glow   { 0%,100%{opacity:.6} 50%{opacity:1} }
 </style>
 <div class="mb-4 flex flex-col items-center text-center gap-1">
-  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:.25rem">
-    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(124,58,237,.5) 0%,transparent 70%);border-radius:50%;animation:ren-shadow 3s ease-in-out infinite;"></div>
-    <div style="animation:ren-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
-      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.22) 0%,transparent 65%);animation:ren-glow 3s ease-in-out infinite;pointer-events:none;"></div>
-      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(167,139,250,.85);border-bottom:2px solid rgba(167,139,250,.2);transform:rotateX(72deg);animation:ren-orbit 3.5s linear infinite;pointer-events:none;"></div>
-      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(196,181,253,.7);border-left:1.5px solid rgba(196,181,253,.15);transform:rotateX(72deg) rotateZ(180deg);animation:ren-orbit2 5s linear infinite;pointer-events:none;"></div>
-      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%,#ddd6fe 0%,#a78bfa 28%,#8b5cf6 52%,#7c3aed 70%,#5b21b6 88%,#2e1065 100%);box-shadow:0 12px 36px rgba(124,58,237,.65),0 4px 12px rgba(0,0,0,.25),inset 0 -8px 16px rgba(0,0,0,.35),inset 2px 2px 6px rgba(255,255,255,.08);position:relative;display:flex;align-items:center;justify-content:center;"
-        onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)'"
-        onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)'">
-        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,.7) 0%,rgba(255,255,255,.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
-        <svg style="width:30px;height:30px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-        </svg>
-      </div>
-    </div>
+  <div style="width:200px;height:124px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto .25rem;animation:ren-float 3s ease-in-out infinite;">
+    <img src="/img/renegociados%20icono.webp" alt="Renegociados"
+         style="width:224px;height:auto;max-width:none;" />
   </div>
 </div>
 

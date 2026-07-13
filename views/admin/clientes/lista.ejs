@@ -48,40 +48,9 @@
 
 <div class="mb-8 flex flex-col items-center text-center gap-2">
   <!-- Contenedor del ícono 3D -->
-  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:0.25rem;">
-
-    <!-- Sombra de suelo sincronizada con el float -->
-    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(37,99,235,0.5) 0%,transparent 70%);border-radius:50%;animation:cli-shadow 3s ease-in-out infinite;"></div>
-
-    <!-- Contenedor flotante -->
-    <div style="animation:cli-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
-
-      <!-- Halo de brillo detrás -->
-      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,0.22) 0%,transparent 65%);animation:cli-glow 3s ease-in-out infinite;pointer-events:none;"></div>
-
-      <!-- Anillo orbital 1 -->
-      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(99,102,241,0.85);border-bottom:2px solid rgba(99,102,241,0.2);transform:rotateX(72deg);animation:cli-orbit 3.5s linear infinite;pointer-events:none;"></div>
-
-      <!-- Anillo orbital 2 (más pequeño, sentido contrario) -->
-      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(147,197,253,0.7);border-left:1.5px solid rgba(147,197,253,0.15);transform:rotateX(72deg) rotateZ(180deg);animation:cli-orbit2 5s linear infinite;pointer-events:none;"></div>
-
-      <!-- Esfera 3D principal -->
-      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%, #93c5fd 0%, #3b82f6 28%, #2563eb 52%, #1d4ed8 70%, #1e3a8a 88%, #172554 100%);box-shadow:0 12px 36px rgba(37,99,235,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08);position:relative;display:flex;align-items:center;justify-content:center;cursor:default;transition:transform 0.25s,box-shadow 0.25s;"
-           onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)';this.style.boxShadow='0 18px 48px rgba(37,99,235,0.8),0 6px 16px rgba(0,0,0,0.3),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'"
-           onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)';this.style.boxShadow='0 12px 36px rgba(37,99,235,0.65),0 4px 12px rgba(0,0,0,0.25),inset 0 -8px 16px rgba(0,0,0,0.35),inset 2px 2px 6px rgba(255,255,255,0.08)'">
-
-        <!-- Destello especular (iluminación 3D) -->
-        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,0.7) 0%,rgba(255,255,255,0.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
-
-        <!-- Brillo secundario inferior -->
-        <div style="position:absolute;bottom:14%;right:14%;width:20%;height:14%;background:radial-gradient(ellipse,rgba(147,197,253,0.4) 0%,transparent 100%);border-radius:50%;filter:blur(2px);pointer-events:none;"></div>
-
-        <!-- Ícono SVG -->
-        <svg style="width:30px;height:30px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-        </svg>
-      </div>
-    </div>
+  <div style="width:200px;height:124px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto 0.25rem;animation:cli-float 3s ease-in-out infinite;">
+    <img src="/img/cliente%20icono.webp" alt="Clientes"
+         style="width:224px;height:auto;max-width:none;" />
   </div>
 
   <h1 class="text-3xl font-bold text-slate-800">Clientes</h1>
@@ -98,10 +67,10 @@
            placeholder="Buscar por nombre, cédula o teléfono..."
            autocomplete="off"
            style="width:100%;padding:0.875rem 1rem 0.875rem 3rem;border-radius:9999px;border:1.5px solid #e2e8f0;background:#fff;font-size:0.9rem;color:#1e293b;outline:none;box-shadow:0 2px 12px rgba(0,0,0,0.06);transition:border-color 0.2s,box-shadow 0.2s;"
-           onfocus="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 3px rgba(59,130,246,0.12),0 2px 12px rgba(0,0,0,0.06)'"
+           onfocus="this.style.borderColor='#22c55e';this.style.boxShadow='0 0 0 3px rgba(34, 197, 94,0.12),0 2px 12px rgba(0,0,0,0.06)'"
            onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'"/>
     <a id="cli-limpiar" href="/admin/clientes"
-       style="position:absolute;right:1.25rem;top:50%;transform:translateY(-50%);color:#3b82f6;font-size:0.8rem;font-weight:600;text-decoration:none;align-items:center;gap:0.3rem;display:<%= busqueda ? 'flex' : 'none' %>;"
+       style="position:absolute;right:1.25rem;top:50%;transform:translateY(-50%);color:#22c55e;font-size:0.8rem;font-weight:600;text-decoration:none;align-items:center;gap:0.3rem;display:<%= busqueda ? 'flex' : 'none' %>;"
        onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
       <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
       Limpiar
@@ -263,9 +232,9 @@
 
 <!-- FAB: Nuevo cliente -->
 <a href="/admin/clientes/nuevo"
-   style="position:fixed;bottom:2rem;right:2rem;z-index:50;display:inline-flex;align-items:center;justify-content:center;width:3.5rem;height:3.5rem;border-radius:9999px;background:linear-gradient(145deg,#60a5fa 0%,#2563eb 45%,#1d4ed8 100%);color:#fff;text-decoration:none;box-shadow:0 6px 20px rgba(37,99,235,.55),0 2px 6px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .15s ease,box-shadow .15s ease;"
-   onmouseover="this.style.transform='translateY(-3px) scale(1.05)';this.style.boxShadow='0 12px 28px rgba(37,99,235,.65),0 4px 10px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25)'"
-   onmouseout="this.style.transform='translateY(0) scale(1)';this.style.boxShadow='0 6px 20px rgba(37,99,235,.55),0 2px 6px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.25)'"
+   style="position:fixed;bottom:2rem;right:2rem;z-index:50;display:inline-flex;align-items:center;justify-content:center;width:3.5rem;height:3.5rem;border-radius:9999px;background:linear-gradient(145deg,#4ade80 0%,#16a34a 45%,#15803d 100%);color:#fff;text-decoration:none;box-shadow:0 6px 20px rgba(22, 163, 74,.55),0 2px 6px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .15s ease,box-shadow .15s ease;"
+   onmouseover="this.style.transform='translateY(-3px) scale(1.05)';this.style.boxShadow='0 12px 28px rgba(22, 163, 74,.65),0 4px 10px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25)'"
+   onmouseout="this.style.transform='translateY(0) scale(1)';this.style.boxShadow='0 6px 20px rgba(22, 163, 74,.55),0 2px 6px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.25)'"
    title="Nuevo cliente">
   <svg style="width:22px;height:22px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.3))" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
 </a>

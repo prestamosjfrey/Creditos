@@ -85,7 +85,7 @@
   }
 
   .sidebar-link-activo {
-    @apply bg-blue-600/15 text-blue-400;
+    @apply bg-gold-400/15 text-gold-300;
   }
 
   .periodo-btn {

@@ -30,8 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
         {
           label: 'Ingresos',
           data: serie.valores,
-          borderColor: '#2563EB',
-          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          borderColor: '#16a34a',
+          backgroundColor: 'rgba(22, 163, 74, 0.12)',
           fill: true,
           tension: 0.35,
           pointRadius: 3,
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
           label: 'Total prestado',
           data: serie.valoresCapitalPrestado,
-          borderColor: '#F97316',
+          borderColor: '#d4af37',
           backgroundColor: 'transparent',
           borderDash: [6, 4],
           fill: false,
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
           label: 'Total prestado + ganancia',
           data: serie.valoresTotalConGanancia,
-          borderColor: '#7C3AED',
+          borderColor: '#166534',
           backgroundColor: 'transparent',
           borderDash: [2, 3],
           fill: false,
