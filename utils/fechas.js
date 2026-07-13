@@ -1,9 +1,18 @@
-const { addDays, addMonths, differenceInCalendarDays, format } = require('date-fns');
+const { addDays, addMonths, differenceInCalendarDays, format, lastDayOfMonth, setDate } = require('date-fns');
+
+// Quincenal fijo: los pagos caen siempre el día 15 y el último día del mes
+// (15 → fin de mes → 15 del mes siguiente → …), sin arrastrar días de calendario.
+function siguienteQuincenaFija(fecha) {
+  const dia = fecha.getDate();
+  if (dia < 15) return setDate(fecha, 15);
+  if (dia === 15) return lastDayOfMonth(fecha);
+  return setDate(addMonths(fecha, 1), 15);
+}
 
 const SUMAR_POR_FRECUENCIA = {
   diario: (fecha) => addDays(fecha, 1),
   semanal: (fecha) => addDays(fecha, 7),
-  quincenal: (fecha) => addDays(fecha, 15),
+  quincenal: siguienteQuincenaFija,
   mensual: (fecha) => addMonths(fecha, 1),
 };
 

@@ -5,6 +5,12 @@
   const form = document.getElementById('form-prestamo');
   if (!form) return;
 
+  // En una carga real de la página (GET nuevo o re-render tras error de envío)
+  // partimos de cero: descartamos cualquier marca de "envío" previa. En una
+  // restauración desde bfcache este script NO se re-ejecuta, así que la marca
+  // sobrevive y la usa el handler de pageshow para recargar en blanco.
+  try { sessionStorage.removeItem('prestamo-enviado'); } catch (e) {}
+
   const FRECUENCIA_ETIQUETA = { diario: 'Diario', semanal: 'Semanal', quincenal: 'Quincenal', mensual: 'Mensual' };
 
   const formatoMoneda = (valor) =>
@@ -121,6 +127,13 @@
   if (hayValoresServidor) guardarBorrador();
   else restaurarBorrador();
 
+  // Fecha de inicio: si quedó vacía (formulario nuevo, sin borrador ni datos del
+  // servidor), se precarga con el día de hoy (fecha local del navegador).
+  if (fechaInicio && !fechaInicio.value) {
+    const hoy = new Date();
+    fechaInicio.value = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+  }
+
   form.addEventListener('input', guardarBorrador);
   form.addEventListener('change', guardarBorrador);
 
@@ -134,7 +147,13 @@
     const f = new Date(fecha);
     if (frecuencia === 'diario') f.setDate(f.getDate() + 1);
     else if (frecuencia === 'semanal') f.setDate(f.getDate() + 7);
-    else if (frecuencia === 'quincenal') f.setDate(f.getDate() + 15);
+    else if (frecuencia === 'quincenal') {
+      // Quincenal fijo: siempre el día 15 y el último día del mes.
+      const dia = f.getDate();
+      if (dia < 15) f.setDate(15);
+      else if (dia === 15) f.setDate(new Date(f.getFullYear(), f.getMonth() + 1, 0).getDate());
+      else { f.setMonth(f.getMonth() + 1, 15); }
+    }
     else if (frecuencia === 'mensual') f.setMonth(f.getMonth() + 1);
     return f;
   }
@@ -149,8 +168,9 @@
     const primerPago = fechaPrimerPago.value;
     if (!cuotas || !primerPago) return [];
 
-    // Interés parejo por cuota (la última absorbe el redondeo). El capital de
-    // cada cuota es lo que queda del monto tras descontar su interés.
+    // La tabla usa el "Valor de cada cuota" del formulario (que se autosugiere
+    // como total ÷ n → cuotas iguales, pero es editable). La última cuota
+    // absorbe la diferencia. Interés parejo por cuota.
     const interesRegular = Math.round(interesTotal / cuotas);
 
     const plan = [];
@@ -341,14 +361,33 @@
     if (pasoActual > 1) mostrarPaso(pasoActual - 1);
   });
 
+  // Si el préstamo ya se creó y el usuario vuelve con el botón "Atrás" del
+  // navegador, la página se restaura desde el bfcache con los datos aún
+  // cargados (riesgo de crear un duplicado). Al detectar ese regreso,
+  // recargamos el formulario en blanco para empezar de cero.
+  window.addEventListener('pageshow', (e) => {
+    let enviado = false;
+    try { enviado = sessionStorage.getItem('prestamo-enviado') === '1'; } catch (err) {}
+    if (e.persisted && enviado) {
+      try { sessionStorage.removeItem('prestamo-enviado'); } catch (err) {}
+      limpiarBorrador();
+      // Volver de una vez al paso 1 para que no se vea el paso 2 ni un instante,
+      // y recargar el formulario en blanco.
+      mostrarPaso(1);
+      window.location.reload();
+    }
+  });
+
   // --- Confirmación final si la caja queda en negativo (advierte, no bloquea) ---
   let confirmadoSaldoNegativo = false;
   form.addEventListener('submit', (e) => {
     const capital = leerMoneda(montoCapital);
     if (capital <= saldoDisponible || confirmadoSaldoNegativo || !window.Swal) {
       // El formulario se va a enviar de verdad: descartamos el borrador para
-      // que el próximo "Nuevo préstamo" empiece en blanco.
+      // que el próximo "Nuevo préstamo" empiece en blanco, y marcamos el envío
+      // para limpiar la vista si el usuario vuelve con "Atrás" (ver pageshow).
       limpiarBorrador();
+      try { sessionStorage.setItem('prestamo-enviado', '1'); } catch (e) {}
       return;
     }
 

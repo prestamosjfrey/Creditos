@@ -203,7 +203,7 @@ function encabezado(doc, titulo) {
 }
 
 // Comprobante de pago de UNA cuota.
-function generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago }, stream) {
+function generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago, esInteres }, stream) {
   const doc = new PDFDocument({ size: 'A4', margin: 36 });
   doc.pipe(stream);
 
@@ -227,8 +227,8 @@ function generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago }, stream) {
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26).text('C', L, 47, { width: 50, align: 'center' });
   doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cartera', 96, 42);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Gestión de préstamos', 96, 62);
-  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('COMPROBANTE DE CUOTA', 250, 40);
-  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Cuota N° ' + cuota.numero_cuota, 250, 57);
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('COMPROBANTE DE CUOTA', 250, 40, { width: 175 });
+  doc.fillColor(esInteres ? '#b45309' : GRIS).font('Helvetica' + (esInteres ? '-Bold' : '')).fontSize(8).text(esInteres ? 'Cuota N° ' + cuota.numero_cuota + ' · Solo interés' : 'Cuota N° ' + cuota.numero_cuota, 250, 57);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('N° de préstamo:', 250, 70, { continued: true });
   doc.fillColor(AZUL).font('Helvetica-Bold').text(' ' + numeroMostrar);
   doc.fillColor(GRIS).font('Helvetica').fontSize(7).text('Fecha de emisión', 430, 38, { width: 129 });
@@ -280,11 +280,16 @@ function generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago }, stream) {
   // ---------- CAJA DE ESTADO DE PAGO ----------
   const cajaY = tablaY + 78;
   if (estaPagada) {
-    doc.roundedRect(L, cajaY, 523, 70, 10).fill('#ecfdf5');
-    doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(9).text('CUOTA PAGADA', L, cajaY + 14, { width: 523, align: 'center' });
-    doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(28).text(formatCOP(cuota.monto_esperado), L, cajaY + 28, { width: 523, align: 'center' });
+    var cajaBgC = esInteres ? '#fffbeb' : '#ecfdf5';
+    var cajaTxC = esInteres ? '#b45309' : VERDE;
+    doc.roundedRect(L, cajaY, 523, 70, 10).fill(cajaBgC);
+    doc.fillColor(cajaTxC).font('Helvetica-Bold').fontSize(9).text(esInteres ? 'INTERÉS PAGADO' : 'CUOTA PAGADA', L, cajaY + (esInteres ? 12 : 14), { width: 523, align: 'center' });
+    doc.fillColor(cajaTxC).font('Helvetica-Bold').fontSize(28).text(formatCOP(cuota.monto_esperado), L, cajaY + (esInteres ? 26 : 28), { width: 523, align: 'center' });
+    if (esInteres) {
+      doc.fillColor('#92400e').font('Helvetica-Bold').fontSize(8).text('Pago de SOLO INTERÉS', L, cajaY + 56, { width: 523, align: 'center' });
+    }
     if (metodoPago) {
-      doc.fillColor('#15803d').font('Helvetica-Bold').fontSize(8).text('MÉTODO', R - 150, cajaY + 20, { width: 130, align: 'right' });
+      doc.fillColor(esInteres ? '#92400e' : '#15803d').font('Helvetica-Bold').fontSize(8).text('MÉTODO', R - 150, cajaY + 20, { width: 130, align: 'right' });
       doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text(metodoPago, R - 150, cajaY + 33, { width: 130, align: 'right' });
     }
   } else if (esParcial) {
@@ -433,6 +438,9 @@ function generarComprobantePagoPDF({ prestamo, pago, saldo, cuotasPagadas, cuota
 
   const cliente = prestamo.perfiles || {};
   const METODOS = { efectivo: 'Efectivo', transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', otro: 'Otro' };
+  const esInteres = pago.tipo === 'interes';
+  const ACCION_LBL = { extension: 'Extender un periodo', saldo: 'Dejar saldo pendiente' };
+  const accionLbl = esInteres ? (ACCION_LBL[pago.accion] || 'Dejar saldo pendiente') : null;
   const pagadas = Number(cuotasPagadas || 0);
   const totalCuotas = Number(cuotasTotal || 0);
   const faltan = Math.max(0, totalCuotas - pagadas);
@@ -453,8 +461,8 @@ function generarComprobantePagoPDF({ prestamo, pago, saldo, cuotasPagadas, cuota
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26).text('C', L, 47, { width: 50, align: 'center' });
   doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cartera', 96, 42);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Gestión de préstamos', 96, 62);
-  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('COMPROBANTE DE PAGO', 250, 40);
-  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Recibo de abono registrado', 250, 57);
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(esInteres ? 11.5 : 13).text(esInteres ? 'COMPROBANTE DE INTERÉS' : 'COMPROBANTE DE PAGO', 250, esInteres ? 42 : 40, { width: 175 });
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text(esInteres ? 'Recibo de pago de solo interés' : 'Recibo de abono registrado', 250, 57);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('N° de préstamo:', 250, 70, { continued: true });
   doc.fillColor(AZUL).font('Helvetica-Bold').text(' ' + numeroMostrar);
   doc.fillColor(GRIS).font('Helvetica').fontSize(7).text('Fecha de emisión', 430, 38, { width: 129 });
@@ -500,13 +508,17 @@ function generarComprobantePagoPDF({ prestamo, pago, saldo, cuotasPagadas, cuota
 
   // ---------- CAJA VERDE MONTO ----------
   const cajaY = tablaY + 78;
-  doc.roundedRect(L, cajaY, 523, 70, 10).fill('#ecfdf5');
-  doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(9).text('MONTO ABONADO', L, cajaY + 14, { width: 523, align: 'center' });
-  doc.fillColor(VERDE).font('Helvetica-Bold').fontSize(28).text(formatCOP(pago.monto), L, cajaY + 28, { width: 523, align: 'center' });
+  const cajaBg = esInteres ? '#fffbeb' : '#ecfdf5';
+  const cajaTx = esInteres ? '#b45309' : VERDE;
+  doc.roundedRect(L, cajaY, 523, 70, 10).fill(cajaBg);
+  doc.fillColor(cajaTx).font('Helvetica-Bold').fontSize(9).text(esInteres ? 'INTERÉS PAGADO' : 'MONTO ABONADO', L, cajaY + 12, { width: 523, align: 'center' });
+  doc.fillColor(cajaTx).font('Helvetica-Bold').fontSize(28).text(formatCOP(pago.monto), L, cajaY + 26, { width: 523, align: 'center' });
   // Método de pago a la derecha de la caja.
-  doc.fillColor('#15803d').font('Helvetica-Bold').fontSize(8).text('MÉTODO', R - 150, cajaY + 20, { width: 130, align: 'right' });
+  doc.fillColor(esInteres ? '#92400e' : '#15803d').font('Helvetica-Bold').fontSize(8).text('MÉTODO', R - 150, cajaY + 20, { width: 130, align: 'right' });
   doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text(METODOS[pago.metodo] || pago.metodo || '—', R - 150, cajaY + 33, { width: 130, align: 'right' });
-  if (pago.notas) {
+  if (esInteres) {
+    doc.fillColor('#92400e').font('Helvetica-Bold').fontSize(8).text('Pago de SOLO INTERÉS', L, cajaY + 56, { width: 523, align: 'center' });
+  } else if (pago.notas) {
     doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Nota: ' + pago.notas, L, cajaY + 58, { width: 523, align: 'center' });
   }
 
@@ -566,9 +578,11 @@ function generarComprobantePagoPDF({ prestamo, pago, saldo, cuotasPagadas, cuota
   // ---------- RESUMEN DEL PRÉSTAMO ----------
   filaY += 14;
   const resumen = [
-    ['Cuotas pagadas',  `${pagadas} de ${totalCuotas}`],
-    ['Saldo pendiente del préstamo', formatCOP(saldo)],
+    ['Tipo de pago', esInteres ? 'Solo interés' : 'Abono normal'],
   ];
+  if (esInteres) resumen.push(['Acción sobre el capital', accionLbl]);
+  resumen.push(['Cuotas pagadas', `${pagadas} de ${totalCuotas}`]);
+  resumen.push(['Saldo pendiente del préstamo', formatCOP(saldo)]);
   resumen.forEach((f, i) => {
     const fy = filaY + i * 22;
     if (i % 2 === 0) doc.rect(L, fy - 4, 523, 22).fill('#f8fafc');

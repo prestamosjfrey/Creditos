@@ -347,5 +347,13 @@
       btnConf.textContent = 'Confirmar y registrar';
     }
   });
+
+  // Al volver con "Atrás", el navegador restaura esta página desde el bfcache con
+  // el botón en "Registrando…" y deshabilitado. Lo devolvemos a su estado normal.
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    var b = document.getElementById('btn-confirmar');
+    if (b) { b.disabled = false; b.textContent = 'Confirmar y registrar'; }
+  });
 })();
 </script>

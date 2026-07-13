@@ -1,9 +1,12 @@
 require('dotenv').config();
 
 const express = require('express');
+const http = require('http');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const expressLayouts = require('express-ejs-layouts');
+const { Server } = require('socket.io');
+const realtime = require('./services/realtime');
 
 const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
@@ -22,6 +25,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+// Cliente de Socket.IO auto-hospedado (nunca CDN).
+app.use('/vendor/socket.io', express.static(path.join(__dirname, 'node_modules/socket.io/client-dist')));
 
 // Disponible en todas las vistas sin tener que pasarlo en cada render.
 app.use((req, res, next) => {
@@ -47,7 +52,14 @@ app.use(errorHandler);
 const { programarRecordatorios } = require('./services/recordatorios.service');
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+// Socket.IO para actualizaciones en tiempo real (p. ej. Centro de Mora).
+const io = new Server(server);
+realtime.setIo(io);
+io.on('connection', () => { /* el cliente solo escucha eventos de datos */ });
+
+server.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
   programarRecordatorios();
 });

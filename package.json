@@ -8,7 +8,8 @@
     "start": "node server.js",
     "electron:dev": "electron .",
     "electron:build": "npm run build:css && electron-builder --win",
-    "seed:admin": "node scripts/seed-admin.js"
+    "seed:admin": "node scripts/seed-admin.js",
+    "seed:anio": "node scripts/seed-anio.js"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +28,7 @@
     "multer": "^2.2.0",
     "pdfkit": "^0.19.1",
     "simple-datatables": "^10.2.0",
+    "socket.io": "^4.8.3",
     "sweetalert2": "^11.26.25",
     "tom-select": "^2.6.1"
   },

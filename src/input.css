@@ -97,23 +97,23 @@
   }
 
   .step-circle {
-    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-400;
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-400 transition-all duration-300;
   }
 
   .step-circle-activo {
-    @apply bg-blue-600 text-white;
+    @apply bg-blue-600 text-white shadow-md shadow-blue-500/30 ring-4 ring-blue-100;
   }
 
   .step-circle-completo {
-    @apply bg-emerald-500 text-white;
+    @apply bg-emerald-500 text-white shadow-sm shadow-emerald-500/30;
   }
 
   .step-line {
-    @apply h-0.5 bg-slate-100;
+    @apply h-1 rounded-full bg-slate-100 transition-all duration-500;
   }
 
   .step-line-activa {
-    @apply bg-blue-600;
+    @apply bg-gradient-to-r from-blue-500 to-blue-600;
   }
 
   .table-base {
@@ -213,4 +213,79 @@
   html.sidebar-mobile-open #sidebar-admin { transform: translateX(0); }
   html.sidebar-mobile-open #barra-toggle { display: none; }
   html.sidebar-mobile-open #sidebar-backdrop { display: block; }
+}
+
+/* ===== Spinner global de navegación entre vistas ===== */
+.loader {
+  width: 52px;
+  aspect-ratio: 1;
+  display: grid;
+  animation: l14 4s infinite;
+}
+.loader::before,
+.loader::after {
+  content: "";
+  grid-area: 1/1;
+  border: 7px solid;
+  border-radius: 50%;
+  border-color: #2563eb #2563eb #0000 #0000; /* azul de marca */
+  mix-blend-mode: darken;
+  animation: l14 1s infinite linear;
+}
+.loader::after {
+  border-color: #0000 #0000 #06b6d4 #06b6d4; /* cian complementario */
+  animation-direction: reverse;
+}
+@keyframes l14 { 100% { transform: rotate(1turn); } }
+
+/* Overlay que aparece mientras se carga la siguiente vista. */
+#nav-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 252, 0.72);
+  backdrop-filter: blur(2px);
+}
+#nav-loader.nav-loader-visible { display: flex; }
+
+/* Transición suave al cambiar de paso en el asistente de nuevo préstamo. */
+@keyframes paso-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+[data-paso]:not(.hidden) {
+  animation: paso-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Chips de selección rápida (número de cuotas). */
+.chip-cuota {
+  @apply inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 transition hover:border-blue-300 hover:text-blue-600;
+}
+.chip-cuota-activo {
+  @apply border-blue-500 bg-blue-50 text-blue-600;
+}
+
+/* Botones de acción del detalle del préstamo (Llamar / WhatsApp / etc.). */
+.accion-detalle {
+  @apply flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 transition hover:-translate-y-0.5 hover:shadow-sm;
+}
+
+/* Resaltado temporal del préstamo al abrir Comprobantes desde el detalle. */
+.archivo-resaltado { animation: archivo-pulse 2.6s ease-out; }
+@keyframes archivo-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); background: rgba(37, 99, 235, 0); }
+  12%  { box-shadow: 0 0 0 3px rgba(37, 99, 235, .35); background: rgba(37, 99, 235, .06); }
+  70%  { box-shadow: 0 0 0 3px rgba(37, 99, 235, .25); background: rgba(37, 99, 235, .05); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); background: rgba(37, 99, 235, 0); }
+}
+
+/* Chips "Aplicar a cuota" del formulario de abono. */
+.chip-cuota-abono {
+  @apply flex flex-col items-start rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-xs transition hover:border-blue-300;
+}
+.chip-abono-activo {
+  @apply border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500;
 }

@@ -1,5 +1,5 @@
 <%
-  var seriesJson = JSON.stringify(seriesPorPeriodo).replace(/<\//g, '<\\/');
+  var seriesJson = JSON.stringify(serie).replace(/<\//g, '<\\/');
 %>
 
 <%- include('../partials/header-admin', {
@@ -14,18 +14,27 @@
     var tieneDeuda = creditosTomados.activos > 0;
   %>
   <div class="hero-card lg:col-span-2">
-    <!-- Fila superior: saldo y deuda -->
+    <% if (!tieneDeuda) { %>
+    <!-- Sin créditos tomados: el saldo llena todo el card. -->
+    <div class="flex h-full flex-col justify-center py-1">
+      <p class="text-xs font-semibold uppercase tracking-wide text-white/60">Saldo en caja</p>
+      <p class="num mt-1 text-4xl sm:text-5xl font-bold leading-none"><%= formatCOP(saldoDisponible) %></p>
+      <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/75">
+        <span class="inline-flex items-center gap-1">👥 <%= resumenDestacado.clientesActivos %> cliente<%= resumenDestacado.clientesActivos !== 1 ? 's' : '' %> activo<%= resumenDestacado.clientesActivos !== 1 ? 's' : '' %></span>
+        <span class="text-white/25">•</span>
+        <span>Este mes <span class="font-semibold text-white/95">+<%= formatCOP(resumenDestacado.interesesEsteMes) %></span> en intereses</span>
+      </div>
+    </div>
+    <% } else { %>
+    <!-- Con créditos tomados: saldo + deuda + descomposición. -->
     <div class="flex items-start justify-between gap-4">
       <div>
         <p class="text-xs font-semibold uppercase tracking-wide text-white/60">Saldo en caja</p>
-        <p class="num mt-1 text-3xl font-bold">
-          <%= formatCOP(saldoDisponible) %>
-        </p>
+        <p class="num mt-1 text-3xl font-bold"><%= formatCOP(saldoDisponible) %></p>
         <span class="mt-2 inline-flex items-center gap-1 text-xs text-white/70">
           👥 <%= resumenDestacado.clientesActivos %> cliente<%= resumenDestacado.clientesActivos !== 1 ? 's' : '' %> activo<%= resumenDestacado.clientesActivos !== 1 ? 's' : '' %>
         </span>
       </div>
-      <% if (tieneDeuda) { %>
       <a href="/admin/creditos-tomados" class="flex flex-col items-end text-right hover:opacity-80 transition shrink-0">
         <p class="text-xs font-semibold uppercase tracking-wide text-orange-300">Deuda propia</p>
         <p class="num text-xl font-bold text-orange-200 mt-0.5"><%= formatCOP(creditosTomados.totalDeuda) %></p>
@@ -33,27 +42,15 @@
           <%= creditosTomados.activos %> crédito<%= creditosTomados.activos > 1 ? 's' : '' %> tomado<%= creditosTomados.activos > 1 ? 's' : '' %> activo<%= creditosTomados.activos > 1 ? 's' : '' %>
         </p>
       </a>
-      <% } else { %>
-      <div class="flex flex-col items-end text-right shrink-0">
-        <p class="text-xs text-white/60">Este mes</p>
-        <p class="text-sm font-semibold">+<%= formatCOP(resumenDestacado.interesesEsteMes) %></p>
-        <p class="text-[11px] text-white/50">Intereses generados</p>
-      </div>
-      <% } %>
     </div>
-
-    <!-- Fila inferior: descomposición del saldo -->
-    <% if (tieneDeuda) { %>
     <div class="mt-4 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
       <div class="rounded-xl bg-white/10 px-3 py-2.5">
         <p class="text-[11px] font-semibold uppercase tracking-wide text-white/50">Capital propio en caja</p>
-        <p class="num text-base font-bold mt-0.5 <%= capitalPropio < 0 ? 'text-red-300' : 'text-white' %>">
-          <%= formatCOP(capitalPropio) %>
-        </p>
+        <p class="num text-base font-bold mt-0.5 <%= capitalPropio < 0 ? 'text-red-300' : 'text-white' %>"><%= formatCOP(capitalPropio) %></p>
         <% if (capitalPropio < 0) { %>
           <p class="text-[11px] text-red-300/70 mt-0.5">Todo tu capital está en cartera</p>
         <% } else { %>
-          <p class="text-[11px] text-white/40 mt-0.5">Sin deuda de acreedores</p>
+          <p class="text-[11px] text-white/40 mt-0.5">Dinero tuyo, no adeudado</p>
         <% } %>
       </div>
       <div class="rounded-xl bg-white/10 px-3 py-2.5">
@@ -123,31 +120,31 @@
 %>
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   <div class="card flex items-start gap-3 relative">
-    <%- btnExplica('Capital prestado', '<p><strong>Capital prestado (histórico)</strong></p><p>Suma del capital de <strong>todos</strong> los préstamos creados: <strong>' + formatCOP(kpis.capitalPrestado) + '</strong>.</p><p class="text-slate-400">Es cuánto dinero has entregado en total, sin importar si ya te lo pagaron.</p>' + tablaDesglose(function(it){ return it.capital; }, kpis.capitalPrestado)) %>
+    <%- btnExplica('Capital prestado', '<p><strong>Capital prestado (periodo)</strong></p><p>Suma del capital de los préstamos creados <strong>en el periodo seleccionado</strong>: <strong>' + formatCOP(kpis.capitalPrestado) + '</strong>.</p><p class="text-slate-400">Cambia según el filtro de arriba.</p>' + tablaDesglose(function(it){ return it.capital > 0 ? it.capital : null; }, kpis.capitalPrestado)) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3" /></svg>
     </span>
     <div>
       <p class="text-sm text-slate-400">Capital prestado</p>
       <p class="num mt-1 text-xl font-semibold text-slate-800"><%= formatCOP(kpis.capitalPrestado) %></p>
-      <p class="text-xs text-slate-400 mt-0.5">Histórico total</p>
+      <p class="text-xs text-slate-400 mt-0.5">Prestado en el periodo</p>
     </div>
   </div>
 
   <div class="card flex items-start gap-3 relative">
-    <%- btnExplica('Total recuperado', '<p><strong>Total recuperado</strong></p><p>Suma de <strong>todos los abonos</strong> registrados en todos los préstamos: <strong>' + formatCOP(kpis.totalRecuperado) + '</strong>.</p><p class="text-slate-400">Es todo el dinero que ha vuelto a la caja (capital + interés juntos).</p>' + tablaDesglose(function(it){ return it.pagado; }, kpis.totalRecuperado)) %>
+    <%- btnExplica('Total recuperado', '<p><strong>Total recuperado (periodo)</strong></p><p>Suma de los abonos <strong>recibidos en el periodo seleccionado</strong> (de cualquier préstamo): <strong>' + formatCOP(kpis.totalRecuperado) + '</strong>.</p><p class="text-slate-400">Es el dinero (capital + interés) que entró a la caja en ese periodo. Coincide con la línea "Ingresos" de la gráfica.</p>' + tablaDesglose(function(it){ return it.pagado > 0 ? it.pagado : null; }, kpis.totalRecuperado)) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182.553-.439 1.278-.659 2.003-.659.725 0 1.45.22 2.003.659l.659.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
     </span>
     <div>
       <p class="text-sm text-slate-400">Total recuperado</p>
       <p class="num mt-1 text-xl font-semibold text-slate-800"><%= formatCOP(kpis.totalRecuperado) %></p>
-      <p class="text-xs text-slate-400 mt-0.5">Abonos registrados</p>
+      <p class="text-xs text-slate-400 mt-0.5">Recuperado en el periodo</p>
     </div>
   </div>
 
   <div class="card flex items-start gap-3 relative">
-    <%- btnExplica('Interés cobrado', '<p><strong>Interés cobrado (aproximado)</strong></p><p>Por cada préstamo se toma su interés pactado y se multiplica por el <strong>% ya pagado</strong>. Ejemplo: si un préstamo va al 60% de su total, se cuenta el 60% de su interés.</p><p>La suma de todos da <strong>' + formatCOP(kpis.interesesCobrados) + '</strong>.</p><p class="text-slate-400">Es una estimación del interés real que ya entró a caja.</p>' + tablaDesglose(function(it){ return it.interesCobrado; }, kpis.interesesCobrados)) %>
+    <%- btnExplica('Interés cobrado', '<p><strong>Interés cobrado (periodo)</strong></p><p>De cada abono recibido <strong>en el periodo</strong> se toma su parte de interés (según la proporción interés/total de su préstamo).</p><p>La suma da <strong>' + formatCOP(kpis.interesesCobrados) + '</strong>.</p><p class="text-slate-400">Es una estimación del interés real que entró a caja en el periodo.</p>' + tablaDesglose(function(it){ return it.interesCobrado > 0 ? it.interesCobrado : null; }, kpis.interesesCobrados)) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
         <line x1="19" y1="5" x2="5" y2="19" stroke-linecap="round" />
@@ -158,47 +155,69 @@
     <div>
       <p class="text-sm text-slate-400">Interés cobrado</p>
       <p class="num mt-1 text-xl font-semibold text-slate-800"><%= formatCOP(kpis.interesesCobrados) %></p>
-      <p class="text-xs text-slate-400 mt-0.5">Interés real ya recibido</p>
+      <p class="text-xs text-slate-400 mt-0.5">Interés recibido en el periodo</p>
     </div>
   </div>
 
   <div class="card flex items-start gap-3 relative">
-    <%- btnExplica('Pendiente por cobrar', '<p><strong>Pendiente por cobrar = Total − Abonado</strong></p><p>Suma de los saldos pendientes (Total a pagar menos lo abonado) de todos los préstamos que aún deben: <strong>' + formatCOP(kpis.carteraActiva) + '</strong>.</p><p class="text-slate-400">Es el dinero que todavía te falta por recibir de la cartera activa.</p>' + tablaDesglose(function(it){ return it.saldo > 0 ? it.saldo : null; }, kpis.carteraActiva)) %>
+    <%- btnExplica('Pendiente por cobrar', '<p><strong>Pendiente por cobrar = Total − Abonado</strong></p><p>Suma de los saldos pendientes de los préstamos creados <strong>en el periodo seleccionado</strong> que aún deben: <strong>' + formatCOP(kpis.carteraActiva) + '</strong>.</p><p class="text-slate-400">Es cuánto falta por recibir de lo prestado en ese periodo.</p>' + tablaDesglose(function(it){ return it.saldo > 0 ? it.saldo : null; }, kpis.carteraActiva)) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9v3" /></svg>
     </span>
     <div>
       <p class="text-sm text-slate-400">Pendiente por cobrar</p>
       <p class="num mt-1 text-xl font-semibold text-slate-800"><%= formatCOP(kpis.carteraActiva) %></p>
-      <p class="text-xs text-slate-400 mt-0.5">Saldo pendiente por cobrar</p>
+      <p class="text-xs text-slate-400 mt-0.5">Pendiente de esos préstamos</p>
     </div>
   </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
   <div class="card lg:col-span-2">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <p class="font-medium text-slate-700">Ingresos del mes</p>
-      <div class="flex items-center gap-1 rounded-lg bg-slate-100 p-1 text-sm" id="filtros-periodo">
-        <button type="button" data-periodo="7d" class="periodo-btn">7 días</button>
-        <button type="button" data-periodo="30d" class="periodo-btn periodo-btn-activo">30 días</button>
-        <button type="button" data-periodo="3m" class="periodo-btn">3 meses</button>
-        <button type="button" data-periodo="12m" class="periodo-btn">12 meses</button>
+    <% var opciones = [['hoy', 'Hoy'], ['esta_semana', 'Esta semana'], ['este_mes', 'Este mes'], ['este_anio', 'Este año']]; %>
+    <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <p class="font-medium text-slate-700">Ingresos</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Chips segmentados -->
+        <div class="inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1">
+          <% opciones.forEach(function(o) { var act = periodo === o[0]; %>
+            <a href="/admin/dashboard?periodo=<%= o[0] %>"
+               class="rounded-lg px-3 py-1.5 text-sm font-medium transition <%= act ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700' %>">
+              <%= o[1] %>
+            </a>
+          <% }); %>
+        </div>
+        <!-- Rango personalizado -->
+        <form method="GET" action="/admin/dashboard" class="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 p-1.5">
+          <input class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700" type="date" name="desde" value="<%= periodo === 'personalizado' ? (desde || '') : '' %>" />
+          <span class="text-slate-400 text-sm">–</span>
+          <input class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700" type="date" name="hasta" value="<%= periodo === 'personalizado' ? (hasta || '') : '' %>" />
+          <button type="submit" class="rounded-lg bg-blue-600 px-3 py-1 text-sm font-medium text-white transition hover:bg-blue-700">Aplicar</button>
+          <% if (periodo === 'personalizado' && desde && hasta) { %>
+            <a href="/admin/dashboard?periodo=este_mes" class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-red-500 text-white transition hover:bg-red-600" title="Limpiar filtros">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </a>
+          <% } %>
+        </form>
       </div>
     </div>
     <canvas id="chart-ingresos" height="110"></canvas>
+    <%
+      var _sum = function (arr) { return (arr || []).reduce(function (a, b) { return a + Number(b || 0); }, 0); };
+      var _s30 = serie;
+    %>
     <div class="mt-5 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-sm">
       <div>
-        <p class="text-slate-400">Total ingresos</p>
-        <p id="stat-total" class="num font-semibold text-slate-800"><%= formatCOP(seriesPorPeriodo['30d'].estadisticas.total) %></p>
+        <p class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full" style="background:#2563EB"></span>Total ingresos</p>
+        <p id="stat-total" class="num font-semibold text-slate-800"><%= formatCOP(_sum(_s30.valores)) %></p>
       </div>
       <div>
-        <p class="text-slate-400">Promedio diario</p>
-        <p id="stat-promedio" class="num font-semibold text-slate-800"><%= formatCOP(seriesPorPeriodo['30d'].estadisticas.promedioDiario) %></p>
+        <p class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full" style="background:#F97316"></span>Total prestado</p>
+        <p id="stat-prestado" class="num font-semibold text-slate-800"><%= formatCOP(_sum(_s30.valoresCapitalPrestado)) %></p>
       </div>
       <div>
-        <p class="text-slate-400">Días con ingresos</p>
-        <p id="stat-dias" class="num font-semibold text-slate-800"><%= seriesPorPeriodo['30d'].estadisticas.diasConIngresos %> de <%= seriesPorPeriodo['30d'].estadisticas.diasTotales %></p>
+        <p class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full" style="background:#7C3AED"></span>Total + ganancia</p>
+        <p id="stat-ganancia" class="num font-semibold text-slate-800"><%= formatCOP(_sum(_s30.valoresTotalConGanancia)) %></p>
       </div>
     </div>
   </div>
@@ -245,48 +264,61 @@
       </div>
     </section>
 
-    <section>
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="font-medium text-slate-700">Actividad reciente</h2>
-        <a href="/admin/pagos" class="text-sm text-blue-600 hover:underline">Ver todo</a>
-      </div>
-      <div class="card divide-y divide-slate-100 p-0">
-        <% if (actividadReciente.length === 0) { %>
-          <p class="px-5 py-6 text-center text-sm text-slate-400">Sin actividad reciente.</p>
-        <% } %>
-        <% actividadReciente.forEach(function(ev) { %>
-          <div class="flex items-center justify-between px-5 py-3">
-            <div class="flex items-center gap-3">
-              <% if (ev.tipo === 'pago') { %>
-                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                </span>
-              <% } else if (ev.tipo === 'prestamo') { %>
-                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
-                </span>
-              <% } else { %>
-                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-500">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Z" /></svg>
-                </span>
-              <% } %>
-              <div>
-                <p class="text-sm text-slate-700">
-                  <%= ev.tipo === 'pago' ? 'Pago recibido' : ev.tipo === 'prestamo' ? 'Nuevo préstamo' : 'Cliente en mora' %>
-                  · <%= ev.cliente %>
-                </p>
-                <p class="text-xs text-slate-400"><%= ev.hace %></p>
-              </div>
-            </div>
-            <p class="num text-sm font-semibold <%= ev.tipo === 'mora' ? 'text-red-500' : 'text-emerald-600' %>">
-              <%= ev.tipo === 'mora' ? '' : '+' %><%= formatCOP(ev.monto) %>
-            </p>
-          </div>
-        <% }); %>
-      </div>
-    </section>
   </div>
 </div>
+
+<!-- Actividad reciente a lo ancho: llena todo el espacio bajo el gráfico. -->
+<section class="mb-8">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-medium text-slate-700">Actividad reciente</h2>
+    <a href="/admin/pagos" class="text-sm text-blue-600 hover:underline">Ver todo</a>
+  </div>
+  <div class="card p-4">
+    <% if (actividadReciente.length === 0) { %>
+      <p class="py-6 text-center text-sm text-slate-400">Sin actividad reciente.</p>
+    <% } else { %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <% actividadReciente.forEach(function(ev) { %>
+        <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-4 py-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <% if (ev.tipo === 'pago') { %>
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+              </span>
+            <% } else if (ev.tipo === 'prestamo') { %>
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14" /></svg>
+              </span>
+            <% } else if (ev.tipo === 'pago_tomado') { %>
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 14l-6-6m6 6l6-6" /></svg>
+              </span>
+            <% } else if (ev.tipo === 'credito_tomado') { %>
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m0-14l-6 6m6-6l6 6" /></svg>
+              </span>
+            <% } else { %>
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-500">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Z" /></svg>
+              </span>
+            <% } %>
+            <div class="min-w-0">
+              <p class="text-sm text-slate-700 truncate">
+                <%= ev.tipo === 'pago' ? 'Pago recibido' : ev.tipo === 'prestamo' ? 'Nuevo préstamo' : ev.tipo === 'pago_tomado' ? 'Pago crédito propio' : ev.tipo === 'credito_tomado' ? 'Nuevo crédito propio' : 'Cliente en mora' %>
+                · <%= ev.cliente %>
+              </p>
+              <p class="text-xs text-slate-400"><%= ev.hace %></p>
+            </div>
+          </div>
+          <p class="num text-sm font-semibold whitespace-nowrap <%= ev.tipo === 'mora' ? 'text-red-500' : ev.tipo === 'pago_tomado' ? 'text-amber-600' : ev.tipo === 'credito_tomado' ? 'text-indigo-600' : 'text-emerald-600' %>">
+            <%= ev.tipo === 'mora' ? '' : ev.tipo === 'pago_tomado' ? '−' : '+' %><%= formatCOP(ev.monto) %>
+          </p>
+        </div>
+      <% }); %>
+    </div>
+    <% } %>
+  </div>
+</section>
 
 <script>
   window.__SERIES_INGRESOS__ = <%- seriesJson %>;

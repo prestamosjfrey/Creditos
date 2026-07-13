@@ -3,37 +3,353 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Iniciar sesión · Cartera</title>
+  <title>Iniciar sesión · Cash R&amp;R</title>
   <link rel="stylesheet" href="/css/output.css" />
   <link rel="stylesheet" href="/vendor/sweetalert2/sweetalert2.min.css" />
   <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+  <style>
+    :root {
+      --verde-900: #0e3b2b;
+      --verde-800: #124a35;
+      --verde-700: #166534;
+      --verde-600: #1c7a43;
+      --oro: #d4af37;
+      --oro-claro: #eab308;
+      --tinta: #0f3d2e;
+      --gris: #6b7280;
+      --gris-suave: #9ca3af;
+      --linea: #e6ebe8;
+    }
+
+    * { box-sizing: border-box; }
+
+    .login-body {
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--tinta);
+      background:
+        radial-gradient(1100px 520px at 12% 18%, rgba(22, 101, 52, .10), transparent 60%),
+        radial-gradient(900px 500px at 88% 82%, rgba(212, 175, 55, .12), transparent 60%),
+        linear-gradient(135deg, #f6f9f7 0%, #eef4f0 100%);
+    }
+
+    .login-wrap {
+      width: 100%;
+      max-width: 1180px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 32px;
+    }
+
+    /* ---- Columna del logo ---- */
+    .brand {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      animation: fade-up .7s cubic-bezier(.16, 1, .3, 1) both;
+    }
+    /* Halo detrás del logo (no se recorta). */
+    .brand::before {
+      content: "";
+      position: absolute;
+      width: 78%;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(22, 101, 52, .13) 0%, transparent 66%);
+      z-index: 0;
+    }
+    /* Marco que ENCUADRA el logo y recorta el margen transparente lateral del
+       .webp, para que el dibujo se vea grande y proporcional al login. */
+    .brand-frame {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      aspect-ratio: 4 / 5;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: float 6s ease-in-out infinite;
+    }
+    .brand-frame img {
+      height: 132%;
+      width: auto;
+      max-width: none;
+    }
+
+    /* ---- Tarjeta del formulario ---- */
+    .login-card {
+      background: #fff;
+      border: 2px solid var(--oro);
+      border-radius: 26px;
+      padding: 40px 38px;
+      box-shadow:
+        0 0 0 5px rgba(212, 175, 55, .10),
+        0 30px 60px -20px rgba(14, 59, 43, .25),
+        0 8px 24px -12px rgba(14, 59, 43, .12);
+      animation: fade-up .7s cubic-bezier(.16, 1, .3, 1) .08s both;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--verde-600);
+    }
+    .eyebrow::before, .eyebrow::after {
+      content: "";
+      width: 22px;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--oro);
+    }
+
+    .login-title {
+      margin: 10px 0 6px;
+      text-align: center;
+      font-size: 34px;
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: var(--verde-900);
+    }
+    .login-sub {
+      margin: 0 0 26px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--gris);
+    }
+
+    .field { margin-bottom: 18px; }
+    .field > label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--verde-900);
+    }
+    .control { position: relative; }
+    .control .ico {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gris-suave);
+      pointer-events: none;
+      display: flex;
+    }
+    .control input {
+      width: 100%;
+      height: 52px;
+      padding: 0 46px;
+      border: 1.5px solid var(--linea);
+      border-radius: 14px;
+      background: #f8faf9;
+      font-size: 15px;
+      color: var(--tinta);
+      transition: border-color .18s, box-shadow .18s, background .18s;
+      outline: none;
+    }
+    .control input::placeholder { color: var(--gris-suave); }
+    .control input:focus {
+      border-color: var(--verde-600);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(22, 101, 52, .12);
+    }
+    .control input:focus + .ico,
+    .control:focus-within .ico { color: var(--verde-600); }
+
+    .toggle-eye {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--gris-suave);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: color .15s, background .15s;
+    }
+    .toggle-eye:hover { color: var(--verde-700); background: rgba(22, 101, 52, .08); }
+
+    .btn-entrar {
+      width: 100%;
+      height: 54px;
+      margin-top: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      color: #fff;
+      font-size: 15.5px;
+      font-weight: 700;
+      letter-spacing: .01em;
+      background: linear-gradient(135deg, var(--verde-600) 0%, var(--verde-800) 55%, var(--verde-900) 100%);
+      box-shadow: 0 12px 24px -10px rgba(14, 59, 43, .55);
+      transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+    }
+    .btn-entrar .arrow { transition: transform .2s ease; }
+    .btn-entrar:hover {
+      filter: brightness(1.06);
+      box-shadow: 0 18px 30px -10px rgba(14, 59, 43, .6);
+      transform: translateY(-1px);
+    }
+    .btn-entrar:hover .arrow { transform: translateX(4px); }
+    .btn-entrar:active { transform: translateY(0); }
+
+    .forgot {
+      margin-top: 16px;
+      text-align: center;
+    }
+    .forgot a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      color: var(--gris);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .forgot a:hover { color: var(--verde-700); }
+
+    .divisor {
+      height: 1px;
+      background: var(--linea);
+      margin: 24px 0 18px;
+    }
+    .foot {
+      text-align: center;
+      font-size: 12.5px;
+      color: var(--gris-suave);
+      line-height: 1.7;
+    }
+    .foot .marca { color: var(--verde-900); font-weight: 700; }
+    .foot .oro { color: var(--oro-claro); }
+
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-12px); }
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 920px) {
+      .login-wrap { grid-template-columns: 1fr; gap: 8px; max-width: 460px; }
+      .brand-frame { max-width: 300px; aspect-ratio: 5 / 4; animation: none; }
+      .brand { padding-bottom: 0; }
+      .login-card { padding: 32px 24px; }
+      .login-title { font-size: 28px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .brand, .login-card, .brand img { animation: none; }
+    }
+  </style>
 </head>
-<body class="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-  <div class="w-full max-w-[22rem]">
-    <div class="mb-5 flex flex-col items-center text-center">
-      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
-        <svg class="h-5 w-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 1.5v21M17.5 5.5H9.75a3.25 3.25 0 0 0 0 6.5h4.5a3.25 3.25 0 0 1 0 6.5H6.5" />
-        </svg>
+<body class="login-body">
+  <main class="login-wrap">
+    <!-- Marca -->
+    <section class="brand">
+      <div class="brand-frame">
+        <img src="/img/login%20mejorado.webp" alt="Cash R&amp;R Financiadora" />
       </div>
-      <p class="mt-2.5 text-lg font-semibold text-slate-800 tracking-tight">Cartera</p>
-      <p class="text-xs text-slate-400">Gestión de préstamos</p>
-    </div>
+    </section>
 
-    <form action="/auth/login" method="POST" class="card space-y-3.5 py-6">
-      <div>
-        <label class="label-field" for="email">Correo</label>
-        <input class="input-field" type="email" id="email" name="email" required autofocus />
+    <!-- Formulario -->
+    <section class="login-card">
+      <p class="eyebrow">Bienvenido</p>
+      <h1 class="login-title">Iniciar sesión</h1>
+      <p class="login-sub">Ingresa tus credenciales para acceder al sistema</p>
+
+      <form action="/auth/login" method="POST" data-no-loading>
+        <div class="field">
+          <label for="email">Correo electrónico</label>
+          <div class="control">
+            <span class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+            </span>
+            <input type="email" id="email" name="email" placeholder="correo@ejemplo.com" required autofocus autocomplete="email" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="password">Contraseña</label>
+          <div class="control">
+            <span class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </span>
+            <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required minlength="8" autocomplete="current-password" />
+            <button type="button" class="toggle-eye" id="toggle-pass" aria-label="Mostrar contraseña">
+              <svg id="eye-open" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eye-off" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a13.2 13.2 0 0 1-2.16 2.98M6.6 6.6A13.2 13.2 0 0 0 2 12s3.5 7 10 7a9.1 9.1 0 0 0 3.4-.66"/><path d="M14.12 14.12A3 3 0 0 1 9.88 9.88"/><path d="m2 2 20 20"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-entrar">
+          Entrar al sistema
+          <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+
+      <div class="forgot">
+        <a href="#">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          ¿Olvidaste tu contraseña?
+        </a>
       </div>
 
-      <div>
-        <label class="label-field" for="password">Contraseña</label>
-        <input class="input-field" type="password" id="password" name="password" required />
-      </div>
+      <div class="divisor"></div>
+      <p class="foot">
+        Uso exclusivo para personal autorizado
+      </p>
+    </section>
+  </main>
 
-      <button type="submit" class="btn-primary w-full mt-1">Iniciar sesión</button>
-    </form>
-  </div>
+  <script>
+    (function () {
+      var btn = document.getElementById('toggle-pass');
+      var input = document.getElementById('password');
+      var open = document.getElementById('eye-open');
+      var off = document.getElementById('eye-off');
+      if (btn && input) {
+        btn.addEventListener('click', function () {
+          var mostrar = input.type === 'password';
+          input.type = mostrar ? 'text' : 'password';
+          open.style.display = mostrar ? 'none' : '';
+          off.style.display = mostrar ? '' : 'none';
+          btn.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
+          input.focus();
+        });
+      }
+    })();
+  </script>
 
   <%- include('../partials/flash-script', { flashError: error, flashExito: null }) %>
 </body>

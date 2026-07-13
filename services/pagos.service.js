@@ -2,6 +2,7 @@ const { supabaseAdmin } = require('../config/supabase');
 const cajaService = require('./caja.service');
 const auditoria = require('./auditoria.service');
 const scoreService = require('./score.service');
+const realtime = require('./realtime');
 const { diasDeAtraso, siguienteFecha, formatoISO } = require('../utils/fechas');
 const { formatCOP } = require('../utils/moneda');
 
@@ -139,6 +140,9 @@ async function registrarAbono({ prestamoId, cuotaId, monto, fechaPago, metodo, n
 
   // Recalcular score crediticio del cliente (fail-soft).
   await scoreService.recalcularYGuardar(prestamo?.cliente_id || null);
+
+  // Avisar a los paneles en tiempo real (mora, dashboard, etc.).
+  realtime.emitir('datos:cambio', { origen: 'pago' });
 
   return pago;
 }
@@ -300,6 +304,9 @@ async function registrarPagoInteres({ prestamoId, cuotaId, monto, fechaPago, met
 
   // Recalcular score crediticio del cliente (fail-soft).
   await scoreService.recalcularYGuardar(prestamo?.cliente_id || null);
+
+  // Avisar a los paneles en tiempo real (mora, dashboard, etc.).
+  realtime.emitir('datos:cambio', { origen: 'pago' });
 
   return pago;
 }

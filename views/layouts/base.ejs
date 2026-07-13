@@ -24,6 +24,11 @@
   <% } %>
 </head>
 <body class="min-h-screen bg-slate-50">
+  <!-- Loader de navegación entre vistas (se muestra al ir a otra página). -->
+  <div id="nav-loader" role="status" aria-live="polite">
+    <div class="loader"></div>
+    <span class="sr-only">Cargando…</span>
+  </div>
   <% if (esAdmin) { %>
     <%- include('../partials/sidebar-admin') %>
     <div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-slate-900/50"></div>
@@ -35,7 +40,7 @@
     <% if (esAdmin) { %>
       <!-- Barra pegajosa con el botón para abrir el menú. Se queda arriba al
            hacer scroll y su fondo evita que el contenido quede por debajo. -->
-      <div id="barra-toggle" class="sticky top-0 z-40 -mx-6 sm:-mx-8 -mt-6 mb-4 border-b border-slate-100 bg-slate-50/85 px-6 sm:px-8 py-2.5 backdrop-blur">
+      <div id="barra-toggle" class="-mx-6 -mt-6 mb-2 border-b border-slate-100 bg-slate-50 px-6 py-1.5 sm:-mx-8 sm:px-8">
         <button type="button" id="btn-abrir-sidebar" aria-label="Abrir menú"
           style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:.75rem;background:linear-gradient(145deg,#f8fafc 0%,#e2e8f0 60%,#cbd5e1 100%);color:#475569;border:1px solid rgba(255,255,255,.9);box-shadow:0 4px 10px rgba(100,116,139,.25),0 1px 3px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.95);transition:transform .15s ease,box-shadow .15s ease;"
           onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(100,116,139,.35),0 2px 6px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.95)'"

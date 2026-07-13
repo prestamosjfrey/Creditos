@@ -79,6 +79,7 @@ router.post('/creditos-tomados/:id/cuotas', creditosTomadosController.pagarCuota
 router.get('/cobros', cobrosController.mostrarCobros);
 router.post('/cobros/notificar', cobrosController.notificarCobrosHoy);
 router.get('/mora', cobrosController.mostrarMora);
+router.get('/mora/datos', cobrosController.datosMora);
 
 router.get('/reportes', reportesController.mostrarIndice);
 router.get('/reportes/capital-prestado', reportesController.mostrarCapitalPrestado);

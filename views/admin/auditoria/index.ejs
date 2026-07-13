@@ -72,25 +72,32 @@
 <!-- Resumen por categoría -->
 <%
   var _c = typeof conteos !== 'undefined' && conteos ? conteos : { total:0, prestamos:0, pagos:0, mora:0, caja:0, clientes:0 };
-  var svgDoc   = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>';
-  var svgPres  = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>';
-  var svgPago  = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>';
-  var svgMora  = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
-  var svgCaja  = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="12" cy="14" r="2"/></svg>';
-  var svgCli   = '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>';
+  // Íconos por categoría — MISMA fuente para las tarjetas y para los chips de abajo,
+  // así el ícono de "Pagos" (etc.) es idéntico arriba y abajo.
+  var icoPath = {
+    todos:     '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    prestamos: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/>',
+    pagos:     '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
+    mora:      '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    caja:      '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="12" cy="14" r="2"/>',
+    clientes:  '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>',
+  };
+  function icoSvg(cat, size) {
+    return '<svg class="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + (icoPath[cat] || '') + '</svg>';
+  }
   var tarjetas = [
-    { icono: svgDoc,  bg:'bg-blue-100',    tx:'text-blue-600',    label:'Eventos registrados', valor:_c.total,     nota:'Total en el sistema' },
-    { icono: svgPres, bg:'bg-emerald-100', tx:'text-emerald-600', label:'Préstamos',           valor:_c.prestamos, nota:'Eventos registrados' },
-    { icono: svgPago, bg:'bg-violet-100',  tx:'text-violet-600',  label:'Pagos',               valor:_c.pagos,     nota:'Eventos registrados' },
-    { icono: svgMora, bg:'bg-amber-100',   tx:'text-amber-600',   label:'Mora',                valor:_c.mora,      nota:'Eventos registrados' },
-    { icono: svgCaja, bg:'bg-cyan-100',    tx:'text-cyan-600',    label:'Caja',                valor:_c.caja,      nota:'Eventos registrados' },
-    { icono: svgCli,  bg:'bg-indigo-100',  tx:'text-indigo-600',  label:'Clientes',            valor:_c.clientes,  nota:'Eventos registrados' },
+    { cat:'todos',     bg:'bg-blue-100',    tx:'text-blue-600',    label:'Eventos registrados', valor:_c.total,     nota:'Total en el sistema' },
+    { cat:'prestamos', bg:'bg-emerald-100', tx:'text-emerald-600', label:'Préstamos',           valor:_c.prestamos, nota:'Eventos registrados' },
+    { cat:'pagos',     bg:'bg-violet-100',  tx:'text-violet-600',  label:'Pagos',               valor:_c.pagos,     nota:'Eventos registrados' },
+    { cat:'mora',      bg:'bg-amber-100',   tx:'text-amber-600',   label:'Mora',                valor:_c.mora,      nota:'Eventos registrados' },
+    { cat:'caja',      bg:'bg-cyan-100',    tx:'text-cyan-600',    label:'Caja',                valor:_c.caja,      nota:'Eventos registrados' },
+    { cat:'clientes',  bg:'bg-indigo-100',  tx:'text-indigo-600',  label:'Clientes',            valor:_c.clientes,  nota:'Eventos registrados' },
   ];
 %>
 <div class="card mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 divide-slate-100 lg:divide-x">
   <% tarjetas.forEach(function(t, i) { %>
     <div class="flex items-center gap-3 <%= i > 0 ? 'lg:pl-4' : '' %>">
-      <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full <%= t.bg %> <%= t.tx %>"><%- t.icono %></span>
+      <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full <%= t.bg %> <%= t.tx %>"><%- icoSvg(t.cat, 'h-5 w-5') %></span>
       <div class="min-w-0">
         <p class="text-xs text-slate-400 truncate"><%= t.label %></p>
         <p class="num text-2xl font-bold text-slate-800"><%= t.valor %></p>
@@ -101,39 +108,36 @@
 </div>
 
 <!-- Filtros + búsqueda + exportar -->
-<%
-  var ico = {
-    todos:     '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
-    prestamos: '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>',
-    pagos:     '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
-    mora:      '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-    caja:      '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="12" cy="14" r="2"/></svg>',
-    clientes:  '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>',
-  };
-%>
-<div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-  <div class="flex flex-wrap gap-2">
-    <% cats.forEach(function(c) { var activo = (cat || 'todos') === c[0]; %>
-      <a href="/admin/auditoria?cat=<%= c[0] %>"
-         class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition <%= activo ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50' %>">
-        <%- ico[c[0]] %>
-        <%= c[1] %>
-      </a>
-    <% }); %>
+<div class="mb-4 flex flex-wrap items-center justify-center gap-2">
+  <% cats.forEach(function(c) { var activo = (cat || 'todos') === c[0]; %>
+    <a href="/admin/auditoria?cat=<%= c[0] %>"
+       class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition <%= activo ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50' %>">
+      <%- icoSvg(c[0], 'h-4 w-4') %>
+      <%= c[1] %>
+    </a>
+  <% }); %>
+
+  <div class="relative w-full sm:w-64">
+    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    </span>
+    <input id="buscar-auditoria" type="text" placeholder="Buscar evento, cliente o referencia…"
+      class="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-600 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100" />
   </div>
-  <div class="flex items-center gap-2">
-    <div class="relative flex-1 lg:w-72">
-      <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      </span>
-      <input id="buscar-auditoria" type="text" placeholder="Buscar evento, cliente o referencia…"
-        class="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-600 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100" />
-    </div>
+
+  <div class="relative shrink-0">
     <button type="button" id="btn-exportar-auditoria"
-      class="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+      class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
       Exportar
+      <svg class="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
     </button>
+    <div id="menu-exportar" class="hidden absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-lg">
+      <button type="button" id="exportar-json" class="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-600 transition hover:bg-slate-50">
+        <svg class="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1M16 3h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-1"/></svg>
+        Formato JSON
+      </button>
+    </div>
   </div>
 </div>
 
@@ -178,18 +182,21 @@
 </div>
 
 <%
-  // Datos para exportar a CSV (todos los eventos de la vista actual).
-  var filasCsv = [['Fecha', 'Evento', 'Descripción', 'Cliente', 'Cédula', 'Registrado por']];
-  eventos.forEach(function (ev) {
+  // Datos para exportar (todos los eventos de la vista actual).
+  var datosJson = eventos.map(function (ev) {
     var cli = ev.cliente || (ev.prestamo && ev.prestamo.perfiles) || null;
-    filasCsv.push([
-      fechaHora(ev.creado_en),
-      etiqueta(ev.tipo),
-      ev.descripcion || '',
-      cli ? cli.nombre_completo : '',
-      cli ? (cli.numero_documento || '') : '',
-      ev.actor ? ev.actor.nombre_completo : 'Sistema',
-    ]);
+    return {
+      fecha: fechaHora(ev.creado_en),
+      tipo: ev.tipo,
+      evento: etiqueta(ev.tipo),
+      descripcion: ev.descripcion || '',
+      cliente: cli ? cli.nombre_completo : null,
+      cedula: cli ? (cli.numero_documento || null) : null,
+      registrado_por: ev.actor ? ev.actor.nombre_completo : 'Sistema',
+      creado_en: ev.creado_en,
+      prestamo_id: ev.prestamo_id || null,
+      cliente_id: ev.cliente_id || null,
+    };
   });
 %>
 <script>
@@ -204,25 +211,34 @@
       });
     }
 
-    // Exportar a CSV.
-    var filas = <%- JSON.stringify(filasCsv).replace(/</g, '\\u003c') %>;
+    // Menú de exportar (abrir/cerrar).
     var btn = document.getElementById('btn-exportar-auditoria');
-    if (btn) {
-      btn.addEventListener('click', function () {
-        var csv = filas.map(function (fila) {
-          return fila.map(function (c) {
-            return '"' + (c == null ? '' : String(c)).replace(/"/g, '""') + '"';
-          }).join(',');
-        }).join('\r\n');
-        var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    var menu = document.getElementById('menu-exportar');
+    if (btn && menu) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        menu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', function () { menu.classList.add('hidden'); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') menu.classList.add('hidden'); });
+    }
+
+    // Exportar a JSON.
+    var datos = <%- JSON.stringify(datosJson).replace(/</g, '\\u003c') %>;
+    var btnJson = document.getElementById('exportar-json');
+    if (btnJson) {
+      btnJson.addEventListener('click', function () {
+        var json = JSON.stringify(datos, null, 2);
+        var blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
         a.href = url;
-        a.download = 'auditoria-<%= cat || "todos" %>-' + new Date().toISOString().slice(0, 10) + '.csv';
+        a.download = 'auditoria-<%= cat || "todos" %>-' + new Date().toISOString().slice(0, 10) + '.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        if (menu) menu.classList.add('hidden');
       });
     }
   })();

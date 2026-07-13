@@ -1,6 +1,7 @@
 const { supabaseAdmin } = require('../../config/supabase');
 const { formatoISO } = require('../../utils/fechas');
 const callmebot = require('../../services/callmebot.service');
+const moraService = require('../../services/mora.service');
 
 async function obtenerCobros(diasAdelante = 30) {
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
@@ -116,28 +117,17 @@ async function notificarCobrosHoy(req, res, next) {
 
 async function mostrarMora(req, res, next) {
   try {
-    const { data: mora, error } = await supabaseAdmin
-      .from('cuotas')
-      .select(`
-        id, numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, estado, prestamo_id,
-        prestamos:prestamo_id(
-          id, numero, numero_cuotas,
-          perfiles:cliente_id(nombre_completo, numero_documento, telefono)
-        )
-      `)
-      .in('estado', ['pendiente', 'parcial', 'vencida'])
-      .lt('fecha_vencimiento', formatoISO(new Date()))
-      .order('fecha_vencimiento', { ascending: true });
-    if (error) throw error;
-
-    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-    const lista = (mora || []).map((c) => {
-      const diasAtraso = Math.round((hoy - new Date(c.fecha_vencimiento + 'T00:00:00')) / 86400000);
-      const num = c.prestamos?.numero != null ? String(c.prestamos.numero).padStart(5, '0') : null;
-      return { ...c, diasAtraso, saldo: Number(c.monto_esperado) - Number(c.monto_pagado), numeroPrestamo: num ? `#PR-${num}` : null };
-    });
-    res.render('admin/mora/index', { titulo: 'Mora', mora: lista });
+    const centro = await moraService.obtenerCentroMora();
+    res.render('admin/mora/index', { titulo: 'Mora', centro });
   } catch (err) { next(err); }
 }
 
-module.exports = { mostrarCobros, notificarCobrosHoy, mostrarMora };
+// Mismos datos en JSON, para refrescar el Centro de Mora en tiempo real.
+async function datosMora(req, res, next) {
+  try {
+    const centro = await moraService.obtenerCentroMora();
+    res.json(centro);
+  } catch (err) { next(err); }
+}
+
+module.exports = { mostrarCobros, notificarCobrosHoy, mostrarMora, datosMora };

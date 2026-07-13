@@ -4,6 +4,7 @@ const { formatCOP } = require('../utils/moneda');
 const cajaService = require('./caja.service');
 const auditoria = require('./auditoria.service');
 const scoreService = require('./score.service');
+const realtime = require('./realtime');
 
 // Genera las filas de `cuotas` para un préstamo ya creado.
 // El admin siempre define valor_cuota, numero_cuotas y monto_total_a_pagar —
@@ -17,7 +18,8 @@ function calcularPlanDeCuotas(prestamo) {
 
   for (let i = 1; i <= numero_cuotas; i++) {
     const esUltima = i === numero_cuotas;
-    // La última cuota absorbe la diferencia de redondeo frente a monto_total_a_pagar.
+    // Cada cuota vale valor_cuota (que el formulario sugiere como total ÷ n para
+    // que salgan iguales); la última absorbe la diferencia de redondeo.
     const montoEsperado = esUltima
       ? Math.round((monto_total_a_pagar - acumulado) * 100) / 100
       : Math.round(valor_cuota * 100) / 100;
@@ -84,6 +86,8 @@ async function crearPrestamoConPlan(datosPrestamo) {
     },
     actorId: prestamo.creado_por,
   });
+
+  realtime.emitir('datos:cambio', { origen: 'prestamo' });
 
   return prestamo;
 }
@@ -167,6 +171,8 @@ async function marcarCuotasVencidas() {
   for (const clienteId of clientesEnMora) {
     await scoreService.recalcularYGuardar(clienteId);
   }
+
+  if ((nuevasEnMora || []).length) realtime.emitir('datos:cambio', { origen: 'mora' });
 }
 
 module.exports = {

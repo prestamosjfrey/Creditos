@@ -274,16 +274,30 @@ async function generarComprobanteCuota(req, res, next) {
     // distribución guardada). Si son varios distintos → "Varios".
     const METODOS = { efectivo: 'Efectivo', transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', otro: 'Otro' };
     const metodosSet = new Set();
+    let pagoInteres = null;
     (pagos || []).forEach((p) => {
       const aplic = p.distribucion && Array.isArray(p.distribucion.aplicaciones) ? p.distribucion.aplicaciones : [];
-      if (aplic.some((a) => a.cuota_id === cuotaId) && p.metodo) {
-        metodosSet.add(METODOS[p.metodo] || p.metodo);
+      if (aplic.some((a) => a.cuota_id === cuotaId)) {
+        if (p.metodo) metodosSet.add(METODOS[p.metodo] || p.metodo);
+        if (p.tipo === 'interes' && !pagoInteres) pagoInteres = p;
       }
     });
     const metodoPago = metodosSet.size === 0 ? null : (metodosSet.size === 1 ? [...metodosSet][0] : 'Varios');
 
     const disp = req.query.ver === '1' ? 'inline' : 'attachment';
     res.setHeader('Content-Type', 'application/pdf');
+
+    // Si la cuota se pagó con un abono de SOLO INTERÉS, el comprobante correcto
+    // es el del pago de interés (no el de cuota normal) — así no se duplican.
+    if (pagoInteres) {
+      const abonadoTotal = (pagos || []).reduce((a, p) => a + Number(p.monto), 0);
+      const saldo = Number(prestamo.monto_total_a_pagar) - abonadoTotal;
+      const cuotasTotal = (cuotas || []).length || prestamo.numero_cuotas;
+      const cuotasPagadas = (cuotas || []).filter((c) => c.estado === 'pagada').length;
+      res.setHeader('Content-Disposition', `${disp}; filename="comprobante-interes-cuota-${cuota.numero_cuota}.pdf"`);
+      return comprobanteService.generarComprobantePagoPDF({ prestamo, pago: pagoInteres, saldo, cuotasPagadas, cuotasTotal }, res);
+    }
+
     res.setHeader('Content-Disposition', `${disp}; filename="cuota-${cuota.numero_cuota}.pdf"`);
     comprobanteService.generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago }, res);
   } catch (err) {

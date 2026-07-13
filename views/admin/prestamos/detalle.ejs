@@ -1,6 +1,5 @@
 <%
-  // Arma el número para WhatsApp: solo dígitos; si son 10 (celular CO) le
-  // antepone el 57; si ya empieza por 57 lo deja igual.
+  // --- WhatsApp (preservado para los modales de compartir) ---
   var telDigitos = (prestamo.perfiles?.telefono || '').replace(/\D/g, '');
   var telWa = telDigitos.length === 10 ? '57' + telDigitos : telDigitos;
   var tieneTel = telDigitos.length >= 10;
@@ -12,133 +11,328 @@
     '• Primer pago: ' + prestamo.fecha_primer_pago + '\n\n' +
     'Adjunto el comprobante en PDF. ¡Gracias!';
   var waUrl = 'https://wa.me/' + telWa + '?text=' + encodeURIComponent(mensajeWa);
+
+  // --- Derivados del préstamo ---
+  var cli = prestamo.perfiles || {};
+  var capital = Number(prestamo.monto_capital);
+  var total = Number(prestamo.monto_total_a_pagar);
+  var interes = Math.max(0, total - capital);
+  var nCuotas = Number(prestamo.numero_cuotas);
+  var valorCuota = Number(prestamo.valor_cuota);
+  var abonado = pagos.reduce(function (a, p) { return a + Number(p.monto); }, 0);
+  var saldo = total - abonado;
+  var cuotasPagadas = cuotas.filter(function (c) { return c.estado === 'pagada'; }).length;
+  var cuotasRestantes = Math.max(0, nCuotas - cuotasPagadas);
+  var progresoPct = nCuotas ? Math.round(cuotasPagadas / nCuotas * 100) : 0;
+  var pctCapital = total ? Math.round(capital / total * 100) : 0;
+  var pctInteres = total ? Math.round(interes / total * 100) : 0;
+  var pctPagado = total ? Math.round(abonado / total * 100) : 0;
+  var pctSaldo = total ? Math.round(saldo / total * 100) : 0;
+  var interesPorCuota = nCuotas ? Math.round(interes / nCuotas) : 0;
+  var ratioCapital = total ? (capital / total) : 0;
+
+  var hoyD = new Date(); hoyD.setHours(0, 0, 0, 0);
+  function difDias(iso) { if (!iso) return 0; return Math.round((new Date(iso + 'T00:00:00') - hoyD) / 86400000); }
+  var pend = cuotas.filter(function (c) { return c.estado !== 'pagada'; }).slice()
+    .sort(function (a, b) { return String(a.fecha_vencimiento).localeCompare(String(b.fecha_vencimiento)); });
+  var proxima = pend[0] || null;
+  var diasRestantes = proxima ? difDias(proxima.fecha_vencimiento) : 0;
+  var diasMora = 0; cuotas.forEach(function (c) { if (c.estado !== 'pagada') { var d = -difDias(c.fecha_vencimiento); if (d > diasMora) diasMora = d; } });
+  var enMora = diasMora > 0 || prestamo.estado === 'en_mora';
+  var estaPagado = prestamo.estado === 'pagado' || saldo <= 0.01;
+  var fechasPago = pagos.map(function (p) { return p.fecha_pago; }).filter(Boolean).sort();
+  var ultimoPago = fechasPago.length ? fechasPago[fechasPago.length - 1] : null;
+  var totalPendienteCuotas = cuotas.reduce(function (a, c) { return a + (Number(c.monto_esperado) - Number(c.monto_pagado)); }, 0);
+
+  var MES3 = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var MESL = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  function fCorta(iso) { if (!iso) return '—'; var d = new Date(iso + 'T00:00:00'); return d.getDate() + ' ' + MES3[d.getMonth()] + ' ' + d.getFullYear(); }
+  function fLarga(iso) { if (!iso) return '—'; var d = new Date(iso + 'T00:00:00'); return d.getDate() + ' de ' + MESL[d.getMonth()] + ' de ' + d.getFullYear(); }
+  function inicial(n) { return (n || '?').trim().slice(0, 1).toUpperCase(); }
+  var numCred = 'CRD-' + String(prestamo.fecha_inicio || '2000').slice(0, 4) + '-' + (prestamo.numero != null ? String(prestamo.numero).padStart(4, '0') : String(prestamo.id).replace(/\D/g, '').slice(0, 4));
+  var hoyISOv = (function () { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+  var METODOS_LBL = { efectivo: 'Efectivo', transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', otro: 'Otro' };
+  var estadoBadge = estaPagado
+    ? '<span class="badge-exito">Pagado</span>'
+    : (enMora ? '<span class="badge-peligro">En mora</span>' : '<span class="badge-exito">Activo</span>');
 %>
-<style>
-  @keyframes pd-float  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-  @keyframes pd-orbit  { from{transform:rotateX(72deg) rotateZ(0deg)}   to{transform:rotateX(72deg) rotateZ(360deg)} }
-  @keyframes pd-orbit2 { from{transform:rotateX(72deg) rotateZ(180deg)} to{transform:rotateX(72deg) rotateZ(540deg)} }
-  @keyframes pd-shadow { 0%,100%{transform:translateX(-50%) scale(1);opacity:.35} 50%{transform:translateX(-50%) scale(.8);opacity:.18} }
-  @keyframes pd-glow   { 0%,100%{opacity:.6} 50%{opacity:1} }
-</style>
-<div class="mb-6 flex flex-col items-center text-center gap-1">
-  <div style="position:relative;width:84px;height:92px;display:flex;align-items:center;justify-content:center;margin-bottom:.25rem">
-    <div style="position:absolute;bottom:0;left:50%;width:72px;height:12px;background:radial-gradient(ellipse,rgba(5,150,105,.5) 0%,transparent 70%);border-radius:50%;animation:pd-shadow 3s ease-in-out infinite;"></div>
-    <div style="animation:pd-float 3s ease-in-out infinite;position:relative;width:70px;height:70px;">
-      <div style="position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(5,150,105,.22) 0%,transparent 65%);animation:pd-glow 3s ease-in-out infinite;pointer-events:none;"></div>
-      <div style="position:absolute;inset:-14px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(16,185,129,.85);border-bottom:2px solid rgba(16,185,129,.2);transform:rotateX(72deg);animation:pd-orbit 3.5s linear infinite;pointer-events:none;"></div>
-      <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(110,231,183,.7);border-left:1.5px solid rgba(110,231,183,.15);transform:rotateX(72deg) rotateZ(180deg);animation:pd-orbit2 5s linear infinite;pointer-events:none;"></div>
-      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 33% 28%,#6ee7b7 0%,#10b981 28%,#059669 52%,#047857 70%,#065f46 88%,#022c22 100%);box-shadow:0 12px 36px rgba(5,150,105,.65),0 4px 12px rgba(0,0,0,.25),inset 0 -8px 16px rgba(0,0,0,.35),inset 2px 2px 6px rgba(255,255,255,.08);position:relative;display:flex;align-items:center;justify-content:center;"
-        onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)'"
-        onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)'">
-        <div style="position:absolute;top:12%;left:16%;width:38%;height:30%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,.7) 0%,rgba(255,255,255,.15) 55%,transparent 100%);border-radius:50%;filter:blur(3px);pointer-events:none;"></div>
-        <svg style="width:30px;height:30px;color:white;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125h17.25c.621 0 1.125.504 1.125 1.125v.375m-19.5 0v8.25a1.125 1.125 0 0 0 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-8.25M12 11.25a2.625 2.625 0 1 1 0-5.25 2.625 2.625 0 0 1 0 5.25Z"/>
-        </svg>
+
+<!-- ===================== ENCABEZADO ===================== -->
+<div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+  <div class="flex items-start gap-4">
+    <a href="/admin/prestamos" class="icon-btn shrink-0 mt-1" aria-label="Volver">
+      <svg class="h-5 w-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </a>
+    <div class="relative shrink-0">
+      <span class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 text-2xl font-bold text-white shadow-lg shadow-blue-500/25"><%= inicial(cli.nombre_completo) %></span>
+      <span class="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full <%= enMora ? 'bg-red-500' : 'bg-emerald-500' %> text-white ring-2 ring-white">
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </span>
+    </div>
+    <div class="min-w-0">
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 class="text-2xl font-bold text-slate-800"><%= cli.nombre_completo || 'Cliente' %></h1>
+        <%- estadoBadge %>
       </div>
+      <p class="text-sm text-slate-500 mt-0.5">C.C. <%= cli.numero_documento || '—' %> · Crédito <span class="font-medium text-slate-600">#<%= numCred %></span></p>
+      <p class="text-xs text-slate-400 mt-0.5">Desde el <%= fLarga(prestamo.fecha_inicio) %><% if (proxima) { %> · Próximo pago: <span class="font-medium text-slate-500"><%= fLarga(proxima.fecha_vencimiento) %></span><% } %></p>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-stretch gap-2">
+    <% if (tieneTel) { %>
+      <a href="tel:<%= telDigitos %>" class="accion-detalle">
+        <img src="/img/telefono-removebg-preview.ico" alt="Llamar" class="h-16 w-16 object-contain" style="image-rendering:auto" />
+        Llamar
+      </a>
+      <a href="<%= waUrl %>" target="_blank" rel="noopener" class="accion-detalle">
+        <img src="/img/nuevo-icono-wasap.ico" alt="WhatsApp" class="h-16 w-16 object-contain" style="image-rendering:auto" />
+        WhatsApp
+      </a>
+    <% } %>
+    <a href="/admin/archivo?prestamo=<%= prestamo.id %>" class="accion-detalle">
+      <img src="/img/nuevo%20comprobante.ico" alt="Comprobantes" class="h-16 w-16 object-contain" style="image-rendering:auto" />
+      Comprobantes
+    </a>
+    <a href="/admin/clientes/<%= prestamo.cliente_id %>/editar" class="accion-detalle">
+      <img src="/img/nuevo%20editar.ico" alt="Editar" class="h-16 w-16 object-contain" style="image-rendering:auto" />
+      Editar
+    </a>
+  </div>
+</div>
+
+<!-- ===================== KPIs ===================== -->
+<div class="mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+  <div class="card">
+    <div class="flex items-center gap-2 mb-2"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-500"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M21 12a2 2 0 0 0-2-2h-4a2 2 0 0 0 0 4h4a2 2 0 0 0 2-2Z"/></svg></span><p class="text-xs text-slate-400">Capital</p></div>
+    <p class="num text-xl font-bold text-slate-800"><%= formatCOP(capital) %></p>
+    <p class="text-[11px] text-slate-400 mt-0.5"><%= pctCapital %>% del total</p>
+    <div class="mt-2 h-1.5 rounded-full bg-slate-100"><div class="h-full rounded-full bg-emerald-500" style="width:<%= pctCapital %>%"></div></div>
+  </div>
+  <div class="card">
+    <div class="flex items-center gap-2 mb-2"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-500"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 9l-5 5-2-2-4 4"/></svg></span><p class="text-xs text-slate-400">Interés</p></div>
+    <p class="num text-xl font-bold text-slate-800"><%= formatCOP(interes) %></p>
+    <p class="text-[11px] text-slate-400 mt-0.5"><%= pctInteres %>% del total</p>
+    <div class="mt-2 h-1.5 rounded-full bg-slate-100"><div class="h-full rounded-full bg-violet-500" style="width:<%= pctInteres %>%"></div></div>
+  </div>
+  <div class="card">
+    <div class="flex items-center gap-2 mb-2"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-500"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span><p class="text-xs text-slate-400">Total a pagar</p></div>
+    <p class="num text-xl font-bold text-slate-800"><%= formatCOP(total) %></p>
+    <p class="text-[11px] text-slate-400 mt-0.5">100% del crédito</p>
+    <div class="mt-2 h-1.5 rounded-full bg-slate-100"><div class="h-full rounded-full bg-blue-500" style="width:100%"></div></div>
+  </div>
+  <div class="card">
+    <div class="flex items-center gap-2 mb-2"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-500"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><p class="text-xs text-slate-400">Próxima cuota</p></div>
+    <p class="num text-lg font-bold text-slate-800"><%= proxima ? fCorta(proxima.fecha_vencimiento) : (estaPagado ? 'Pagado' : '—') %></p>
+    <p class="text-[11px] text-slate-400 mt-0.5"><%= formatCOP(valorCuota) %> · <%= (prestamo.frecuencia_pago||'').charAt(0).toUpperCase()+(prestamo.frecuencia_pago||'').slice(1) %></p>
+    <div class="mt-2 h-1.5 rounded-full bg-slate-100"><div class="h-full rounded-full bg-amber-500" style="width:<%= progresoPct %>%"></div></div>
+  </div>
+  <div class="card">
+    <div class="flex items-center gap-2 mb-2"><span class="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-500"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M21 12a2 2 0 0 0-2-2h-4a2 2 0 0 0 0 4h4a2 2 0 0 0 2-2Z"/></svg></span><p class="text-xs text-slate-400">Saldo pendiente</p></div>
+    <p class="num text-xl font-bold text-slate-800"><%= formatCOP(saldo) %></p>
+    <p class="text-[11px] text-slate-400 mt-0.5"><%= pctSaldo %>% por pagar</p>
+    <div class="mt-2 h-1.5 rounded-full bg-slate-100"><div class="h-full rounded-full bg-red-500" style="width:<%= pctSaldo %>%"></div></div>
+  </div>
+</div>
+
+<!-- ===================== PROGRESO + ESTADO ===================== -->
+<div class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+  <div class="lg:col-span-2 card !py-4">
+    <p class="font-semibold text-slate-800 mb-3">Progreso del crédito</p>
+    <div class="relative pt-4">
+      <div class="h-2.5 rounded-full bg-slate-100">
+        <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all" style="width:<%= progresoPct %>%"></div>
+      </div>
+      <span class="absolute -top-1 flex items-center justify-center rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[11px] font-bold text-emerald-600 shadow-sm" style="left:<%= progresoPct %>%;transform:translateX(-50%)"><%= progresoPct %>%</span>
+    </div>
+    <div class="mt-3 flex justify-between text-xs text-slate-400">
+      <span><span class="font-medium text-slate-600"><%= cuotasPagadas %></span> de <%= nCuotas %> cuotas pagadas</span>
+      <span><span class="font-medium text-slate-600"><%= cuotasRestantes %></span> cuotas restantes</span>
+    </div>
+  </div>
+  <div class="card !py-4 flex items-center gap-4">
+    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl <%= enMora ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500' %>">
+      <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><% if (enMora) { %><path d="M12 8v4M12 16h.01"/><% } else { %><path d="m9 12 2 2 4-4"/><% } %></svg>
+    </span>
+    <div>
+      <p class="text-xs text-slate-400">Estado del crédito</p>
+      <p class="text-lg font-bold <%= enMora ? 'text-red-500' : 'text-emerald-600' %>"><%= estaPagado ? 'Pagado' : (enMora ? 'En mora' : 'Al día') %></p>
+      <p class="text-xs text-slate-400"><%= enMora ? diasMora + ' día' + (diasMora===1?'':'s') + ' de mora' : 'Sin mora' %></p>
     </div>
   </div>
 </div>
-<div class="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-  <div>
-    <h1 class="text-xl font-semibold text-slate-800"><%= prestamo.perfiles?.nombre_completo %></h1>
-    <p class="text-sm text-slate-400">
-      Préstamo del <%= prestamo.fecha_inicio %> ·
-      <% if (prestamo.estado === 'pagado') { %><span class="badge-exito">Pagado</span>
-      <% } else if (prestamo.estado === 'en_mora') { %><span class="badge-peligro">En mora</span>
-      <% } else if (prestamo.estado === 'cancelado') { %><span class="badge-neutro">Cancelado</span>
-      <% } else { %><span class="badge-neutro">Activo</span><% } %>
-    </p>
+
+<!-- ===================== PLAN DE CUOTAS + REGISTRAR ABONO ===================== -->
+<div class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+  <!-- Plan de cuotas -->
+  <div class="lg:col-span-2 card">
+    <h2 class="font-semibold text-slate-800 mb-4">Plan de cuotas</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <th class="pb-3 pr-3">#</th><th class="pb-3 pr-3">Vence</th><th class="pb-3 pr-3 text-right">Monto</th><th class="pb-3 pr-3 text-right">Pagado</th><th class="pb-3 pr-3 text-right">Saldo</th><th class="pb-3 text-right">Estado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          <% cuotas.slice().sort(function(a,b){return a.numero_cuota-b.numero_cuota;}).forEach(function(c) {
+              var sc = Number(c.monto_esperado) - Number(c.monto_pagado);
+              var venc = difDias(c.fecha_vencimiento);
+              var esProx = proxima && c.id === proxima.id;
+              var badge, fila = '';
+              if (c.estado === 'pagada') { badge = '<span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-600"><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pagada</span>'; }
+              else if (venc < 0) { badge = '<span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-600"><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/></svg>Vencida</span>'; fila = 'bg-red-50/40'; }
+              else if (esProx) { badge = '<span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-600"><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Por vencer</span>'; fila = 'bg-amber-50'; }
+              else if (c.estado === 'parcial') { badge = '<span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-600">Parcial</span>'; }
+              else { badge = '<span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">Pendiente</span>'; }
+          %>
+            <tr class="<%= fila %>">
+              <td class="py-3 pr-3 font-mono text-xs text-slate-400"><%= c.numero_cuota %></td>
+              <td class="py-3 pr-3 text-slate-600 whitespace-nowrap"><%= fCorta(c.fecha_vencimiento) %></td>
+              <td class="py-3 pr-3 text-right num text-slate-700"><%= formatCOP(c.monto_esperado) %></td>
+              <td class="py-3 pr-3 text-right num text-slate-500"><%= formatCOP(c.monto_pagado) %></td>
+              <td class="py-3 pr-3 text-right num font-medium text-slate-800"><%= formatCOP(sc) %></td>
+              <td class="py-3 text-right"><%- badge %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <!-- Footer stats -->
+    <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-slate-100 pt-4">
+      <div><p class="text-[11px] text-slate-400">Cuotas pagadas</p><p class="num text-base font-bold text-slate-800"><%= cuotasPagadas %></p></div>
+      <div><p class="text-[11px] text-slate-400">Total pagado</p><p class="num text-base font-bold text-emerald-600"><%= formatCOP(abonado) %></p></div>
+      <div><p class="text-[11px] text-slate-400">Total pendiente</p><p class="num text-base font-bold text-red-500"><%= formatCOP(saldo) %></p></div>
+      <div><p class="text-[11px] text-slate-400">Días restantes</p><p class="num text-base font-bold text-blue-600"><%= proxima ? (diasRestantes >= 0 ? diasRestantes + ' días' : 'Vencida') : '—' %></p></div>
+    </div>
   </div>
-  <div class="flex flex-wrap items-center gap-2">
-    <a href="/admin/clientes/<%= prestamo.cliente_id %>" class="btn-secondary">Ver cliente</a>
-    <a href="/admin/prestamos/<%= prestamo.id %>/comprobante" target="_blank" rel="noopener" class="btn-secondary">
-      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16.5V3m0 13.5-4-4m4 4 4-4M4.5 16.5V18a2.25 2.25 0 0 0 2.25 2.25h10.5A2.25 2.25 0 0 0 19.5 18v-1.5"/></svg>
-      Comprobante PDF
-    </a>
-    <% if (tieneTel) { %>
-      <button type="button" id="btn-compartir-plan" class="inline-flex items-center justify-center gap-2 rounded-xl bg-green-500 px-4 py-2.5 font-medium text-white transition hover:bg-green-600">
-        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/></svg>
-        Enviar plan por WhatsApp
-      </button>
+
+  <!-- Registrar abono -->
+  <div class="card">
+    <h2 class="flex items-center gap-2 font-semibold text-slate-800 mb-4">
+      <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-500"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
+      Registrar abono
+    </h2>
+    <% if (estaPagado) { %>
+      <div class="rounded-xl bg-emerald-50 px-4 py-6 text-center">
+        <p class="font-medium text-emerald-700">Préstamo pagado</p>
+        <p class="text-xs text-emerald-600/80 mt-1">Este crédito ya está saldado por completo.</p>
+      </div>
     <% } else { %>
-      <span class="inline-flex items-center gap-1.5 text-xs text-slate-400">Cliente sin teléfono para WhatsApp</span>
+      <form action="/admin/prestamos/<%= prestamo.id %>/pagos" method="POST" id="form-abono"
+            data-loading-title="Registrando abono…" data-ratio-capital="<%= ratioCapital %>" data-saldo="<%= saldo %>" data-interes-cuota="<%= interesPorCuota %>">
+        <input type="hidden" name="fecha_pago" value="<%= hoyISOv %>" />
+        <input type="hidden" name="cuota_id" id="abono-cuota-id" value="<%= proxima ? proxima.id : '' %>" />
+
+        <div class="grid grid-cols-1 gap-3">
+          <div>
+            <label class="label-field" for="abono-tipo">Tipo de pago</label>
+            <select class="input-field" id="abono-tipo" name="tipo">
+              <option value="abono">Abono normal</option>
+              <option value="interes">Solo interés</option>
+            </select>
+          </div>
+          <div>
+            <label class="label-field" for="abono-monto"><span id="abono-monto-label">Monto del abono</span></label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+              <input class="input-field pl-7 input-moneda" type="text" inputmode="numeric" id="abono-monto" name="monto" placeholder="0" required />
+            </div>
+          </div>
+          <div>
+            <label class="label-field" for="abono-metodo">Método de pago</label>
+            <select class="input-field" id="abono-metodo" name="metodo">
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="nequi">Nequi</option>
+              <option value="daviplata">Daviplata</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Opciones para pago de SOLO INTERÉS -->
+        <div id="bloque-interes" class="hidden mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+          <p class="text-sm font-medium text-amber-800">¿Qué se hace con el capital de esta cuota?</p>
+          <label class="flex items-start gap-2 text-sm text-slate-600">
+            <input type="radio" name="accion" value="saldo" class="mt-1" checked />
+            <span><span class="font-medium text-slate-700">Dejar saldo pendiente</span> — el capital no pagado se cobra después (renegociación). El plan no cambia.</span>
+          </label>
+          <label class="flex items-start gap-2 text-sm text-slate-600">
+            <input type="radio" name="accion" value="extension" class="mt-1" />
+            <span><span class="font-medium text-slate-700">Extender un periodo</span> — se agrega una cuota más con interés de <%= formatCOP(interesPorCuota) %>; el capital se difiere al final.</span>
+          </label>
+        </div>
+
+        <% if (pend.length > 0) { %>
+          <p class="label-field mt-4 mb-2">Aplicar a</p>
+          <div class="grid grid-cols-3 gap-2">
+            <% pend.slice(0, 3).forEach(function(c) { %>
+              <button type="button" class="chip-cuota-abono <%= proxima && c.id === proxima.id ? 'chip-abono-activo' : '' %>" data-cuota="<%= c.id %>">
+                <span class="font-semibold text-slate-700">Cuota <%= c.numero_cuota %></span>
+                <span class="text-slate-400"><%= fCorta(c.fecha_vencimiento) %></span>
+              </button>
+            <% }); %>
+          </div>
+          <% if (pend.length > 3) { %>
+            <select class="input-field mt-2 text-sm" id="abono-cuota-mas">
+              <option value="">Más cuotas…</option>
+              <% pend.slice(3).forEach(function(c) { %>
+                <option value="<%= c.id %>">Cuota <%= c.numero_cuota %> · <%= fCorta(c.fecha_vencimiento) %></option>
+              <% }); %>
+            </select>
+          <% } %>
+        <% } %>
+
+        <!-- Resumen del abono (en vivo) -->
+        <div class="mt-4 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+          <p class="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-2"><svg class="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 16v-4M12 8h.01"/></svg>Resumen del abono</p>
+          <div class="flex justify-between text-sm py-0.5"><span class="text-slate-400">Capital aplicado</span><span class="num font-medium text-slate-700" id="abono-cap">$ 0</span></div>
+          <div class="flex justify-between text-sm py-0.5"><span class="text-slate-400">Interés aplicado</span><span class="num font-medium text-slate-700" id="abono-int">$ 0</span></div>
+          <div class="flex justify-between text-sm py-0.5 border-t border-slate-200 mt-1 pt-1.5"><span class="font-medium text-slate-600">Nuevo saldo pendiente</span><span class="num font-bold text-red-500" id="abono-saldo"><%= formatCOP(saldo) %></span></div>
+        </div>
+
+        <button type="submit" class="btn-primary w-full mt-4">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          Registrar abono
+        </button>
+      </form>
     <% } %>
   </div>
 </div>
 
-<%
-  var _capital  = Number(prestamo.monto_capital);
-  var _total    = Number(prestamo.monto_total_a_pagar);
-  var _interes  = _total - _capital;
-  var _nCuotas  = Number(prestamo.numero_cuotas);
-  var _cuota    = Number(prestamo.valor_cuota);
-  var _abonado  = pagos.reduce(function(acc, p) { return acc + Number(p.monto); }, 0);
-  var _saldo    = _total - _abonado;
-  var _pct      = _capital > 0 ? Math.round((_interes / _capital) * 100) : 0;
-%>
-<div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
-  <%- include('../../partials/kpi-card', {
-    titulo: 'Capital',
-    valor: formatCOP(_capital),
-    explicaHtml: '<p>Es el dinero que se le entregó al cliente: <strong>' + formatCOP(_capital) + '</strong>.</p><p>Sobre este monto se calcula el interés del préstamo.</p>'
-  }) %>
-  <%- include('../../partials/kpi-card', {
-    titulo: 'Interés',
-    valor: formatCOP(_interes),
-    nota: 'Interés del préstamo',
-    explicaHtml: '<p><strong>Interés total = Total a pagar − Capital</strong></p><p>' + formatCOP(_total) + ' − ' + formatCOP(_capital) + ' = <strong>' + formatCOP(_interes) + '</strong></p><p class="text-slate-400">Equivale al ' + _pct + '% sobre el capital. Es el interés pactado de todo el préstamo, no necesariamente lo ya cobrado.</p>'
-  }) %>
-  <%- include('../../partials/kpi-card', {
-    titulo: 'Total a pagar',
-    valor: formatCOP(_total),
-    explicaHtml: '<p><strong>Total = Capital + Interés</strong></p><p>' + formatCOP(_capital) + ' + ' + formatCOP(_interes) + ' = <strong>' + formatCOP(_total) + '</strong></p><p class="text-slate-400">Este es el monto que el cliente debe pagar en total, repartido en ' + _nCuotas + ' cuotas.</p>'
-  }) %>
-  <%- include('../../partials/kpi-card', {
-    titulo: 'Cuota',
-    valor: formatCOP(_cuota),
-    nota: prestamo.frecuencia_pago,
-    explicaHtml: '<p><strong>Valor de cada cuota</strong></p><p>Total ' + formatCOP(_total) + ' ÷ ' + _nCuotas + ' cuotas = <strong>' + formatCOP(_cuota) + '</strong></p><p class="text-slate-400">Frecuencia de pago: ' + prestamo.frecuencia_pago + '. La última cuota puede variar unos pesos por redondeo.</p>'
-  }) %>
-  <%- include('../../partials/kpi-card', {
-    titulo: 'Saldo pendiente',
-    valor: formatCOP(_saldo),
-    explicaHtml: '<p><strong>Saldo pendiente = Total a pagar − Abonado</strong></p><p>' + formatCOP(_total) + ' − ' + formatCOP(_abonado) + ' = <strong>' + formatCOP(_saldo) + '</strong></p><p class="text-slate-400">Abonado = suma de los ' + pagos.length + ' pago(s) registrados en este préstamo.</p>'
-  }) %>
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <div class="lg:col-span-2">
-    <h2 class="font-medium text-slate-700 mb-3">Plan de cuotas</h2>
-    <%
-      // Mapa cuota → decisión del pago de solo interés (extension | saldo),
-      // para distinguir esas cuotas en el plan.
-      var mapaInteres = {};
-      pagos.forEach(function(p) { if (p.tipo === 'interes' && p.cuota_id) mapaInteres[p.cuota_id] = p.accion; });
-    %>
-    <div class="card overflow-hidden p-0">
-      <%- include('../../partials/tabla-cuotas', { cuotas, formatCOP, mapaInteres }) %>
-    </div>
-
-    <h2 class="font-medium text-slate-700 mb-3 mt-8">Historial de abonos</h2>
-    <div class="card overflow-hidden p-0">
-      <table class="table-base" data-datatable>
+<!-- ===================== HISTORIAL + RESUMEN DEL CRÉDITO ===================== -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+  <!-- Historial de abonos -->
+  <div class="lg:col-span-2 card">
+    <h2 class="font-semibold text-slate-800 mb-4">Historial de abonos</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" data-datatable data-no-search>
         <thead>
-          <tr><th>Fecha</th><th>Monto</th><th>Método</th><th>Notas</th><th>Comprobante</th></tr>
+          <tr class="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <th class="pb-3 pr-3">Fecha</th><th class="pb-3 pr-3 text-right">Monto</th><th class="pb-3 pr-3">Método</th><th class="pb-3 pr-3">Aplicado a</th><th class="pb-3">Comprobante</th>
+          </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-slate-50">
           <% if (pagos.length === 0) { %>
-            <tr><td colspan="5" class="px-3 py-6 text-center text-slate-500">Aún no se han registrado abonos.</td></tr>
+            <tr><td colspan="5" class="py-8 text-center text-slate-400">Aún no se han registrado abonos.</td></tr>
           <% } %>
-          <% pagos.forEach(function(p) { %>
+          <% pagos.forEach(function(p) {
+              var apl = (p.distribucion && Array.isArray(p.distribucion.aplicaciones)) ? p.distribucion.aplicaciones : [];
+              var aplTxt = apl.length ? apl.map(function(a){ return 'Cuota ' + a.cuota_numero; }).join(', ') : '—';
+              var esInteresPago = p.tipo === 'interes';
+          %>
             <tr>
-              <td><%= p.fecha_pago %></td>
-              <td class="num"><%= formatCOP(p.monto) %></td>
-              <td><%= p.metodo || '—' %></td>
-              <td class="text-slate-400"><%= p.notas || '—' %></td>
-              <td>
-                <a href="/admin/prestamos/<%= prestamo.id %>/pagos/<%= p.id %>/comprobante?ver=1" target="_blank" rel="noopener"
-                  class="inline-flex items-center gap-1.5 text-blue-600 hover:underline text-sm font-medium">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+              <td class="py-3 pr-3 whitespace-nowrap text-slate-600"><%= p.fecha_pago %></td>
+              <td class="py-3 pr-3 text-right num font-semibold text-slate-800"><%= formatCOP(p.monto) %></td>
+              <td class="py-3 pr-3 whitespace-nowrap">
+                <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"><%= METODOS_LBL[p.metodo] || p.metodo || '—' %></span>
+                <% if (esInteresPago) { %><span class="ml-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-600">Solo interés</span><% } %>
+              </td>
+              <td class="py-3 pr-3 text-slate-500"><%= aplTxt %></td>
+              <td class="py-3">
+                <a href="/admin/prestamos/<%= prestamo.id %>/pagos/<%= p.id %>/comprobante?ver=1" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-blue-600 hover:underline text-xs font-medium">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
                   Ver recibo
                 </a>
               </td>
@@ -149,107 +343,40 @@
     </div>
   </div>
 
-  <%
-    var interesTotalP = Number(prestamo.monto_total_a_pagar) - Number(prestamo.monto_capital);
-    var interesPorCuota = prestamo.numero_cuotas ? Math.round(interesTotalP / prestamo.numero_cuotas) : 0;
-  %>
-  <div>
-    <h2 class="font-medium text-slate-700 mb-3">Registrar abono</h2>
-    <form action="/admin/prestamos/<%= prestamo.id %>/pagos" method="POST" class="card space-y-4" data-loading-title="Registrando pago…">
-      <div>
-        <label class="label-field" for="tipo_pago">Tipo de pago</label>
-        <select class="input-field" id="tipo_pago" name="tipo">
-          <option value="abono">Abono normal</option>
-          <option value="interes">Solo interés</option>
-        </select>
+  <!-- Resumen del crédito -->
+  <div class="card">
+    <h2 class="font-semibold text-slate-800 mb-4">Resumen del crédito</h2>
+    <div class="flex items-center gap-4 mb-4">
+      <div class="relative h-24 w-24 shrink-0">
+        <canvas id="dona-credito" data-capital="<%= capital %>" data-interes="<%= interes %>"></canvas>
+        <span class="absolute inset-0 flex items-center justify-center text-base font-bold text-slate-800"><%= pctCapital %>%</span>
       </div>
-      <div>
-        <label class="label-field" for="cuota_id">Aplicar a cuota</label>
-        <select class="input-field" id="cuota_id" name="cuota_id">
-          <option value="">Automático (más antigua pendiente)</option>
-          <% cuotas.filter(function(c) { return c.estado !== 'pagada'; }).forEach(function(c) { %>
-            <option value="<%= c.id %>">Cuota #<%= c.numero_cuota %> · <%= formatCOP(c.monto_esperado - c.monto_pagado) %></option>
-          <% }); %>
-        </select>
+      <div class="text-sm space-y-1.5">
+        <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span><span class="text-slate-500">Capital</span></div>
+        <p class="num text-xs text-slate-400 pl-4"><%= formatCOP(capital) %> (<%= pctCapital %>%)</p>
+        <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-violet-500"></span><span class="text-slate-500">Interés</span></div>
+        <p class="num text-xs text-slate-400 pl-4"><%= formatCOP(interes) %> (<%= pctInteres %>%)</p>
       </div>
-      <div>
-        <label class="label-field" for="monto" id="label-monto">Monto abonado</label>
-        <input class="input-field input-moneda" type="text" inputmode="numeric" id="monto" name="monto" required />
-      </div>
-      <div id="bloque-interes" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
-        <p class="text-sm font-medium text-amber-800">¿Qué se hace con el capital de esta cuota?</p>
-        <label class="flex items-start gap-2 text-sm text-slate-600">
-          <input type="radio" name="accion" value="saldo" class="mt-1" checked />
-          <span><span class="font-medium text-slate-700">Dejar saldo pendiente</span> — el capital no pagado se cobra después (renegociación). El plan no cambia.</span>
-        </label>
-        <label class="flex items-start gap-2 text-sm text-slate-600">
-          <input type="radio" name="accion" value="extension" class="mt-1" />
-          <span><span class="font-medium text-slate-700">Extender un periodo</span> — se agrega una cuota más con interés de <%= formatCOP(interesPorCuota) %>; el capital se difiere al final.</span>
-        </label>
-      </div>
-      <div>
-        <label class="label-field" for="fecha_pago">Fecha de pago</label>
-        <input class="input-field" type="date" id="fecha_pago" name="fecha_pago" required />
-      </div>
-      <div>
-        <label class="label-field" for="metodo">Método</label>
-        <select class="input-field" id="metodo" name="metodo">
-          <option value="efectivo">Efectivo</option>
-          <option value="transferencia">Transferencia</option>
-          <option value="nequi">Nequi</option>
-          <option value="daviplata">Daviplata</option>
-          <option value="otro">Otro</option>
-        </select>
-      </div>
-      <div>
-        <label class="label-field" for="notas">Notas</label>
-        <input class="input-field" type="text" id="notas" name="notas" />
-      </div>
-      <button type="submit" id="btn-registrar-pago" class="btn-primary w-full">Registrar abono</button>
-    </form>
+    </div>
+    <dl class="divide-y divide-slate-100 text-sm">
+      <div class="flex items-center justify-between py-2"><dt class="text-slate-400">Estado</dt><dd class="font-medium <%= enMora ? 'text-red-500' : 'text-emerald-600' %>"><%= estaPagado ? 'Pagado' : (enMora ? 'En mora' : 'Al día') %></dd></div>
+      <div class="flex items-center justify-between py-2"><dt class="text-slate-400">Días de mora</dt><dd class="num font-medium text-slate-700"><%= diasMora %> días</dd></div>
+      <div class="flex items-center justify-between py-2"><dt class="text-slate-400">Último pago</dt><dd class="font-medium text-slate-700"><%= fCorta(ultimoPago) %></dd></div>
+      <div class="flex items-center justify-between py-2"><dt class="text-slate-400">Próxima cuota</dt><dd class="font-medium text-slate-700"><%= proxima ? fCorta(proxima.fecha_vencimiento) : '—' %></dd></div>
+      <div class="flex items-center justify-between py-2"><dt class="text-slate-400">Saldo pendiente</dt><dd class="num font-semibold text-slate-800"><%= formatCOP(saldo) %></dd></div>
+    </dl>
   </div>
 </div>
 
 <script>
-  (function () {
-    var tipoSel = document.getElementById('tipo_pago');
-    var bloque = document.getElementById('bloque-interes');
-    var montoInput = document.getElementById('monto');
-    var labelMonto = document.getElementById('label-monto');
-    var btn = document.getElementById('btn-registrar-pago');
-    var interesCuota = <%= interesPorCuota %>;
-    if (!tipoSel) return;
-    tipoSel.addEventListener('change', function () {
-      var esInteres = tipoSel.value === 'interes';
-      bloque.classList.toggle('hidden', !esInteres);
-      if (esInteres) {
-        if ((!montoInput.value || montoInput.value.trim() === '') && interesCuota > 0) {
-          montoInput.value = window.formatearMoneda ? window.formatearMoneda(interesCuota) : String(interesCuota);
-        }
-        if (labelMonto) labelMonto.textContent = 'Interés a pagar';
-        if (btn) btn.textContent = 'Registrar pago de interés';
-      } else {
-        if (labelMonto) labelMonto.textContent = 'Monto abonado';
-        if (btn) btn.textContent = 'Registrar abono';
-      }
-    });
-  })();
-</script>
-
-<script>
-  // Compartir el PLAN DE PAGO (PDF) por WhatsApp de verdad: usa la API de
-  // compartir del dispositivo (navigator.share con archivos), que en celular
-  // abre el menú de compartir → eliges WhatsApp → el PDF queda ADJUNTO.
-  // En equipos que no soportan adjuntar (escritorio), cae a un respaldo:
-  // descarga el PDF y abre el chat del cliente con el texto.
+  // Compartir el PLAN DE PAGO (PDF) por WhatsApp: usa navigator.share con
+  // archivo (celular) y cae a descargar + abrir chat (escritorio).
   (function () {
     var comprobanteUrl = <%- JSON.stringify('/admin/prestamos/' + prestamo.id + '/comprobante') %>;
     var nombreArchivo = <%- JSON.stringify('comprobante-' + (prestamo.perfiles && prestamo.perfiles.nombre_completo ? prestamo.perfiles.nombre_completo.replace(/[^\w]+/g, '_') : 'cliente') + '.pdf') %>;
     var texto = <%- JSON.stringify(mensajeWa) %>;
     var waUrl = <%- JSON.stringify(waUrl) %>;
 
-    // Compartidor genérico de PDF por WhatsApp (navigator.share con archivo;
-    // respaldo a descargar + abrir chat en equipos sin soporte de adjuntar).
     window.__compartirPDF = async function (url, nombre, mensaje, chatUrl) {
       try {
         var resp = await fetch(url, { credentials: 'same-origin' });
@@ -259,96 +386,44 @@
           await navigator.share({ files: [archivo], text: mensaje });
           return;
         }
-      } catch (e) {
-        if (e && e.name === 'AbortError') return;
-      }
+      } catch (e) { if (e && e.name === 'AbortError') return; }
       window.open(url, '_blank');
       if (chatUrl) window.open(chatUrl, '_blank');
       if (window.Swal) {
         Swal.fire({ icon: 'info', title: 'Comparte el PDF manualmente', text: 'Este dispositivo no permite adjuntar el PDF directo a WhatsApp. Descargué el documento y abrí el chat del cliente: adjunta el PDF ahí.', confirmButtonText: 'Entendido' });
       }
     };
-
     window.__compartirPlan = function () { return window.__compartirPDF(comprobanteUrl, nombreArchivo, texto, waUrl); };
-
-    var btn = document.getElementById('btn-compartir-plan');
-    if (btn) btn.addEventListener('click', window.__compartirPlan);
   })();
 </script>
+<script src="/js/prestamo-detalle.js"></script>
 
 <% if (typeof recienCreado !== 'undefined' && recienCreado) { %>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    // Limpia el parámetro de la URL para que al recargar NO se repita el modal.
     if (window.history.replaceState) {
-      var _u = new URL(window.location.href);
-      _u.searchParams.delete('creado');
-      window.history.replaceState({}, '', _u.toString());
+      var _u = new URL(window.location.href); _u.searchParams.delete('creado'); window.history.replaceState({}, '', _u.toString());
     }
-
-    var comprobanteUrl = <%- JSON.stringify('/admin/prestamos/' + prestamo.id + '/comprobante') %>;
     var tieneTel = <%- tieneTel ? 'true' : 'false' %>;
-
     var iconoExito =
-      '<div style="position:relative;width:120px;height:120px;margin:4px auto 0;">' +
-        '<svg width="120" height="120" viewBox="0 0 120 120" fill="none">' +
-          '<g stroke="#86efac" stroke-width="3" stroke-linecap="round">' +
-            '<line x1="60" y1="14" x2="60" y2="6"/><line x1="104" y1="60" x2="112" y2="60"/>' +
-            '<line x1="16" y1="60" x2="8" y2="60"/><line x1="60" y1="106" x2="60" y2="114"/>' +
-            '<line x1="91" y1="29" x2="97" y2="23"/><line x1="29" y1="29" x2="23" y2="23"/>' +
-            '<line x1="29" y1="91" x2="23" y2="97"/><line x1="91" y1="91" x2="97" y2="97"/>' +
-          '</g>' +
-          '<circle cx="60" cy="60" r="46" fill="#22c55e" fill-opacity="0.12"/>' +
-          '<circle cx="60" cy="60" r="34" fill="#22c55e"/>' +
-          '<path d="M47 60l9 9 18-18" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>' +
-        '</svg>' +
-      '</div>';
-
-    var tarjeta =
-      'display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;text-align:left;' +
-      'padding:14px;border-radius:18px;border:1px solid;cursor:pointer;text-decoration:none;transition:background .15s;';
-    var cajaIcono = 'display:flex;width:48px;height:48px;flex:0 0 48px;align-items:center;justify-content:center;border-radius:14px;';
+      '<div style="position:relative;width:120px;height:120px;margin:4px auto 0;"><svg width="120" height="120" viewBox="0 0 120 120" fill="none">' +
+        '<circle cx="60" cy="60" r="46" fill="#22c55e" fill-opacity="0.12"/><circle cx="60" cy="60" r="34" fill="#22c55e"/>' +
+        '<path d="M47 60l9 9 18-18" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+    var tarjeta = 'display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;text-align:left;padding:14px;border-radius:18px;border:1px solid;cursor:pointer;text-decoration:none;';
+    var caja = 'display:flex;width:48px;height:48px;flex:0 0 48px;align-items:center;justify-content:center;border-radius:14px;';
     var chevron = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
-
     var tarjetaWa = tieneTel
       ? '<button type="button" onclick="window.__compartirPlan()" style="' + tarjeta + 'border-color:#dcfce7;background:#f0fdf480;">' +
-          '<span style="' + cajaIcono + 'background:#dcfce7;color:#16a34a;">' +
-            '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885"/></svg>' +
-          '</span>' +
-          '<span style="flex:1;"><span style="display:block;font-weight:700;color:#15803d;">Enviar por WhatsApp</span>' +
-          '<span style="display:block;font-size:12px;color:#94a3b8;">Envía el comprobante directamente al cliente</span></span>' +
-          '<span style="color:#4ade80;">' + chevron + '</span>' +
-        '</button>'
+          '<span style="' + caja + 'background:#dcfce7;color:#16a34a;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg></span>' +
+          '<span style="flex:1;"><span style="display:block;font-weight:700;color:#15803d;">Enviar por WhatsApp</span><span style="display:block;font-size:12px;color:#94a3b8;">Envía el comprobante al cliente</span></span>' +
+          '<span style="color:#4ade80;">' + chevron + '</span></button>'
       : '<div style="text-align:center;font-size:13px;color:#94a3b8;padding:6px;">Cliente sin teléfono para WhatsApp</div>';
-
-    var notaSeguridad =
-      '<div style="display:flex;align-items:center;gap:10px;margin-top:18px;padding-top:18px;border-top:1px solid #f1f5f9;text-align:left;">' +
-        '<span style="display:flex;width:36px;height:36px;flex:0 0 36px;align-items:center;justify-content:center;border-radius:9999px;background:#eff6ff;color:#3b82f6;">' +
-          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>' +
-        '</span>' +
-        '<span style="font-size:12px;color:#94a3b8;">El comprobante queda guardado en <b>Comprobantes</b>, disponible cuando lo necesites.</span>' +
-      '</div>';
-
-    var html =
-      iconoExito +
-      '<h2 style="font-size:26px;font-weight:800;color:#0f172a;margin:14px 0 6px;">¡Préstamo creado!</h2>' +
-      '<p style="color:#64748b;font-size:14px;margin:0 0 18px;">Comparte el comprobante con el cliente:</p>' +
-      '<div style="display:flex;flex-direction:column;gap:12px;">' + tarjetaWa + '</div>' +
-      notaSeguridad;
-
     Swal.fire({
-      html: html,
-      width: 480,
-      padding: '1.5rem 1.5rem 2rem',
-      showConfirmButton: true,
-      showCloseButton: true,
-      confirmButtonText: 'Cerrar',
-      buttonsStyling: false,
-      customClass: {
-        popup: 'rounded-3xl',
-        confirmButton: 'btn-secondary px-10 mt-5',
-      },
-      allowOutsideClick: true,
+      html: iconoExito + '<h2 style="font-size:26px;font-weight:800;color:#0f172a;margin:14px 0 6px;">¡Préstamo creado!</h2>' +
+        '<p style="color:#64748b;font-size:14px;margin:0 0 18px;">Comparte el comprobante con el cliente:</p>' +
+        '<div style="display:flex;flex-direction:column;gap:12px;">' + tarjetaWa + '</div>',
+      width: 480, padding: '1.5rem 1.5rem 2rem', showConfirmButton: true, showCloseButton: true,
+      confirmButtonText: 'Cerrar', buttonsStyling: false, customClass: { popup: 'rounded-3xl', confirmButton: 'btn-secondary px-10 mt-5' }, allowOutsideClick: true,
     });
   });
 </script>
@@ -357,54 +432,35 @@
 <% if (typeof abonoId !== 'undefined' && abonoId) { var abono = (pagos || []).find(function (x) { return x.id === abonoId; }); %>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    // Limpia el parámetro de la URL para que al recargar NO se repita el modal.
     if (window.history.replaceState) {
-      var _u = new URL(window.location.href);
-      _u.searchParams.delete('abono');
-      window.history.replaceState({}, '', _u.toString());
+      var _u = new URL(window.location.href); _u.searchParams.delete('abono'); window.history.replaceState({}, '', _u.toString());
     }
-
     var pagoUrl = <%- JSON.stringify('/admin/prestamos/' + prestamo.id + '/pagos/' + abonoId + '/comprobante') %>;
     var tieneTel = <%- tieneTel ? 'true' : 'false' %>;
     var waUrl = <%- JSON.stringify(waUrl) %>;
     var texto = <%- JSON.stringify('Hola ' + (prestamo.perfiles && prestamo.perfiles.nombre_completo ? prestamo.perfiles.nombre_completo : '') + ', te comparto el comprobante de tu pago' + (abono ? ' de ' + formatCOP(abono.monto) : '') + '. ¡Gracias!') %>;
     window.__compartirAbono = function () { return window.__compartirPDF(pagoUrl, 'comprobante-pago.pdf', texto, waUrl); };
-
     var tarjeta = 'display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;text-align:left;padding:14px;border-radius:18px;border:1px solid;cursor:pointer;text-decoration:none;';
     var caja = 'display:flex;width:48px;height:48px;flex:0 0 48px;align-items:center;justify-content:center;border-radius:14px;';
     var chevron = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
-
     var tarjetaPdf =
       '<a href="' + pagoUrl + '" target="_blank" rel="noopener" style="' + tarjeta + 'border-color:#dbeafe;background:#eff6ff80;">' +
         '<span style="' + caja + 'background:#dbeafe;color:#2563eb;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span>' +
         '<span style="flex:1;"><span style="display:block;font-weight:700;color:#1d4ed8;">Descargar comprobante de pago</span><span style="display:block;font-size:12px;color:#94a3b8;">Recibo del abono en PDF</span></span>' +
         '<span style="color:#60a5fa;">' + chevron + '</span></a>';
-
     var tarjetaWa = tieneTel
       ? '<button type="button" onclick="window.__compartirAbono()" style="' + tarjeta + 'border-color:#dcfce7;background:#f0fdf480;">' +
-          '<span style="' + caja + 'background:#dcfce7;color:#16a34a;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885"/></svg></span>' +
+          '<span style="' + caja + 'background:#dcfce7;color:#16a34a;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg></span>' +
           '<span style="flex:1;"><span style="display:block;font-weight:700;color:#15803d;">Enviar por WhatsApp</span><span style="display:block;font-size:12px;color:#94a3b8;">Envía el recibo al cliente</span></span>' +
           '<span style="color:#4ade80;">' + chevron + '</span></button>'
       : '<div style="text-align:center;font-size:13px;color:#94a3b8;padding:6px;">Cliente sin teléfono para WhatsApp</div>';
-
-    var icono =
-      '<div style="width:96px;height:96px;margin:0 auto;"><svg width="96" height="96" viewBox="0 0 120 120" fill="none">' +
-        '<circle cx="60" cy="60" r="46" fill="#22c55e" fill-opacity="0.12"/><circle cx="60" cy="60" r="34" fill="#22c55e"/>' +
-        '<path d="M47 60l9 9 18-18" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
-
+    var icono = '<div style="width:96px;height:96px;margin:0 auto;"><svg width="96" height="96" viewBox="0 0 120 120" fill="none"><circle cx="60" cy="60" r="46" fill="#22c55e" fill-opacity="0.12"/><circle cx="60" cy="60" r="34" fill="#22c55e"/><path d="M47 60l9 9 18-18" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
     Swal.fire({
-      html: icono +
-        '<h2 style="font-size:24px;font-weight:800;color:#0f172a;margin:12px 0 6px;">¡Abono registrado!</h2>' +
+      html: icono + '<h2 style="font-size:24px;font-weight:800;color:#0f172a;margin:12px 0 6px;">¡Abono registrado!</h2>' +
         '<p style="color:#64748b;font-size:14px;margin:0 0 18px;">Comparte el comprobante de pago con el cliente:</p>' +
         '<div style="display:flex;flex-direction:column;gap:12px;">' + tarjetaPdf + tarjetaWa + '</div>',
-      width: 470,
-      padding: '1.5rem 1.5rem 2rem',
-      showConfirmButton: true,
-      showCloseButton: true,
-      confirmButtonText: 'Cerrar',
-      buttonsStyling: false,
-      customClass: { popup: 'rounded-3xl', confirmButton: 'btn-secondary px-10 mt-5' },
-      allowOutsideClick: true,
+      width: 470, padding: '1.5rem 1.5rem 2rem', showConfirmButton: true, showCloseButton: true,
+      confirmButtonText: 'Cerrar', buttonsStyling: false, customClass: { popup: 'rounded-3xl', confirmButton: 'btn-secondary px-10 mt-5' }, allowOutsideClick: true,
     });
   });
 </script>

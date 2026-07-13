@@ -97,7 +97,7 @@
 
           <div data-hijos class="hidden ml-5 border-l border-slate-200 pl-4 space-y-2 pt-1">
             <% cliente.prestamos.forEach(function(p) { %>
-              <div>
+              <div id="pr-<%= p.id %>" class="rounded-xl transition">
                 <!-- Préstamo -->
                 <div class="flex items-center gap-2">
                   <button type="button" data-folder class="flex flex-1 items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm transition hover:bg-slate-50 text-left">
@@ -122,13 +122,24 @@
                     icono: icoFile, titulo: 'Plan de pago', subtitulo: 'Plan de amortización del préstamo',
                     menuId: 'm-doc-plan-' + p.id, icoIr: icoIr, icoDots: icoDots
                   }) %>
-                  <!-- Cuotas con algún pago (pagadas o parciales) -->
-                  <% p.cuotas.filter(function(c){ return c.estado === 'pagada' || c.estado === 'parcial'; }).forEach(function(c) { %>
+                  <!-- Un comprobante por ABONO real (refleja los pagos que de
+                       verdad ocurrieron; un abono puede cubrir varias cuotas). -->
+                  <% var _metodos = { efectivo: 'Efectivo', transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', otro: 'Otro' }; %>
+                  <% p.pagos.forEach(function(pago, i) { %>
+                    <%
+                      var _cuotasTxt = pago.cuotas.length === 0 ? ''
+                        : (pago.cuotas.length === 1 ? 'Cuota ' + pago.cuotas[0]
+                          : 'Cuotas ' + pago.cuotas.join(', '));
+                      var _sub = formatCOP(pago.monto)
+                        + (pago.metodo ? ' · ' + (_metodos[pago.metodo] || pago.metodo) : '')
+                        + (pago.tipo === 'interes' ? ' · solo interés' : '')
+                        + (_cuotasTxt ? ' · ' + _cuotasTxt : '');
+                    %>
                     <%- include('partial-fila', {
-                      href: '/admin/prestamos/' + p.id + '/cuotas/' + c.id + '/comprobante',
-                      icono: icoFolder, titulo: 'Cuota ' + c.numero_cuota,
-                      subtitulo: c.estado === 'parcial' ? 'Comprobante · pago parcial' : 'Comprobante de pago',
-                      menuId: 'm-doc-c' + c.id, icoIr: icoIr, icoDots: icoDots
+                      href: '/admin/prestamos/' + p.id + '/pagos/' + pago.id + '/comprobante',
+                      icono: icoFolder, titulo: 'Abono ' + (i + 1),
+                      subtitulo: _sub,
+                      menuId: 'm-doc-pago' + pago.id, icoIr: icoIr, icoDots: icoDots
                     }) %>
                   <% }); %>
                   <!-- Paz y salvo (solo cuando el préstamo está pagado) -->
@@ -206,6 +217,38 @@
       if (sr) sr.classList.toggle('hidden', algun);
     });
   }
+
+  // Si llegamos con ?prestamo=<id>, abrir esa carpeta (cliente + préstamo),
+  // hacer scroll y resaltarla.
+  (function () {
+    var pid = new URLSearchParams(window.location.search).get('prestamo');
+    if (!pid) return;
+    var el = document.getElementById('pr-' + pid);
+    if (!el) return;
+
+    function openerBtn(hijos) {
+      var prev = hijos.previousElementSibling;
+      if (!prev) return null;
+      return prev.matches('[data-folder]') ? prev : prev.querySelector('[data-folder]');
+    }
+    function abrir(hijos) {
+      if (!hijos) return;
+      hijos.classList.remove('hidden');
+      var btn = openerBtn(hijos);
+      var ch = btn && btn.querySelector('[data-chevron]');
+      if (ch) ch.classList.remove('-rotate-90');
+    }
+
+    var cli = el.closest('[data-cliente]');
+    if (cli) abrir(cli.querySelector(':scope > [data-hijos]')); // carpeta del cliente
+    abrir(el.querySelector(':scope > [data-hijos]'));           // documentos del préstamo
+
+    setTimeout(function () {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('archivo-resaltado');
+      setTimeout(function () { el.classList.remove('archivo-resaltado'); }, 2600);
+    }, 120);
+  })();
 
   // Menú (⋮) por fila — posición fija para que no lo recorte ningún contenedor.
   document.addEventListener('click', function (e) {

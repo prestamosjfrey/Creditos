@@ -15,6 +15,17 @@ function mostrarCargando(titulo) {
 }
 window.mostrarCargando = mostrarCargando;
 
+// Al pulsar "Atrás", el navegador restaura la página desde el bfcache tal cual
+// quedó: con el spinner de "Procesando…" aún abierto y el botón de enviar
+// deshabilitado. Al restaurar (e.persisted), cerramos el spinner y reactivamos
+// los botones para que la vista vuelva a quedar usable.
+window.addEventListener('pageshow', function (e) {
+  if (!e.persisted) return;
+  if (window.Swal && Swal.isVisible && Swal.isVisible()) Swal.close();
+  document.querySelectorAll('button[type="submit"][disabled], input[type="submit"][disabled]')
+    .forEach(function (btn) { btn.disabled = false; });
+});
+
 // Feedback inmediato + anti-doble-clic en TODA acción (formularios POST):
 // al enviar, se muestra el spinner de una vez para que se vea que la acción
 // ya está en curso, y se deshabilita el botón para evitar envíos duplicados.
@@ -73,4 +84,40 @@ document.addEventListener('submit', function (e) {
   window.matchMedia('(min-width: 1024px)').addEventListener('change', function () {
     html.classList.remove('sidebar-mobile-open');
   });
+})();
+
+// Loader entre vistas: muestra el spinner al navegar por enlaces internos (GET).
+// Los formularios POST ya muestran su propio spinner (SweetAlert), así que aquí
+// solo cubrimos las navegaciones que hoy no mostraban nada.
+(function () {
+  var overlay = document.getElementById('nav-loader');
+  if (!overlay) return;
+  var timer = null, fallback = null;
+
+  function mostrar() {
+    // Retardo anti-parpadeo: si la página carga rápido, no alcanza a verse.
+    timer = setTimeout(function () { overlay.classList.add('nav-loader-visible'); }, 150);
+    // Salvavidas: si la navegación no ocurre (enlace JS), se oculta solo.
+    fallback = setTimeout(ocultar, 8000);
+  }
+  function ocultar() {
+    clearTimeout(timer); clearTimeout(fallback);
+    overlay.classList.remove('nav-loader-visible');
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var a = e.target.closest('a[href]');
+    if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+    var href = a.getAttribute('href') || '';
+    if (!href || href.charAt(0) === '#' || /^(javascript|mailto|tel):/i.test(href)) return;
+    var url;
+    try { url = new URL(a.href, window.location.href); } catch (err) { return; }
+    if (url.origin !== window.location.origin) return;               // solo mismo sitio
+    if (url.pathname === window.location.pathname && url.search === window.location.search) return; // misma vista
+    mostrar();
+  });
+
+  // Al volver con "atrás" (bfcache) o al cargar, siempre ocultar.
+  window.addEventListener('pageshow', ocultar);
 })();
