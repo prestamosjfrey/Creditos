@@ -57,7 +57,7 @@ async function crearPrestamoConPlan(datosPrestamo) {
   if (errorCuotas) throw errorCuotas;
 
   const { data: cliente } = await supabaseAdmin
-    .from('perfiles')
+    .from('clientes')
     .select('nombre_completo')
     .eq('id', prestamo.cliente_id)
     .single();
@@ -112,7 +112,7 @@ function sugerirValorCuota({ tipo_interes, monto_capital, valor_interes, tasa_in
 async function obtenerPrestamoConCuotas(prestamoId) {
   const { data: prestamo, error } = await supabaseAdmin
     .from('prestamos')
-    .select('*, perfiles:cliente_id(nombre_completo, numero_documento, telefono, email, direccion)')
+    .select('*, perfiles:clientes(nombre_completo, numero_documento, telefono, email, direccion)')
     .eq('id', prestamoId)
     .single();
   if (error) throw error;

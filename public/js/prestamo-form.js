@@ -2,7 +2,9 @@
 // Es un solo <form> real: los pasos solo se muestran/ocultan con CSS, así que
 // el envío final sigue siendo el mismo POST a /admin/prestamos de siempre.
 (function () {
-  const form = document.getElementById('form-prestamo');
+  // Sirve tanto para "Nuevo préstamo" como para "Nuevo crédito tomado":
+  // ambos usan el mismo wizard (marcado con data-wizard).
+  const form = document.querySelector('form[data-wizard]');
   if (!form) return;
 
   // En una carga real de la página (GET nuevo o re-render tras error de envío)
@@ -27,6 +29,7 @@
   const campoValorInteres = document.getElementById('campo-valor-interes');
   const campoTasaInteres = document.getElementById('campo-tasa-interes');
   const clienteId = form.querySelector('#cliente_id');
+  const acreedorInput = form.querySelector('#acreedor');
   const montoCapital = form.querySelector('#monto_capital');
   const valorInteres = form.querySelector('#valor_interes');
   const tasaInteres = form.querySelector('#tasa_interes');
@@ -40,6 +43,9 @@
   const contadorNotas = document.getElementById('contador-notas');
   const saldoDisponible = Number(window.__SALDO_DISPONIBLE__) || 0;
   const alertaSaldo = document.getElementById('alerta-saldo-insuficiente');
+  // El crédito tomado NO gasta la caja (la aumenta), así que no revisa saldo.
+  const chequearSaldo = form.hasAttribute('data-check-saldo');
+  const entidadLabel = form.getAttribute('data-entidad-label') || 'Cliente';
 
   // --- Tipo de interés: visibilidad de campos + sugerencia de cuota ---
   function actualizarVisibilidadCampos() {
@@ -95,9 +101,9 @@
   notas.addEventListener('input', actualizarContadorNotas);
 
   // --- Autoguardado de borrador (sobrevive a recargas de la página) ---
-  const DRAFT_KEY = 'borrador-prestamo';
-  const camposDraft = [clienteId, montoCapital, tipoInteres, valorInteres, tasaInteres,
-    numeroCuotas, valorCuota, montoTotalAPagar, frecuenciaPago, fechaInicio, fechaPrimerPago, notas];
+  const DRAFT_KEY = form.getAttribute('data-draft-key') || 'borrador-prestamo';
+  const camposDraft = [clienteId, acreedorInput, montoCapital, tipoInteres, valorInteres, tasaInteres,
+    numeroCuotas, valorCuota, montoTotalAPagar, frecuenciaPago, fechaInicio, fechaPrimerPago, notas].filter(Boolean);
 
   function guardarBorrador() {
     const data = {};
@@ -111,7 +117,7 @@
     let data = null;
     try { data = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) {}
     if (!data) return;
-    const clientePreseleccionado = clienteId.value !== '';
+    const clientePreseleccionado = clienteId && clienteId.value !== '';
     camposDraft.forEach((el) => {
       if (data[el.id] === undefined) return;
       // Respetar el cliente que venga preseleccionado por URL o por el servidor.
@@ -138,7 +144,7 @@
   form.addEventListener('change', guardarBorrador);
 
   // --- TomSelect para el selector de cliente ---
-  if (window.TomSelect) {
+  if (window.TomSelect && clienteId) {
     new TomSelect('#cliente_id', { create: false, placeholder: 'Busca un cliente por nombre o cédula...' });
   }
 
@@ -255,10 +261,12 @@
     const contenedor = document.getElementById('resumen-confirmacion');
     if (!contenedor) return;
 
-    const nombreCliente = clienteId.options[clienteId.selectedIndex]?.text.trim() || '—';
+    const nombreCliente = clienteId
+      ? (clienteId.options[clienteId.selectedIndex]?.text.trim() || '—')
+      : (acreedorInput ? (acreedorInput.value.trim() || '—') : '—');
     const plan = calcularPlanDeCuotas();
     const filas = [
-      ['Cliente', nombreCliente],
+      [entidadLabel, nombreCliente],
       ['Capital a prestar', formatoMoneda(leerMoneda(montoCapital))],
       ['Total a pagar', formatoMoneda(leerMoneda(montoTotalAPagar))],
       ['Número de cuotas', numeroCuotas.value || '—'],
@@ -382,7 +390,7 @@
   let confirmadoSaldoNegativo = false;
   form.addEventListener('submit', (e) => {
     const capital = leerMoneda(montoCapital);
-    if (capital <= saldoDisponible || confirmadoSaldoNegativo || !window.Swal) {
+    if (!chequearSaldo || capital <= saldoDisponible || confirmadoSaldoNegativo || !window.Swal) {
       // El formulario se va a enviar de verdad: descartamos el borrador para
       // que el próximo "Nuevo préstamo" empiece en blanco, y marcamos el envío
       // para limpiar la vista si el usuario vuelve con "Atrás" (ver pageshow).
@@ -406,6 +414,41 @@
       }
     });
   });
+
+  // --- Botón "Limpiar": deja el formulario en blanco (con confirmación) ---
+  function reiniciarFormulario() {
+    form.reset();
+    if (clienteId && clienteId.tomselect) clienteId.tomselect.clear(true);
+    limpiarBorrador();
+    // Volver a precargar la fecha de inicio con el día de hoy.
+    if (fechaInicio) {
+      const hoy = new Date();
+      fechaInicio.value = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+    }
+    confirmadoSaldoNegativo = false;
+    actualizarVisibilidadCampos();
+    actualizarContadorNotas();
+    actualizarResumen();
+    actualizarAlertaSaldo();
+    generarTablaCuotas();
+    mostrarPaso(1);
+  }
+
+  const btnLimpiar = document.getElementById('btn-limpiar');
+  if (btnLimpiar) {
+    btnLimpiar.addEventListener('click', () => {
+      if (!window.Swal) { reiniciarFormulario(); return; }
+      Swal.fire({
+        icon: 'question',
+        title: '¿Limpiar el formulario?',
+        text: 'Se borrarán todos los datos que ingresaste.',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, limpiar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#16a34a',
+      }).then((r) => { if (r.isConfirmed) reiniciarFormulario(); });
+    });
+  }
 
   actualizarVisibilidadCampos();
   actualizarContadorNotas();

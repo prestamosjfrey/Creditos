@@ -75,6 +75,7 @@ router.get('/creditos-tomados/nuevo', creditosTomadosController.mostrarFormulari
 router.post('/creditos-tomados', creditosTomadosController.crearCredito);
 router.get('/creditos-tomados/:id', creditosTomadosController.mostrarDetalle);
 router.post('/creditos-tomados/:id/cuotas', creditosTomadosController.pagarCuota);
+router.post('/creditos-tomados/:id/pagos', creditosTomadosController.registrarPago);
 
 router.get('/cobros', cobrosController.mostrarCobros);
 router.post('/cobros/notificar', cobrosController.notificarCobrosHoy);

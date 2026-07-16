@@ -8,9 +8,8 @@ async function listarClientes(req, res, next) {
     const busqueda = (req.query.q || '').trim();
 
     let query = supabaseAdmin
-      .from('perfiles')
+      .from('clientes')
       .select('*')
-      .eq('rol', 'cliente')
       .order('nombre_completo', { ascending: true });
 
     if (busqueda) {
@@ -24,9 +23,8 @@ async function listarClientes(req, res, next) {
 
     // Estadísticas globales (no dependen del filtro de búsqueda).
     const { data: todos, error: errorTodos } = await supabaseAdmin
-      .from('perfiles')
-      .select('activo, creado_en')
-      .eq('rol', 'cliente');
+      .from('clientes')
+      .select('activo, creado_en');
     if (errorTodos) throw errorTodos;
 
     const hoy = new Date();
@@ -53,36 +51,36 @@ async function mostrarFormularioNuevo(req, res) {
 async function crearCliente(req, res, next) {
   const { email, nombre_completo, numero_documento, telefono, direccion } = req.body;
   try {
-    // El cliente no inicia sesión en el sistema (es solo un registro que
-    // lleva el admin), así que se crea sin contraseña.
-    const { data: creado, error: errorAuth } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { nombre_completo, rol: 'cliente' },
-    });
-    if (errorAuth) throw errorAuth;
-
-    const { error: errorPerfil } = await supabaseAdmin
-      .from('perfiles')
-      .update({ numero_documento, telefono, direccion })
-      .eq('id', creado.user.id);
-    if (errorPerfil) throw errorPerfil;
+    // El cliente es solo un registro que lleva el admin (no inicia sesión),
+    // así que se guarda directamente en la tabla clientes.
+    const { data: creado, error: errorCliente } = await supabaseAdmin
+      .from('clientes')
+      .insert({
+        nombre_completo,
+        numero_documento: numero_documento || null,
+        telefono: telefono || null,
+        direccion: direccion || null,
+        email: email || null,
+      })
+      .select('id')
+      .single();
+    if (errorCliente) throw errorCliente;
 
     await auditoria.registrar({
       tipo: 'cliente_creado',
       descripcion: `Cliente creado: ${nombre_completo}.`,
-      clienteId: creado.user.id,
+      clienteId: creado.id,
       detalle: { numero_documento, telefono, email },
       actorId: req.usuario.id,
     });
 
-    res.redirect(`/admin/clientes/${creado.user.id}?ok=${encodeURIComponent('Cliente creado correctamente.')}`);
+    res.redirect(`/admin/clientes/${creado.id}?ok=${encodeURIComponent('Cliente creado correctamente.')}`);
   } catch (err) {
-    const esEmailDuplicado = /already been registered|already exists|email.*exist/i.test(err.message || '');
-    res.status(esEmailDuplicado ? 409 : 400).render('admin/clientes/form', {
+    const esDocDuplicado = err.code === '23505' || /duplicate key|numero_documento/i.test(err.message || '');
+    res.status(esDocDuplicado ? 409 : 400).render('admin/clientes/form', {
       titulo: 'Nuevo cliente',
-      error: esEmailDuplicado ? null : (err.message || 'No se pudo crear el cliente.'),
-      alerta: esEmailDuplicado ? 'Ya existe un usuario registrado con ese correo electrónico. Usa uno diferente.' : null,
+      error: esDocDuplicado ? null : (err.message || 'No se pudo crear el cliente.'),
+      alerta: esDocDuplicado ? 'Ya existe un cliente registrado con ese número de documento. Usa uno diferente.' : null,
       valores: req.body,
     });
   }
@@ -93,10 +91,9 @@ async function mostrarFicha(req, res, next) {
     const { id } = req.params;
 
     const { data: cliente, error: errorCliente } = await supabaseAdmin
-      .from('perfiles')
+      .from('clientes')
       .select('*')
       .eq('id', id)
-      .eq('rol', 'cliente')
       .single();
     if (errorCliente || !cliente) return res.status(404).render('errores/404');
 
@@ -149,10 +146,9 @@ async function mostrarFormularioEditar(req, res, next) {
   try {
     const { id } = req.params;
     const { data: cliente, error } = await supabaseAdmin
-      .from('perfiles')
+      .from('clientes')
       .select('*')
       .eq('id', id)
-      .eq('rol', 'cliente')
       .single();
     if (error || !cliente) return res.status(404).render('errores/404');
 
@@ -166,18 +162,17 @@ async function editarCliente(req, res, next) {
   const { id } = req.params;
   const { nombre_completo, numero_documento, telefono, direccion, email } = req.body;
   try {
-    // El correo es el identificador en auth, así que se actualiza ahí también.
-    const { error: errorAuth } = await supabaseAdmin.auth.admin.updateUserById(id, {
-      email,
-      user_metadata: { nombre_completo, rol: 'cliente' },
-    });
-    if (errorAuth) throw errorAuth;
-
-    const { error: errorPerfil } = await supabaseAdmin
-      .from('perfiles')
-      .update({ nombre_completo, numero_documento, telefono, direccion, email })
+    const { error: errorCliente } = await supabaseAdmin
+      .from('clientes')
+      .update({
+        nombre_completo,
+        numero_documento: numero_documento || null,
+        telefono: telefono || null,
+        direccion: direccion || null,
+        email: email || null,
+      })
       .eq('id', id);
-    if (errorPerfil) throw errorPerfil;
+    if (errorCliente) throw errorCliente;
 
     await auditoria.registrar({
       tipo: 'cliente_editado',
@@ -201,14 +196,14 @@ async function cambiarEstado(req, res, next) {
   const { id } = req.params;
   try {
     const { data: cliente, error: errorLectura } = await supabaseAdmin
-      .from('perfiles')
+      .from('clientes')
       .select('activo')
       .eq('id', id)
       .single();
     if (errorLectura) throw errorLectura;
 
     const nuevoEstado = !cliente.activo;
-    const { error } = await supabaseAdmin.from('perfiles').update({ activo: nuevoEstado }).eq('id', id);
+    const { error } = await supabaseAdmin.from('clientes').update({ activo: nuevoEstado }).eq('id', id);
     if (error) throw error;
 
     await auditoria.registrar({
@@ -229,7 +224,7 @@ async function guardarNotas(req, res, next) {
   const { notas_admin } = req.body;
   try {
     const { error } = await supabaseAdmin
-      .from('perfiles')
+      .from('clientes')
       .update({ notas_admin: notas_admin || null })
       .eq('id', id);
     if (error) throw error;

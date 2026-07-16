@@ -30,7 +30,7 @@ async function obtenerListaFiltrada(query) {
   const { desde, hasta } = rangoFechaInicio(periodo, query);
 
   const [{ data: prestamos, error: e1 }, { data: pagos, error: e2 }, { data: cuotas, error: e3 }] = await Promise.all([
-    supabaseAdmin.from('prestamos').select('*, perfiles:cliente_id(nombre_completo, numero_documento, telefono)').order('creado_en', { ascending: false }),
+    supabaseAdmin.from('prestamos').select('*, perfiles:clientes(nombre_completo, numero_documento, telefono)').order('creado_en', { ascending: false }),
     supabaseAdmin.from('pagos').select('prestamo_id, monto'),
     supabaseAdmin.from('cuotas').select('prestamo_id, estado, fecha_vencimiento'),
   ]);
@@ -131,9 +131,8 @@ async function mostrarFormularioNuevo(req, res, next) {
   try {
     const [{ data: clientes, error }, saldoDisponible] = await Promise.all([
       supabaseAdmin
-        .from('perfiles')
+        .from('clientes')
         .select('id, nombre_completo, numero_documento')
-        .eq('rol', 'cliente')
         .order('nombre_completo', { ascending: true }),
       cajaService.obtenerSaldoDisponible(),
     ]);
@@ -188,9 +187,8 @@ async function crearPrestamo(req, res, next) {
   } catch (err) {
     const [{ data: clientes }, saldoDisponible] = await Promise.all([
       supabaseAdmin
-        .from('perfiles')
+        .from('clientes')
         .select('id, nombre_completo, numero_documento')
-        .eq('rol', 'cliente')
         .order('nombre_completo', { ascending: true }),
       cajaService.obtenerSaldoDisponible(),
     ]);

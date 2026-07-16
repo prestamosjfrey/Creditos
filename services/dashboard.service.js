@@ -12,7 +12,7 @@ async function calcularKpisAlCorte(fechaCorte) {
   const corte = formatoISO(fechaCorte);
 
   const [{ data: prestamos, error: errorPrestamos }, { data: pagos, error: errorPagos }] = await Promise.all([
-    supabaseAdmin.from('prestamos').select('id, numero, monto_capital, monto_total_a_pagar, perfiles:cliente_id(nombre_completo)').lte('fecha_inicio', corte),
+    supabaseAdmin.from('prestamos').select('id, numero, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo)').lte('fecha_inicio', corte),
     supabaseAdmin.from('pagos').select('prestamo_id, monto').lte('fecha_pago', corte),
   ]);
   if (errorPrestamos) throw errorPrestamos;
@@ -76,11 +76,11 @@ async function calcularKpisRango({ desde, hasta }) {
   ] = await Promise.all([
     // Préstamos originados en el periodo (para capital y saldo pendiente).
     supabaseAdmin.from('prestamos')
-      .select('id, numero, monto_capital, monto_total_a_pagar, perfiles:cliente_id(nombre_completo)')
+      .select('id, numero, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo)')
       .gte('fecha_inicio', desde).lte('fecha_inicio', hasta),
     // Pagos recibidos en el periodo, con su préstamo (para recuperado e interés).
     supabaseAdmin.from('pagos')
-      .select('prestamo_id, monto, prestamos:prestamo_id(numero, monto_capital, monto_total_a_pagar, perfiles:cliente_id(nombre_completo))')
+      .select('prestamo_id, monto, prestamos:prestamo_id(numero, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo))')
       .gte('fecha_pago', desde).lte('fecha_pago', hasta),
   ]);
   if (e1) throw e1;
@@ -194,7 +194,7 @@ async function obtenerAlertasMora() {
   const hoy = formatoISO(new Date());
   const { data, error } = await supabaseAdmin
     .from('cuotas')
-    .select('*, prestamos:prestamo_id(cliente_id, perfiles:cliente_id(nombre_completo, telefono))')
+    .select('*, prestamos:prestamo_id(cliente_id, perfiles:clientes(nombre_completo, telefono))')
     .in('estado', ['pendiente', 'parcial', 'vencida'])
     .lt('fecha_vencimiento', hoy)
     .order('fecha_vencimiento', { ascending: true });
@@ -215,7 +215,7 @@ async function obtenerProximosCobros(diasAdelante = 7) {
 
   const { data, error } = await supabaseAdmin
     .from('cuotas')
-    .select('*, prestamos:prestamo_id(cliente_id, perfiles:cliente_id(nombre_completo, telefono))')
+    .select('*, prestamos:prestamo_id(cliente_id, perfiles:clientes(nombre_completo, telefono))')
     .in('estado', ['pendiente', 'parcial'])
     .gte('fecha_vencimiento', formatoISO(hoy))
     .lte('fecha_vencimiento', formatoISO(limite))
@@ -393,8 +393,8 @@ async function obtenerConteosNotificacion() {
       .in('estado', ['pendiente', 'parcial', 'vencida']).lt('fecha_vencimiento', hoy),
     supabaseAdmin.from('cuotas').select('id', { count: 'exact', head: true })
       .in('estado', ['pendiente', 'parcial']).eq('fecha_vencimiento', hoy),
-    supabaseAdmin.from('perfiles').select('id', { count: 'exact', head: true })
-      .eq('rol', 'cliente').eq('activo', true),
+    supabaseAdmin.from('clientes').select('id', { count: 'exact', head: true })
+      .eq('activo', true),
     supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true })
       .eq('estado', 'activo'),
     supabaseAdmin.from('pagos').select('prestamo_id, prestamos:prestamo_id(estado)').eq('tipo', 'interes'),
@@ -421,7 +421,7 @@ async function obtenerConteosNotificacion() {
 async function obtenerPagosRecientes(limite = 8) {
   const { data, error } = await supabaseAdmin
     .from('pagos')
-    .select('*, prestamos:prestamo_id(perfiles:cliente_id(nombre_completo))')
+    .select('*, prestamos:prestamo_id(perfiles:clientes(nombre_completo))')
     .order('creado_en', { ascending: false })
     .limit(limite);
   if (error) throw error;
@@ -442,19 +442,19 @@ async function obtenerActividadReciente(limite = 8) {
   ] = await Promise.all([
     supabaseAdmin
       .from('pagos')
-      .select('monto, creado_en, prestamos:prestamo_id(perfiles:cliente_id(nombre_completo))')
+      .select('monto, creado_en, prestamos:prestamo_id(perfiles:clientes(nombre_completo))')
       .gte('creado_en', desde)
       .order('creado_en', { ascending: false })
       .limit(limite),
     supabaseAdmin
       .from('prestamos')
-      .select('monto_capital, creado_en, perfiles:cliente_id(nombre_completo)')
+      .select('monto_capital, creado_en, perfiles:clientes(nombre_completo)')
       .gte('creado_en', desde)
       .order('creado_en', { ascending: false })
       .limit(limite),
     supabaseAdmin
       .from('cuotas')
-      .select('monto_esperado, monto_pagado, fecha_vencimiento, prestamos:prestamo_id(perfiles:cliente_id(nombre_completo))')
+      .select('monto_esperado, monto_pagado, fecha_vencimiento, prestamos:prestamo_id(perfiles:clientes(nombre_completo))')
       .eq('estado', 'vencida')
       .gte('fecha_vencimiento', desde)
       .order('fecha_vencimiento', { ascending: false })

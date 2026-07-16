@@ -73,16 +73,25 @@
     });
   }
 
-  function marcar(cuotaId) {
+  function marcar(cuotaId, saldo) {
     if (inputCuota) inputCuota.value = cuotaId || '';
     chips.forEach(function (c) {
       c.classList.toggle('chip-abono-activo', c.getAttribute('data-cuota') === String(cuotaId || ''));
     });
+    // Al seleccionar una cuota, colocar de una vez su saldo en el monto.
+    if (saldo != null && inputMonto && !esInteres()) {
+      inputMonto.value = window.formatearMoneda ? window.formatearMoneda(Number(saldo)) : String(Math.round(Number(saldo) || 0));
+      actualizarResumen();
+    }
   }
   chips.forEach(function (c) {
-    c.addEventListener('click', function () { marcar(c.getAttribute('data-cuota')); if (selMas) selMas.value = ''; });
+    c.addEventListener('click', function () { marcar(c.getAttribute('data-cuota'), c.getAttribute('data-saldo')); if (selMas) selMas.value = ''; });
   });
-  if (selMas) selMas.addEventListener('change', function () { if (selMas.value) marcar(selMas.value); });
+  if (selMas) selMas.addEventListener('change', function () {
+    if (!selMas.value) return;
+    var opt = selMas.options[selMas.selectedIndex];
+    marcar(selMas.value, opt ? opt.getAttribute('data-saldo') : null);
+  });
 
   actualizarResumen();
 })();

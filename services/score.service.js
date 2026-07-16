@@ -133,7 +133,7 @@ async function recalcularYGuardar(clienteId) {
   try {
     const score = await calcularScoreCliente(clienteId);
     if (score === null) return; // sin historial suficiente
-    await supabaseAdmin.from('perfiles').update({
+    await supabaseAdmin.from('clientes').update({
       score_credito: score,
       score_actualizado_en: new Date().toISOString(),
     }).eq('id', clienteId);

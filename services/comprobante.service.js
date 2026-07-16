@@ -1,5 +1,9 @@
 const PDFDocument = require('pdfkit');
+const path = require('path');
 const { formatCOP } = require('../utils/moneda');
+
+// Logo de Cash R&R (PNG, porque pdfkit no admite webp) para el encabezado.
+const LOGO_PATH = path.join(__dirname, '..', 'public', 'img', 'logo-comprobante.png');
 
 function iniciales(nombre) {
   const p = (nombre || '').trim().split(/\s+/);
@@ -64,8 +68,8 @@ function generarComprobantePDF({ prestamo, cuotas, pagos }, stream) {
     ? String(prestamo.numero).padStart(5, '0')
     : numeroPrestamo(prestamo.id);
 
-  const NAVY = '#0f172a';
-  const AZUL = '#2563eb';
+  const NAVY = '#0e3b2b';
+  const AZUL = '#16a34a';
   const GRIS = '#94a3b8';
   const L = 36, R = 559;
 
@@ -73,10 +77,9 @@ function generarComprobantePDF({ prestamo, cuotas, pagos }, stream) {
   doc.pipe(stream);
 
   // ---------- ENCABEZADO ----------
-  doc.roundedRect(L, 34, 50, 50, 10).fill(NAVY);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26).text('C', L, 47, { width: 50, align: 'center' });
-  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cartera', 96, 42);
-  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Gestión de préstamos', 96, 62);
+  try { doc.image(LOGO_PATH, L, 34, { width: 50, height: 50 }); } catch (e) { doc.circle(61, 59, 25).fill('#0e3b2b'); }
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cash R&R', 96, 42);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Financiadora', 96, 62);
   doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('PLAN DE PAGO', 250, 40);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Resumen de tu préstamo', 250, 57);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('N° de préstamo:', 250, 70, { continued: true });
@@ -89,7 +92,7 @@ function generarComprobantePDF({ prestamo, cuotas, pagos }, stream) {
 
   // ---------- TARJETA CLIENTE ----------
   doc.roundedRect(L, 106, 523, 86, 10).lineWidth(0.8).strokeColor('#e2e8f0').stroke();
-  doc.circle(70, 142, 22).fill('#dbeafe');
+  doc.circle(70, 142, 22).fill('#dcfce7');
   doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(15).text(iniciales(cliente.nombre_completo), 48, 134, { width: 44, align: 'center' });
 
   doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('NOMBRE', 104, 122);
@@ -172,7 +175,7 @@ function generarComprobantePDF({ prestamo, cuotas, pagos }, stream) {
 
   // ---------- IMPORTANTE + PIE ----------
   if (y > 720) { doc.addPage(); y = 40; }
-  doc.roundedRect(L, y, 523, 46, 10).fillAndStroke('#eff6ff', '#dbeafe');
+  doc.roundedRect(L, y, 523, 46, 10).fillAndStroke('#f0fdf4', '#bbf7d0');
   doc.fillColor('#1e40af').font('Helvetica-Bold').fontSize(9).text('Importante', 54, y + 12);
   doc.fillColor('#64748b').font('Helvetica').fontSize(8).text('Conserva este comprobante como respaldo de tu préstamo. Realiza el pago de cada cuota en la fecha de vencimiento indicada.', 54, y + 25, { width: 480 });
   y += 60;
@@ -196,7 +199,7 @@ function calcularDesglose(prestamo) {
 }
 
 function encabezado(doc, titulo) {
-  doc.fontSize(22).fillColor('#2563EB').text('Cartera', 50, 50);
+  doc.fontSize(22).fillColor('#16a34a').text('Cash R&R', 50, 50);
   doc.fontSize(11).fillColor('#64748b').text(titulo, 50, 78);
   doc.fontSize(9).fillColor('#64748b').text('Generado: ' + new Date().toLocaleString('es-CO'), 50, 50, { align: 'right' });
   doc.moveTo(50, 100).lineTo(545, 100).strokeColor('#e2e8f0').stroke();
@@ -210,8 +213,8 @@ function generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago, esInteres }, 
   const cliente = prestamo.perfiles || {};
   const { capital, interes } = calcularDesglose(prestamo)(cuota);
 
-  const NAVY = '#0f172a';
-  const AZUL = '#2563eb';
+  const NAVY = '#0e3b2b';
+  const AZUL = '#16a34a';
   const GRIS = '#94a3b8';
   const VERDE = '#16a34a';
   const L = 36, R = 559;
@@ -223,10 +226,9 @@ function generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago, esInteres }, 
   const estaPagada = cuota.estado === 'pagada';
 
   // ---------- ENCABEZADO ----------
-  doc.roundedRect(L, 34, 50, 50, 10).fill(NAVY);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26).text('C', L, 47, { width: 50, align: 'center' });
-  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cartera', 96, 42);
-  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Gestión de préstamos', 96, 62);
+  try { doc.image(LOGO_PATH, L, 34, { width: 50, height: 50 }); } catch (e) { doc.circle(61, 59, 25).fill('#0e3b2b'); }
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cash R&R', 96, 42);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Financiadora', 96, 62);
   doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('COMPROBANTE DE CUOTA', 250, 40, { width: 175 });
   doc.fillColor(esInteres ? '#b45309' : GRIS).font('Helvetica' + (esInteres ? '-Bold' : '')).fontSize(8).text(esInteres ? 'Cuota N° ' + cuota.numero_cuota + ' · Solo interés' : 'Cuota N° ' + cuota.numero_cuota, 250, 57);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('N° de préstamo:', 250, 70, { continued: true });
@@ -239,7 +241,7 @@ function generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago, esInteres }, 
 
   // ---------- TARJETA CLIENTE ----------
   doc.roundedRect(L, 106, 523, 86, 10).lineWidth(0.8).strokeColor('#e2e8f0').stroke();
-  doc.circle(70, 142, 22).fill('#dbeafe');
+  doc.circle(70, 142, 22).fill('#dcfce7');
   doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(15).text(iniciales(cliente.nombre_completo), 48, 134, { width: 44, align: 'center' });
 
   doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('NOMBRE', 104, 122);
@@ -334,7 +336,7 @@ function generarComprobanteCuotaPDF({ prestamo, cuota, metodoPago, esInteres }, 
   const pieY = detY + 36 + detalles.length * 22 + 20;
   doc.moveTo(L, pieY).lineTo(R, pieY).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
   doc.fontSize(7.5).fillColor(GRIS).text(
-    'Comprobante generado por el sistema Cartera con base en los registros del préstamo.',
+    'Comprobante generado por el sistema Cash R&R con base en los registros del préstamo.',
     L, pieY + 10, { width: 523, align: 'center' }
   );
   doc.end();
@@ -349,8 +351,8 @@ function generarPazYSalvoPDF({ prestamo, pagos }, stream) {
   const fechas = (pagos || []).map((p) => p.fecha_pago).filter(Boolean).sort();
   const fechaFin = fechas.length ? fechas[fechas.length - 1] : null;
 
-  const NAVY = '#0f172a';
-  const AZUL = '#2563eb';
+  const NAVY = '#0e3b2b';
+  const AZUL = '#16a34a';
   const GRIS = '#94a3b8';
   const VERDE = '#16a34a';
   const L = 36, R = 559;
@@ -424,7 +426,7 @@ function generarPazYSalvoPDF({ prestamo, pagos }, stream) {
   const pieY = firmaY + 44;
   doc.moveTo(L, pieY).lineTo(R, pieY).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
   doc.fontSize(7.5).fillColor(GRIS).font('Helvetica').text(
-    'Documento generado por el sistema Cartera con base en los registros del préstamo.',
+    'Documento generado por el sistema Cash R&R con base en los registros del préstamo.',
     L, pieY + 10, { width: 523, align: 'center' }
   );
 
@@ -445,8 +447,8 @@ function generarComprobantePagoPDF({ prestamo, pago, saldo, cuotasPagadas, cuota
   const totalCuotas = Number(cuotasTotal || 0);
   const faltan = Math.max(0, totalCuotas - pagadas);
 
-  const NAVY = '#0f172a';
-  const AZUL = '#2563eb';
+  const NAVY = '#0e3b2b';
+  const AZUL = '#16a34a';
   const GRIS = '#94a3b8';
   const VERDE = '#16a34a';
   const L = 36, R = 559;
@@ -457,10 +459,9 @@ function generarComprobantePagoPDF({ prestamo, pago, saldo, cuotasPagadas, cuota
   const numeroMostrar = prestamo.numero != null ? String(prestamo.numero).padStart(5, '0') : numeroPrestamo(prestamo.id);
 
   // ---------- ENCABEZADO ----------
-  doc.roundedRect(L, 34, 50, 50, 10).fill(NAVY);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(26).text('C', L, 47, { width: 50, align: 'center' });
-  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cartera', 96, 42);
-  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Gestión de préstamos', 96, 62);
+  try { doc.image(LOGO_PATH, L, 34, { width: 50, height: 50 }); } catch (e) { doc.circle(61, 59, 25).fill('#0e3b2b'); }
+  doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(15).text('Cash R&R', 96, 42);
+  doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('Financiadora', 96, 62);
   doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(esInteres ? 11.5 : 13).text(esInteres ? 'COMPROBANTE DE INTERÉS' : 'COMPROBANTE DE PAGO', 250, esInteres ? 42 : 40, { width: 175 });
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text(esInteres ? 'Recibo de pago de solo interés' : 'Recibo de abono registrado', 250, 57);
   doc.fillColor(GRIS).font('Helvetica').fontSize(8).text('N° de préstamo:', 250, 70, { continued: true });
@@ -473,7 +474,7 @@ function generarComprobantePagoPDF({ prestamo, pago, saldo, cuotasPagadas, cuota
 
   // ---------- TARJETA CLIENTE ----------
   doc.roundedRect(L, 106, 523, 86, 10).lineWidth(0.8).strokeColor('#e2e8f0').stroke();
-  doc.circle(70, 142, 22).fill('#dbeafe');
+  doc.circle(70, 142, 22).fill('#dcfce7');
   doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(15).text(iniciales(cliente.nombre_completo), 48, 134, { width: 44, align: 'center' });
 
   doc.fillColor(AZUL).font('Helvetica-Bold').fontSize(7).text('NOMBRE', 104, 122);
@@ -594,7 +595,7 @@ function generarComprobantePagoPDF({ prestamo, pago, saldo, cuotasPagadas, cuota
   const pieY = filaY + resumen.length * 22 + 20;
   doc.moveTo(L, pieY).lineTo(R, pieY).lineWidth(0.5).strokeColor('#e2e8f0').stroke();
   doc.fontSize(7.5).fillColor(GRIS).text(
-    'Comprobante del abono registrado en el sistema Cartera. Conserva este recibo como soporte del pago.',
+    'Comprobante del abono registrado en el sistema Cash R&R. Conserva este recibo como soporte del pago.',
     L, pieY + 10, { width: 523, align: 'center' }
   );
 

@@ -52,13 +52,16 @@ async function crearCreditoConPlan(datos) {
 }
 
 async function obtenerCreditoConCuotas(id) {
-  const [{ data: credito, error: e1 }, { data: cuotas, error: e2 }] = await Promise.all([
+  const [{ data: credito, error: e1 }, { data: cuotas, error: e2 }, pagosRes] = await Promise.all([
     supabaseAdmin.from('creditos_tomados').select('*').eq('id', id).single(),
     supabaseAdmin.from('cuotas_credito_tomado').select('*').eq('credito_id', id).order('numero_cuota'),
+    supabaseAdmin.from('pagos_credito_tomado').select('*').eq('credito_id', id).order('creado_en', { ascending: false }),
   ]);
   if (e1) throw e1;
   if (e2) throw e2;
-  return { credito, cuotas: cuotas || [] };
+  // Si aún no se corrió la migración de pagos_credito_tomado, el historial va vacío.
+  const pagos = pagosRes && !pagosRes.error ? (pagosRes.data || []) : [];
+  return { credito, cuotas: cuotas || [], pagos };
 }
 
 async function pagarCuota({ creditoId, cuotaId, monto, fechaPago, notas, registradoPor }) {
@@ -99,6 +102,81 @@ async function pagarCuota({ creditoId, cuotaId, monto, fechaPago, notas, registr
   });
 }
 
+// Pago "como un abono normal": recibe un monto y lo reparte en las cuotas
+// pendientes (completas, en orden), registra UN egreso de caja con el método y
+// marca el crédito como pagado si se saldó todo.
+async function registrarPagoCreditoTomado({ creditoId, monto, metodo, fechaPago, notas, registradoPor }) {
+  const montoTotal = Number(monto) || 0;
+  if (montoTotal <= 0) throw new Error('El monto debe ser mayor a cero.');
+
+  const [{ data: credito, error: eC }, { data: cuotas, error: eQ }] = await Promise.all([
+    supabaseAdmin.from('creditos_tomados').select('acreedor, estado').eq('id', creditoId).single(),
+    supabaseAdmin.from('cuotas_credito_tomado').select('id, numero_cuota, monto, estado').eq('credito_id', creditoId).order('numero_cuota'),
+  ]);
+  if (eC) throw eC;
+  if (eQ) throw eQ;
+
+  const pendientes = (cuotas || []).filter((q) => q.estado !== 'pagada');
+  if (!pendientes.length) throw new Error('Este crédito ya está pagado por completo.');
+
+  // Repartir en cuotas completas, en orden de vencimiento.
+  let restante = montoTotal;
+  const cubiertas = [];
+  for (const q of pendientes) {
+    const m = Number(q.monto);
+    if (restante + 1e-6 >= m) { cubiertas.push(q); restante -= m; }
+    else break;
+  }
+  if (!cubiertas.length) {
+    throw new Error(`El monto no alcanza para pagar la próxima cuota (${formatCOP(Number(pendientes[0].monto))}).`);
+  }
+  const montoAplicado = cubiertas.reduce((a, q) => a + Number(q.monto), 0);
+
+  const { error: eU } = await supabaseAdmin
+    .from('cuotas_credito_tomado')
+    .update({ estado: 'pagada', pagado_en: new Date().toISOString() })
+    .in('id', cubiertas.map((q) => q.id));
+  if (eU) throw eU;
+
+  const METODOS = { efectivo: 'Efectivo', transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', otro: 'Otro' };
+  const metodoLbl = METODOS[metodo] || 'Efectivo';
+
+  await cajaService.registrarMovimiento({
+    tipo: 'egreso',
+    monto: montoAplicado,
+    concepto: `Pago crédito tomado (${credito?.acreedor || 'acreedor'}) · ${metodoLbl}`,
+    origen: 'pago_credito_tomado',
+    referenciaId: creditoId,
+    registradoPor,
+  });
+
+  if (pendientes.length - cubiertas.length === 0) {
+    await supabaseAdmin.from('creditos_tomados').update({ estado: 'pagado' }).eq('id', creditoId);
+  }
+
+  // Historial de pagos (para el detalle). Si la tabla aún no existe (migración
+  // pendiente), no rompemos el pago: solo se omite el registro del historial.
+  const { error: ePago } = await supabaseAdmin.from('pagos_credito_tomado').insert({
+    credito_id: creditoId,
+    monto: montoAplicado,
+    metodo: metodo || 'efectivo',
+    fecha_pago: fechaPago || null,
+    notas: notas || null,
+    cuotas: cubiertas.map((q) => q.numero_cuota),
+    registrado_por: registradoPor,
+  });
+  if (ePago) console.warn('[creditos-tomados] pagos_credito_tomado no disponible:', ePago.message);
+
+  await auditoria.registrar({
+    tipo: 'pago_credito_tomado',
+    descripcion: `Pago a ${credito?.acreedor || 'acreedor'}: ${formatCOP(montoAplicado)} (${metodoLbl}) — ${cubiertas.length} cuota${cubiertas.length === 1 ? '' : 's'}.`,
+    detalle: { monto: montoAplicado, metodo, fecha_pago: fechaPago, notas: notas || null, cuotas: cubiertas.map((q) => q.numero_cuota) },
+    actorId: registradoPor,
+  });
+
+  return { cuotasPagadas: cubiertas.length, montoAplicado, excedente: montoTotal - montoAplicado };
+}
+
 async function listarTodos() {
   const [{ data: creditos, error: e1 }, { data: todasCuotas, error: e2 }] = await Promise.all([
     supabaseAdmin.from('creditos_tomados').select('*').order('creado_en', { ascending: false }),
@@ -125,4 +203,4 @@ async function listarTodos() {
   });
 }
 
-module.exports = { crearCreditoConPlan, obtenerCreditoConCuotas, pagarCuota, listarTodos };
+module.exports = { crearCreditoConPlan, obtenerCreditoConCuotas, pagarCuota, registrarPagoCreditoTomado, listarTodos };

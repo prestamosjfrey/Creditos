@@ -2,9 +2,14 @@
   var hoy = new Date().toISOString().slice(0, 10);
   var pagado = cuotas.filter(function(c){ return c.estado === 'pagada'; }).reduce(function(a,c){ return a + Number(c.monto); }, 0);
   var saldo = Number(credito.monto_total_a_pagar) - pagado;
-  var cuotasPend = cuotas.filter(function(c){ return c.estado !== 'pagada'; });
-  var proxCuota = cuotasPend.sort(function(a,b){ return a.fecha_vencimiento.localeCompare(b.fecha_vencimiento); })[0];
+  var cuotasPend = cuotas.filter(function(c){ return c.estado !== 'pagada'; })
+    .sort(function(a,b){ return a.fecha_vencimiento.localeCompare(b.fecha_vencimiento); });
+  var proxCuota = cuotasPend[0];
   var enMora = cuotasPend.some(function(c){ return c.fecha_vencimiento < hoy; });
+  var cuotasPagadasN = cuotas.filter(function(c){ return c.estado === 'pagada'; }).length;
+  var diasRest = proxCuota ? Math.round((new Date(proxCuota.fecha_vencimiento + 'T00:00:00') - new Date(hoy + 'T00:00:00')) / 86400000) : null;
+  var diasRestTxt = credito.estado === 'pagado' ? '—' : (diasRest === null ? '—' : (diasRest < 0 ? Math.abs(diasRest) + ' días de mora' : (diasRest === 0 ? 'Hoy' : diasRest + ' días')));
+  var METODOS_LBL = { efectivo: 'Efectivo', transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', otro: 'Otro' };
 %>
 
 <%- include('../../partials/header-admin', {
@@ -21,7 +26,10 @@
   </div>
 <% } %>
 <% if (typeof req !== 'undefined' && req.query && req.query.pago === '1') { %>
-  <div class="mb-4 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">Cuota registrada como pagada.</div>
+  <div class="mb-4 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">Pago registrado. Salió de tu caja disponible.</div>
+<% } %>
+<% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
+  <div class="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"><%= req.query.error %></div>
 <% } %>
 
 <!-- Estado y badge -->
@@ -36,13 +44,6 @@
     <% } %>
     <span class="text-sm text-slate-400"><%= credito.frecuencia_pago %> · <%= credito.numero_cuotas %> cuotas</span>
   </div>
-  <% if (credito.estado === 'activo' && proxCuota) { %>
-    <button type="button" id="btn-abrir-pago"
-      class="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 font-medium text-white transition hover:bg-orange-700 shadow-sm">
-      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125h17.25c.621 0 1.125.504 1.125 1.125v.375m-19.5 0v8.25a1.125 1.125 0 0 0 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-8.25"/></svg>
-      Registrar pago de cuota
-    </button>
-  <% } %>
 </div>
 
 <!-- KPIs -->
@@ -53,31 +54,38 @@
   <%- include('../../partials/kpi-card', { titulo: 'Saldo por pagar', valor: formatCOP(saldo) }) %>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <!-- Plan de cuotas -->
-  <div class="lg:col-span-2">
+<div class="flex flex-col lg:flex-row gap-6 lg:items-start">
+  <!-- Plan de cuotas + Historial -->
+  <div class="flex-1 min-w-0 flex flex-col gap-6">
+   <div>
     <h2 class="font-medium text-slate-700 mb-3">Plan de cuotas</h2>
     <div class="card overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-            <th class="pb-3 pr-4">N°</th>
-            <th class="pb-3 pr-4">Vencimiento</th>
-            <th class="pb-3 pr-4">Monto</th>
-            <th class="pb-3 pr-4">Estado</th>
-            <th class="pb-3"></th>
+            <th class="pb-3 pr-4">#</th>
+            <th class="pb-3 pr-4">Vence</th>
+            <th class="pb-3 pr-4 text-right">Monto</th>
+            <th class="pb-3 pr-4 text-right">Pagado</th>
+            <th class="pb-3 pr-4 text-right">Saldo</th>
+            <th class="pb-3">Estado</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
           <% cuotas.forEach(function(c) {
-            var vencida = c.estado !== 'pagada' && c.fecha_vencimiento < hoy;
+            var pagadaC = c.estado === 'pagada';
+            var vencida = !pagadaC && c.fecha_vencimiento < hoy;
+            var pag = pagadaC ? Number(c.monto) : 0;
+            var sal = pagadaC ? 0 : Number(c.monto);
           %>
-            <tr class="<%= c.estado === 'pagada' ? 'opacity-60' : '' %>">
+            <tr class="<%= pagadaC ? 'opacity-60' : '' %>">
               <td class="py-3 pr-4 font-mono text-xs text-slate-400"><%= String(c.numero_cuota).padStart(2,'0') %></td>
               <td class="py-3 pr-4 text-slate-700 <%= vencida ? 'text-red-600 font-medium' : '' %>"><%= c.fecha_vencimiento %></td>
-              <td class="py-3 pr-4 font-semibold text-slate-800"><%= formatCOP(c.monto) %></td>
-              <td class="py-3 pr-4">
-                <% if (c.estado === 'pagada') { %>
+              <td class="py-3 pr-4 text-right font-semibold text-slate-800"><%= formatCOP(c.monto) %></td>
+              <td class="py-3 pr-4 text-right num text-emerald-600"><%= formatCOP(pag) %></td>
+              <td class="py-3 pr-4 text-right num <%= sal > 0 ? 'text-slate-700' : 'text-slate-300' %>"><%= formatCOP(sal) %></td>
+              <td class="py-3">
+                <% if (pagadaC) { %>
                   <span class="badge-exito">Pagada</span>
                 <% } else if (vencida) { %>
                   <span class="badge-peligro">Vencida</span>
@@ -85,117 +93,144 @@
                   <span class="badge-neutro">Pendiente</span>
                 <% } %>
               </td>
-              <td class="py-3">
-                <% if (c.estado !== 'pagada' && credito.estado === 'activo') { %>
-                  <button type="button"
-                    class="text-xs text-blue-600 hover:underline btn-pagar-cuota"
-                    data-cuota-id="<%= c.id %>"
-                    data-monto="<%= c.monto %>"
-                    data-numero="<%= c.numero_cuota %>">
-                    Pagar
-                  </button>
-                <% } %>
-              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-slate-100 mt-2 pt-4 text-sm">
+        <div><p class="text-xs text-slate-400">Cuotas pagadas</p><p class="font-bold text-slate-800"><%= cuotasPagadasN %> <span class="text-slate-300 font-normal">/ <%= credito.numero_cuotas %></span></p></div>
+        <div><p class="text-xs text-slate-400">Total pagado</p><p class="num font-bold text-emerald-600"><%= formatCOP(pagado) %></p></div>
+        <div><p class="text-xs text-slate-400">Total pendiente</p><p class="num font-bold text-red-500"><%= formatCOP(saldo) %></p></div>
+        <div><p class="text-xs text-slate-400">Días restantes</p><p class="font-bold text-slate-800"><%= diasRestTxt %></p></div>
+      </div>
+    </div>
+   </div>
+
+    <% if (pagos && pagos.length) { %>
+   <div>
+    <h2 class="font-medium text-slate-700 mb-3">Historial de abonos</h2>
+    <div class="card p-0 overflow-x-auto">
+      <table class="table-base w-full" data-datatable>
+        <thead>
+          <tr><th>Fecha</th><th class="text-right">Monto</th><th>Método</th><th>Aplicado a</th></tr>
+        </thead>
+        <tbody>
+          <% pagos.forEach(function(p) {
+            var cuotasArr = Array.isArray(p.cuotas) ? p.cuotas : [];
+            var cuotasTxt = cuotasArr.length === 0 ? '—' : (cuotasArr.length === 1 ? 'Cuota ' + cuotasArr[0] : 'Cuotas ' + cuotasArr.join(', '));
+            var fechaTxt = p.fecha_pago || (p.creado_en ? String(p.creado_en).slice(0,10) : '—');
+          %>
+            <tr>
+              <td class="text-slate-500"><%= fechaTxt %></td>
+              <td class="num text-right font-semibold text-slate-800"><%= formatCOP(p.monto) %></td>
+              <td><span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"><%= METODOS_LBL[p.metodo] || p.metodo || '—' %></span></td>
+              <td class="text-slate-500"><%= cuotasTxt %></td>
             </tr>
           <% }); %>
         </tbody>
       </table>
     </div>
-  </div>
-
-  <!-- Info del crédito -->
-  <div class="space-y-4">
-    <div class="card">
-      <h3 class="font-semibold text-slate-700 mb-3 text-sm">Detalles del crédito</h3>
-      <dl class="space-y-2 text-sm">
-        <div class="flex justify-between"><dt class="text-slate-400">Acreedor</dt><dd class="font-medium text-slate-800"><%= credito.acreedor %></dd></div>
-        <div class="flex justify-between"><dt class="text-slate-400">N° crédito</dt><dd class="font-mono text-slate-600"><%= String(credito.numero).padStart(3,'0') %></dd></div>
-        <div class="flex justify-between"><dt class="text-slate-400">Fecha inicio</dt><dd class="text-slate-600"><%= credito.fecha_inicio %></dd></div>
-        <div class="flex justify-between"><dt class="text-slate-400">Primer pago</dt><dd class="text-slate-600"><%= credito.fecha_primer_pago %></dd></div>
-        <div class="flex justify-between"><dt class="text-slate-400">Frecuencia</dt><dd class="text-slate-600 capitalize"><%= credito.frecuencia_pago %></dd></div>
-        <div class="flex justify-between"><dt class="text-slate-400">Cuotas</dt><dd class="text-slate-600"><%= cuotas.filter(function(c){return c.estado==='pagada';}).length %> / <%= credito.numero_cuotas %> pagadas</dd></div>
-        <div class="flex justify-between"><dt class="text-slate-400">Valor cuota</dt><dd class="font-semibold text-slate-800"><%= formatCOP(credito.valor_cuota) %></dd></div>
-        <% if (credito.notas) { %>
-          <div class="pt-2 border-t border-slate-100"><dt class="text-slate-400 text-xs mb-1">Notas</dt><dd class="text-slate-600 text-xs"><%= credito.notas %></dd></div>
-        <% } %>
-      </dl>
-    </div>
-
-    <% if (proxCuota && credito.estado === 'activo') { %>
-      <div class="card <%= enMora ? 'bg-red-50 border border-red-200' : 'bg-orange-50 border border-orange-100' %>">
-        <p class="text-xs font-semibold uppercase tracking-wide <%= enMora ? 'text-red-500' : 'text-orange-500' %> mb-1">Próxima cuota</p>
-        <p class="text-xl font-bold <%= enMora ? 'text-red-700' : 'text-orange-700' %>"><%= formatCOP(proxCuota.monto) %></p>
-        <p class="text-sm <%= enMora ? 'text-red-600' : 'text-orange-600' %> mt-1"><%= proxCuota.fecha_vencimiento %></p>
-        <% if (enMora) { %>
-          <p class="text-xs text-red-500 mt-1 font-medium">Cuota(s) vencida(s)</p>
-        <% } %>
-      </div>
+   </div>
     <% } %>
   </div>
-</div>
 
-<!-- Modal pago cuota -->
-<div id="modal-pago" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
-  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
-    <h2 class="font-semibold text-slate-800 text-lg mb-4">Registrar pago — Cuota <span id="modal-num-cuota"></span></h2>
-    <form action="/admin/creditos-tomados/<%= credito.id %>/cuotas" method="POST" id="form-pago-cuota">
-      <input type="hidden" name="cuota_id" id="modal-cuota-id" />
-      <div class="space-y-4">
-        <div>
-          <label class="label-field" for="modal-monto">Monto a pagar</label>
-          <div class="relative">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
-            <input class="input-field pl-7 input-moneda" type="text" inputmode="numeric" id="modal-monto" name="monto" required />
+  <!-- Registrar pago + Info -->
+  <div class="w-full lg:w-96 lg:shrink-0 space-y-4">
+    <!-- Registrar pago (mismo estilo que el abono de préstamos) -->
+    <div class="card">
+      <h2 class="flex items-center gap-2 font-semibold text-slate-800 mb-4">
+        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-50 text-orange-500"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
+        Registrar pago
+      </h2>
+      <% if (credito.estado === 'pagado' || cuotasPend.length === 0) { %>
+        <div class="rounded-xl bg-emerald-50 px-4 py-6 text-center">
+          <p class="font-medium text-emerald-700">Crédito pagado</p>
+          <p class="text-xs text-emerald-600/80 mt-1">Ya saldaste este crédito por completo.</p>
+        </div>
+      <% } else { %>
+        <form action="/admin/creditos-tomados/<%= credito.id %>/pagos" method="POST" id="form-pago-credito" data-loading-title="Registrando pago…">
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <label class="label-field" for="pago-monto">Monto a pagar</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                <input class="input-field pl-7 input-moneda" type="text" inputmode="numeric" id="pago-monto" name="monto" placeholder="0" required />
+              </div>
+            </div>
+            <div>
+              <label class="label-field" for="pago-metodo">Método de pago</label>
+              <select class="input-field" id="pago-metodo" name="metodo">
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="nequi">Nequi</option>
+                <option value="daviplata">Daviplata</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label class="label-field" for="pago-fecha">Fecha de pago</label>
+              <input class="input-field" type="date" id="pago-fecha" name="fecha_pago" value="<%= hoy %>" required />
+            </div>
+            <div>
+              <label class="label-field" for="pago-notas">Notas (opcional)</label>
+              <input class="input-field" type="text" id="pago-notas" name="notas" maxlength="200" />
+            </div>
           </div>
-        </div>
-        <div>
-          <label class="label-field" for="modal-fecha">Fecha de pago</label>
-          <input class="input-field" type="date" id="modal-fecha" name="fecha_pago" value="<%= new Date().toISOString().slice(0,10) %>" required />
-        </div>
-        <div>
-          <label class="label-field" for="modal-notas">Notas (opcional)</label>
-          <input class="input-field" type="text" id="modal-notas" name="notas" maxlength="200" />
-        </div>
-      </div>
-      <div class="flex justify-end gap-3 mt-6">
-        <button type="button" id="btn-cerrar-modal" class="btn-secondary">Cancelar</button>
-        <button type="submit" class="btn-primary bg-orange-600 hover:bg-orange-700">Confirmar pago</button>
-      </div>
-    </form>
+
+          <p class="label-field mt-4 mb-2">Pagar rápido</p>
+          <div class="grid grid-cols-3 gap-2">
+            <% cuotasPend.slice(0, 3).forEach(function(c) { %>
+              <button type="button" class="chip-cuota-abono" data-monto="<%= c.monto %>">
+                <span class="font-semibold text-slate-700">Cuota <%= c.numero_cuota %></span>
+                <span class="text-slate-400"><%= formatCOP(c.monto) %></span>
+              </button>
+            <% }); %>
+          </div>
+
+          <!-- Resumen del pago (en vivo) -->
+          <div class="mt-4 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+            <p class="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-2"><svg class="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 16v-4M12 8h.01"/></svg>Resumen del pago</p>
+            <div class="flex justify-between text-sm py-0.5"><span class="text-slate-400">Cuotas que cubre</span><span class="num font-medium text-slate-700" id="pago-cuotas">0</span></div>
+            <div class="flex justify-between text-sm py-0.5"><span class="text-slate-400">Monto aplicado</span><span class="num font-medium text-slate-700" id="pago-aplicado">$ 0</span></div>
+            <div class="flex justify-between text-sm py-0.5 border-t border-slate-200 mt-1 pt-1.5"><span class="font-medium text-slate-600">Nuevo saldo por pagar</span><span class="num font-bold text-red-500" id="pago-saldo"><%= formatCOP(saldo) %></span></div>
+          </div>
+
+          <button type="submit" class="btn-primary w-full mt-4 bg-orange-600 hover:bg-orange-700">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            Registrar pago
+          </button>
+        </form>
+      <% } %>
+    </div>
   </div>
 </div>
 
 <script>
 (function () {
-  var modal = document.getElementById('modal-pago');
-  var fmt = function(v) { return window.formatearMoneda ? window.formatearMoneda(v) : String(Math.round(v||0)); };
+  var input = document.getElementById('pago-monto');
+  if (!input) return;
+  // Montos de las cuotas pendientes, en orden de vencimiento.
+  var pend = <%- JSON.stringify(cuotasPend.map(function(c){ return Number(c.monto); })) %>;
+  var saldo = <%- JSON.stringify(saldo) %>;
+  var fmt = window.formatearMoneda || function (v) { return String(Math.round(v || 0)); };
+  function cop(v) { return '$ ' + Math.round(v || 0).toLocaleString('es-CO'); }
 
-  function abrirModal(cuotaId, monto, numero) {
-    document.getElementById('modal-cuota-id').value = cuotaId;
-    document.getElementById('modal-num-cuota').textContent = numero;
-    var montoEl = document.getElementById('modal-monto');
-    montoEl.value = fmt(monto);
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+  function actualizar() {
+    var monto = window.parseMoneda ? window.parseMoneda(input.value) : (Number(input.value) || 0);
+    var restante = monto, cubiertas = 0, aplicado = 0;
+    for (var i = 0; i < pend.length; i++) {
+      if (restante + 1e-6 >= pend[i]) { cubiertas++; aplicado += pend[i]; restante -= pend[i]; }
+      else break;
+    }
+    document.getElementById('pago-cuotas').textContent = cubiertas;
+    document.getElementById('pago-aplicado').textContent = cop(aplicado);
+    document.getElementById('pago-saldo').textContent = cop(saldo - aplicado);
   }
 
-  function cerrarModal() {
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-  }
-
-  document.getElementById('btn-abrir-pago')?.addEventListener('click', function () {
-    var proxCuota = document.querySelector('.btn-pagar-cuota');
-    if (proxCuota) proxCuota.click();
+  input.addEventListener('input', actualizar);
+  document.querySelectorAll('[data-monto]').forEach(function (b) {
+    b.addEventListener('click', function () { input.value = fmt(Number(b.dataset.monto)); actualizar(); });
   });
-
-  document.querySelectorAll('.btn-pagar-cuota').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      abrirModal(btn.dataset.cuotaId, btn.dataset.monto, btn.dataset.numero);
-    });
-  });
-
-  document.getElementById('btn-cerrar-modal')?.addEventListener('click', cerrarModal);
-  modal?.addEventListener('click', function (e) { if (e.target === modal) cerrarModal(); });
+  actualizar();
 })();
 </script>

@@ -114,7 +114,7 @@ async function registrarAbono({ prestamoId, cuotaId, monto, fechaPago, metodo, n
 
   const { data: prestamo } = await supabaseAdmin
     .from('prestamos')
-    .select('cliente_id, perfiles:cliente_id(nombre_completo)')
+    .select('cliente_id, perfiles:clientes(nombre_completo)')
     .eq('id', prestamoId)
     .single();
 
@@ -164,7 +164,7 @@ async function registrarPagoInteres({ prestamoId, cuotaId, monto, fechaPago, met
 
   const { data: prestamo, error: errorPrest } = await supabaseAdmin
     .from('prestamos')
-    .select('*, perfiles:cliente_id(nombre_completo)')
+    .select('*, perfiles:clientes(nombre_completo)')
     .eq('id', prestamoId)
     .single();
   if (errorPrest) throw errorPrest;
@@ -314,7 +314,7 @@ async function registrarPagoInteres({ prestamoId, cuotaId, monto, fechaPago, met
 async function actualizarEstadoPrestamoSiCompletado(prestamoId, registradoPor) {
   const { data: prestamo } = await supabaseAdmin
     .from('prestamos')
-    .select('estado, cliente_id, perfiles:cliente_id(nombre_completo)')
+    .select('estado, cliente_id, perfiles:clientes(nombre_completo)')
     .eq('id', prestamoId)
     .single();
   if (!prestamo || prestamo.estado === 'pagado') return;

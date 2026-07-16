@@ -46,8 +46,41 @@
 </div>
 
 <!-- Stat cards -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  <div class="card flex items-center gap-3">
+<%
+  var _esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var _fF = function (iso) { try { var d = new Date(iso + 'T00:00:00'); return d.getDate() + '/' + (d.getMonth() + 1); } catch (e) { return iso; } };
+  var _nom = function (c) { return (c.prestamos && c.prestamos.perfiles && c.prestamos.perfiles.nombre_completo) || 'Cliente'; };
+  function _tablaCob(rows, colLabel, total) {
+    if (!rows.length) return '<p class="text-slate-400">Sin registros en esta categoría.</p>';
+    var tb = rows.map(function (r) { return '<tr><td class="py-1 pr-2 text-slate-600">' + _esc(r[0]) + '</td><td class="py-1 text-right num text-slate-700 whitespace-nowrap">' + r[1] + '</td></tr>'; }).join('');
+    var foot = total != null ? '<tfoot><tr><td class="pt-1 border-t border-slate-200 font-semibold text-slate-700">Total</td><td class="pt-1 border-t border-slate-200 text-right num font-semibold text-slate-800 whitespace-nowrap">' + total + '</td></tr></tfoot>' : '';
+    return '<div class="rounded-lg border border-slate-100 bg-slate-50/60 p-2 mt-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">' + colLabel + '</p><table class="w-full text-xs"><tbody>' + tb + '</tbody>' + foot + '</table></div>';
+  }
+  var _rowCob = function (c) { return [_nom(c) + ' · ' + _fF(c.fecha_vencimiento), formatCOP(c.saldo)]; };
+  var _cobHoy = cobros.filter(function (c) { return c.estaHoy; });
+  var _cobSem = cobros.filter(function (c) { return c.estaEnSemana; });
+  var _cobMora = cobros.filter(function (c) { return c.enMora; });
+  var _porCli = {};
+  cobros.forEach(function (c) { var k = _nom(c); _porCli[k] = (_porCli[k] || 0) + c.saldo; });
+  var _cliRows = Object.keys(_porCli).sort().map(function (k) { return [k, formatCOP(_porCli[k])]; });
+  var _dClientes = '<p><strong>Clientes por cobrar</strong></p><p>Clientes distintos con al menos una cuota por cobrar (próximos 30 días o en mora).</p>' + _tablaCob(_cliRows, 'Cliente · total pendiente', formatCOP(stats.totalPorCobrar));
+  var _dTotal = '<p><strong>Total por cobrar</strong></p><p>Suma del saldo de todas las cuotas próximas (30 días) y en mora.</p>' + _tablaCob(cobros.map(_rowCob), 'Cliente · vence → saldo', formatCOP(stats.totalPorCobrar));
+  var _dHoy = '<p><strong>Vencen hoy</strong></p><p>Cuotas cuyo vencimiento es hoy.</p>' + _tablaCob(_cobHoy.map(_rowCob), 'Cliente · saldo', formatCOP(stats.totalHoy));
+  var _dSem = '<p><strong>Vencen esta semana</strong></p><p>Cuotas que vencen entre hoy y los próximos 6 días.</p>' + _tablaCob(_cobSem.map(_rowCob), 'Cliente · saldo', formatCOP(stats.totalSemana));
+  var _dMora = '<p><strong>En mora</strong></p><p>Cuotas vencidas antes de hoy y aún sin pagar.</p>' + _tablaCob(_cobMora.map(_rowCob), 'Cliente · saldo', formatCOP(stats.totalMora));
+  var _iInfo = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-4M12 8h.01"/></svg>';
+  function _btnInfo(t, html) { return '<button type="button" class="explica-btn absolute top-3 right-3 text-slate-300 transition hover:text-blue-500" data-explica-titulo="' + t + '" aria-label="Ver detalle" title="Ver detalle">' + _iInfo + '<template class="explica-contenido">' + html + '</template></button>'; }
+%>
+<div class="flex items-center justify-between mb-2">
+  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Resumen</span>
+  <button id="btn-toggle-cob-stats" title="Mostrar / ocultar" class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 transition">
+    <svg id="ico-cob-stats" style="width:14px;height:14px;transition:transform .25s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 15-6-6-6 6"/></svg>
+    <span id="lbl-cob-stats">Ocultar</span>
+  </button>
+</div>
+<div id="cob-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="card flex items-center gap-3 relative">
+    <%- _btnInfo('Clientes por cobrar', _dClientes) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-500">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm5 10v-2a4 4 0 0 0-3-3.87"/></svg>
     </span>
@@ -57,7 +90,8 @@
       <p class="text-xs text-slate-400 mt-0.5">Activos: <%= stats.clientesActivos %> · Inactivos: <%= stats.clientesInactivos %></p>
     </div>
   </div>
-  <div class="card flex items-center gap-3">
+  <div class="card flex items-center gap-3 relative">
+    <%- _btnInfo('Total por cobrar', _dTotal) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
     </span>
@@ -67,7 +101,8 @@
       <p class="text-xs text-emerald-500 mt-0.5">Próximos 30 días</p>
     </div>
   </div>
-  <div class="card flex items-center gap-3">
+  <div class="card flex items-center gap-3 relative">
+    <%- _btnInfo('Vencen hoy', _dHoy) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
     </span>
@@ -77,7 +112,8 @@
       <p class="text-xs text-red-500 mt-0.5">Total: <%= formatCOP(stats.totalHoy) %></p>
     </div>
   </div>
-  <div class="card flex items-center gap-3">
+  <div class="card flex items-center gap-3 relative">
+    <%- _btnInfo('Vencen esta semana', _dSem) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-50 text-violet-500">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
     </span>
@@ -87,7 +123,8 @@
       <p class="text-xs text-violet-500 mt-0.5">Total: <%= formatCOP(stats.totalSemana) %></p>
     </div>
   </div>
-  <div class="card flex items-center gap-3 border-red-100">
+  <div class="card flex items-center gap-3 border-red-100 relative">
+    <%- _btnInfo('En mora', _dMora) %>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
     </span>
@@ -98,6 +135,35 @@
     </div>
   </div>
 </div>
+<script>
+  (function () {
+    var DUR = 220, KEY = 'cob-stats-v';
+    var btn = document.getElementById('btn-toggle-cob-stats'), sec = document.getElementById('cob-stats');
+    var ico = document.getElementById('ico-cob-stats'), lbl = document.getElementById('lbl-cob-stats');
+    if (!btn || !sec) return;
+    var collapsed = false, busy = false;
+    sec.style.transition = 'opacity ' + DUR + 'ms ease';
+    function estilo(col) {
+      btn.style.background = col ? '#fbf4d6' : ''; btn.style.color = col ? '#15803d' : '';
+      btn.style.fontWeight = col ? '600' : ''; btn.style.boxShadow = col ? 'inset 0 0 0 1px #e4c451' : '';
+      btn.classList.toggle('text-slate-400', !col);
+    }
+    function setBusy(on) { busy = on; btn.disabled = on; btn.style.opacity = on ? '0.45' : ''; if (lbl) lbl.textContent = on ? '...' : (collapsed ? 'Mostrar' : 'Ocultar'); }
+    function aplicar(col, animate) {
+      collapsed = col;
+      try { localStorage.setItem(KEY, col ? '1' : '0'); } catch (e) {}
+      if (ico) ico.style.transform = col ? 'rotate(180deg)' : 'rotate(0deg)';
+      estilo(col);
+      if (!animate) { sec.style.display = col ? 'none' : 'grid'; if (lbl) lbl.textContent = col ? 'Mostrar' : 'Ocultar'; return; }
+      setBusy(true);
+      if (col) { sec.style.opacity = '0'; setTimeout(function () { sec.style.display = 'none'; sec.style.opacity = ''; setBusy(false); }, DUR); }
+      else { sec.style.opacity = '0'; sec.style.display = 'grid'; requestAnimationFrame(function () { requestAnimationFrame(function () { sec.style.opacity = '1'; setTimeout(function () { sec.style.opacity = ''; setBusy(false); }, DUR); }); }); }
+    }
+    var g = false; try { g = localStorage.getItem(KEY) === '1'; } catch (e) {}
+    aplicar(g, false);
+    btn.addEventListener('click', function () { if (!busy) aplicar(!collapsed, true); });
+  })();
+</script>
 
 <!-- Filtros -->
 <div class="card py-3 px-4 mb-4">

@@ -7,7 +7,7 @@ const { supabaseAdmin } = require('../config/supabase');
 async function obtenerArbol() {
   const { data: prestamos, error } = await supabaseAdmin
     .from('prestamos')
-    .select('id, fecha_inicio, monto_total_a_pagar, estado, cliente_id, perfiles:cliente_id(nombre_completo), cuotas(id, numero_cuota), pagos(id, monto, fecha_pago, metodo, tipo, distribucion, creado_en)')
+    .select('id, fecha_inicio, monto_total_a_pagar, estado, cliente_id, perfiles:clientes(nombre_completo), cuotas(id, numero_cuota), pagos(id, monto, fecha_pago, metodo, tipo, distribucion, creado_en)')
     .order('fecha_inicio', { ascending: false });
   if (error) throw error;
 

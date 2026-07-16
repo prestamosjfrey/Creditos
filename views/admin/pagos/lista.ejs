@@ -104,8 +104,64 @@
     <span id="lbl-stats">Ocultar</span>
   </button>
 </div>
+<%
+  // Desglose de los KPIs según el filtro aplicado (rango de fechas).
+  var _rango = (desde && hasta) ? (fechaCorta(desde) + ' – ' + fechaCorta(hasta)) : 'el período';
+  var _dias = 1;
+  if (desde && hasta) { _dias = Math.max(1, Math.round((new Date(hasta + 'T00:00:00') - new Date(desde + 'T00:00:00')) / 86400000) + 1); }
+  var _porMetodo = {};
+  pagos.forEach(function (p) { var k = p.metodo || 'otro'; if (!_porMetodo[k]) _porMetodo[k] = { n: 0, s: 0 }; _porMetodo[k].n++; _porMetodo[k].s += Number(p.monto); });
+  var _metodoKeys = Object.keys(_porMetodo);
+  var _top = pagos.slice().sort(function (a, b) { return Number(b.monto) - Number(a.monto); }).slice(0, 5);
+  var _icoInfo = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-4M12 8h.01"/></svg>';
+  var _esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  // Tabla con el detalle real de los pagos (cliente, fecha, método, monto).
+  function listaPagos(orden) {
+    var arr = pagos.slice();
+    if (orden === 'monto') arr.sort(function (a, b) { return Number(b.monto) - Number(a.monto); });
+    else arr.sort(function (a, b) { return String(a.fecha_pago).localeCompare(String(b.fecha_pago)); });
+    if (!arr.length) return '<p class="text-slate-400">Sin pagos en el período.</p>';
+    var rows = arr.map(function (p) {
+      var nom = (p.prestamos && p.prestamos.perfiles && p.prestamos.perfiles.nombre_completo) || 'Cliente';
+      var met = (METODO[p.metodo] || METODO.otro)[1];
+      return '<tr>'
+        + '<td class="py-1 pr-2 text-slate-600">' + _esc(nom) + '</td>'
+        + '<td class="py-1 pr-2 text-slate-400 whitespace-nowrap">' + _esc(fechaCorta(p.fecha_pago)) + '</td>'
+        + '<td class="py-1 pr-2 text-slate-400">' + _esc(met) + '</td>'
+        + '<td class="py-1 text-right num text-slate-700 whitespace-nowrap">' + formatCOP(p.monto) + '</td>'
+        + '</tr>';
+    }).join('');
+    return '<div class="rounded-lg border border-slate-100 bg-slate-50/60 p-2 mt-2">'
+      + '<p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Detalle de pagos (' + arr.length + ')</p>'
+      + '<table class="w-full text-xs"><thead><tr class="text-slate-400">'
+      + '<th class="text-left font-medium pb-1">Cliente</th><th class="text-left font-medium pb-1">Fecha</th>'
+      + '<th class="text-left font-medium pb-1">Método</th><th class="text-right font-medium pb-1">Monto</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody>'
+      + '<tfoot><tr><td colspan="3" class="pt-1 border-t border-slate-200 font-semibold text-slate-700">Total</td>'
+      + '<td class="pt-1 border-t border-slate-200 text-right num font-semibold text-slate-800 whitespace-nowrap">' + formatCOP(stats.total) + '</td></tr></tfoot>'
+      + '</table></div>';
+  }
+%>
 <div id="pagos-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  <div class="card flex items-center gap-3">
+  <div class="card flex items-center gap-3 relative">
+    <button type="button" class="explica-btn absolute top-3 right-3 text-slate-300 transition hover:text-blue-500" data-explica-titulo="Total en el período" aria-label="Ver detalle" title="Ver detalle">
+      <%- _icoInfo %>
+      <template class="explica-contenido">
+        <p><strong>Total recibido en el período</strong></p>
+        <p>Suma de <strong>todos los abonos</strong> con fecha entre <strong><%= _rango %></strong>: <strong><%= formatCOP(stats.total) %></strong> en <%= stats.count %> pago<%= stats.count === 1 ? '' : 's' %>.</p>
+        <% if (stats.cambioPct !== null) { %><p class="text-slate-400"><%= stats.cambioPct >= 0 ? 'Subió' : 'Bajó' %> <%= Math.abs(stats.cambioPct) %>% frente al período anterior del mismo largo.</p><% } %>
+        <div class="rounded-lg border border-slate-100 bg-slate-50/60 p-2 mt-1">
+          <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Por método de pago</p>
+          <table class="w-full text-xs"><tbody>
+            <% _metodoKeys.forEach(function (k) { var m = METODO[k] || METODO.otro; %>
+              <tr><td class="py-0.5 pr-2 text-slate-500"><%= m[1] %></td><td class="py-0.5 text-right num text-slate-700 whitespace-nowrap"><%= formatCOP(_porMetodo[k].s) %></td></tr>
+            <% }); %>
+            <% if (_metodoKeys.length === 0) { %><tr><td class="py-1 text-slate-400">Sin pagos en el período.</td></tr><% } %>
+          </tbody></table>
+        </div>
+        <%- listaPagos('fecha') %>
+      </template>
+    </button>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
     </span>
@@ -120,7 +176,24 @@
     </div>
   </div>
 
-  <div class="card flex items-center gap-3">
+  <div class="card flex items-center gap-3 relative">
+    <button type="button" class="explica-btn absolute top-3 right-3 text-slate-300 transition hover:text-blue-500" data-explica-titulo="Pagos recibidos" aria-label="Ver detalle" title="Ver detalle">
+      <%- _icoInfo %>
+      <template class="explica-contenido">
+        <p><strong>Pagos recibidos en el período</strong></p>
+        <p>Cantidad de abonos registrados entre <strong><%= _rango %></strong>: <strong><%= stats.count %></strong>.</p>
+        <div class="rounded-lg border border-slate-100 bg-slate-50/60 p-2 mt-1">
+          <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Por método de pago</p>
+          <table class="w-full text-xs"><tbody>
+            <% _metodoKeys.forEach(function (k) { var m = METODO[k] || METODO.otro; %>
+              <tr><td class="py-0.5 pr-2 text-slate-500"><%= m[1] %></td><td class="py-0.5 text-right num text-slate-700 whitespace-nowrap"><%= _porMetodo[k].n %> pago<%= _porMetodo[k].n === 1 ? '' : 's' %></td></tr>
+            <% }); %>
+            <% if (_metodoKeys.length === 0) { %><tr><td class="py-1 text-slate-400">Sin pagos en el período.</td></tr><% } %>
+          </tbody></table>
+        </div>
+        <%- listaPagos('fecha') %>
+      </template>
+    </button>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
     </span>
@@ -131,7 +204,17 @@
     </div>
   </div>
 
-  <div class="card flex items-center gap-3">
+  <div class="card flex items-center gap-3 relative">
+    <button type="button" class="explica-btn absolute top-3 right-3 text-slate-300 transition hover:text-blue-500" data-explica-titulo="Promedio por día" aria-label="Ver detalle" title="Ver detalle">
+      <%- _icoInfo %>
+      <template class="explica-contenido">
+        <p><strong>Promedio por día</strong></p>
+        <p>Total recibido dividido entre los días del período seleccionado:</p>
+        <p><strong><%= formatCOP(stats.total) %></strong> ÷ <strong><%= _dias %> día<%= _dias === 1 ? '' : 's' %></strong> = <strong><%= formatCOP(stats.promedioDia) %></strong>.</p>
+        <p class="text-slate-400">Cuenta todos los días del rango (<%= _rango %>), reciban o no un pago.</p>
+        <%- listaPagos('fecha') %>
+      </template>
+    </button>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
     </span>
@@ -141,7 +224,19 @@
     </div>
   </div>
 
-  <div class="card flex items-center gap-3">
+  <div class="card flex items-center gap-3 relative">
+    <button type="button" class="explica-btn absolute top-3 right-3 text-slate-300 transition hover:text-blue-500" data-explica-titulo="Mayor pago" aria-label="Ver detalle" title="Ver detalle">
+      <%- _icoInfo %>
+      <template class="explica-contenido">
+        <p><strong>Mayor pago del período</strong></p>
+        <% if (stats.masAlto) { %>
+          <p>El abono más alto entre <strong><%= _rango %></strong> fue de <strong><%= formatCOP(stats.masAlto.monto) %></strong> el <%= fechaCorta(stats.masAlto.fecha_pago) %>.</p>
+        <% } else { %>
+          <p class="text-slate-400">No hubo pagos en el período.</p>
+        <% } %>
+        <%- listaPagos('monto') %>
+      </template>
+    </button>
     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
     </span>
@@ -378,6 +473,13 @@
         collapsed = col;
         localStorage.setItem(key, col ? '1' : '0');
         if (ico) ico.style.transform = col ? 'rotate(180deg)' : 'rotate(0deg)';
+        // Botón más NOTABLE cuando está oculto (verde con dorado, invita a
+        // mostrar); sutil (gris) cuando está visible.
+        btn.style.background = col ? '#fbf4d6' : '';
+        btn.style.color = col ? '#15803d' : '';
+        btn.style.fontWeight = col ? '600' : '';
+        btn.style.boxShadow = col ? 'inset 0 0 0 1px #e4c451' : '';
+        btn.classList.toggle('text-slate-400', !col);
         if (!animate) {
           sec.style.display = col ? 'none' : (displayVal || 'block');
           if (lbl) lbl.textContent = col ? 'Mostrar' : 'Ocultar';

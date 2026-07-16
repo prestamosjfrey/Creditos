@@ -34,7 +34,7 @@ async function obtenerCuotasDeHoy() {
   const hoy = formatoISO(new Date());
   const { data, error } = await supabaseAdmin
     .from('cuotas')
-    .select('numero_cuota, monto_esperado, monto_pagado, prestamo_id, prestamos:prestamo_id(numero, perfiles:cliente_id(nombre_completo, telefono))')
+    .select('numero_cuota, monto_esperado, monto_pagado, prestamo_id, prestamos:prestamo_id(numero, perfiles:clientes(nombre_completo, telefono))')
     .in('estado', ['pendiente', 'parcial'])
     .eq('fecha_vencimiento', hoy)
     .order('numero_cuota', { ascending: true });

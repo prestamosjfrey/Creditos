@@ -32,7 +32,7 @@ async function registrar({ tipo, descripcion, prestamoId = null, clienteId = nul
 async function listar({ prestamoId, clienteId, tipos, limite = 300 } = {}) {
   let query = supabaseAdmin
     .from('bitacora')
-    .select('*, actor:actor_id(nombre_completo), cliente:cliente_id(nombre_completo, numero_documento), prestamo:prestamo_id(perfiles:cliente_id(nombre_completo, numero_documento))')
+    .select('*, actor:actor_id(nombre_completo), cliente:cliente_id(nombre_completo, numero_documento), prestamo:prestamo_id(perfiles:clientes(nombre_completo, numero_documento))')
     .order('creado_en', { ascending: false })
     .limit(limite);
   if (prestamoId) query = query.eq('prestamo_id', prestamoId);

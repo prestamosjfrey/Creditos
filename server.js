@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const expressLayouts = require('express-ejs-layouts');
 const { Server } = require('socket.io');
@@ -15,6 +16,11 @@ const errorHandler = require('./middlewares/errorHandler');
 const { formatCOP } = require('./utils/moneda');
 
 const app = express();
+
+// Detrás del proxy de Render: confía en X-Forwarded-Proto para que req.protocol
+// sea 'https' y las URLs de redirect (p. ej. el enlace de recuperar contraseña)
+// se generen correctamente.
+app.set('trust proxy', 1);
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -37,6 +43,11 @@ app.use((req, res, next) => {
   res.locals.flashExito = req.query.ok || null;
   res.locals.flashError = req.query.error || null;
   res.locals.rutaActual = req.path;
+  // Versión del CSS para cache-busting: cambia cada vez que se recompila
+  // output.css, forzando al navegador a cargar el CSS nuevo (no el cacheado).
+  try {
+    res.locals.assetV = String(Math.round(fs.statSync(path.join(__dirname, 'public/css/output.css')).mtimeMs));
+  } catch (e) { res.locals.assetV = '1'; }
   next();
 });
 

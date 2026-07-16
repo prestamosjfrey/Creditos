@@ -51,7 +51,7 @@ async function requireAuth(req, res, next) {
     }
 
     const { data: perfil, error: perfilError } = await supabaseAdmin
-      .from('perfiles')
+      .from('usuarios')
       .select('*')
       .eq('id', data.user.id)
       .single();

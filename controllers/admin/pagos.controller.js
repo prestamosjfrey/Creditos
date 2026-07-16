@@ -29,7 +29,7 @@ async function listarTodos(req, res, next) {
 
     const { data: pagos, error } = await supabaseAdmin
       .from('pagos')
-      .select('*, prestamos:prestamo_id(perfiles:cliente_id(nombre_completo))')
+      .select('*, prestamos:prestamo_id(perfiles:clientes(nombre_completo))')
       .gte('fecha_pago', desde)
       .lte('fecha_pago', hasta)
       .order('fecha_pago', { ascending: false });

@@ -27,12 +27,63 @@
 </a>
 
 <!-- Stats -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  <%- include('../../partials/kpi-card', { titulo: 'Créditos activos', valor: stats.activos }) %>
-  <%- include('../../partials/kpi-card', { titulo: 'Capital recibido (activos)', valor: formatCOP(stats.totalCapital) }) %>
-  <%- include('../../partials/kpi-card', { titulo: 'Saldo por pagar', valor: formatCOP(stats.totalDeuda) }) %>
-  <%- include('../../partials/kpi-card', { titulo: 'En mora', valor: stats.enMora, nota: 'créditos con cuotas vencidas' }) %>
+<%
+  var _esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  function _tablaCred(rows, colLabel, total) {
+    if (!rows.length) return '<p class="text-slate-400">Sin registros en esta categoría.</p>';
+    var tb = rows.map(function (r) { return '<tr><td class="py-1 pr-2 text-slate-600">' + _esc(r[0]) + '</td><td class="py-1 text-right num text-slate-700 whitespace-nowrap">' + r[1] + '</td></tr>'; }).join('');
+    var foot = total != null ? '<tfoot><tr><td class="pt-1 border-t border-slate-200 font-semibold text-slate-700">Total</td><td class="pt-1 border-t border-slate-200 text-right num font-semibold text-slate-800 whitespace-nowrap">' + total + '</td></tr></tfoot>' : '';
+    return '<div class="rounded-lg border border-slate-100 bg-slate-50/60 p-2 mt-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">' + colLabel + '</p><table class="w-full text-xs"><tbody>' + tb + '</tbody>' + foot + '</table></div>';
+  }
+  var _act = creditos.filter(function (c) { return c.estado === 'activo'; });
+  var _moraCred = creditos.filter(function (c) { return c.estado === 'activo' && c.en_mora; });
+  var _detActivos = '<p><strong>Créditos activos</strong></p><p>Créditos que tomaste y siguen vigentes (con saldo por pagar).</p>' + _tablaCred(_act.map(function (c) { return [c.acreedor, formatCOP(c.saldo_pendiente)]; }), 'Acreedor · saldo pendiente');
+  var _detCapital = '<p><strong>Capital recibido (activos)</strong></p><p>Suma del capital que recibiste de tus créditos activos.</p>' + _tablaCred(_act.map(function (c) { return [c.acreedor, formatCOP(c.monto_capital)]; }), 'Acreedor · capital', formatCOP(stats.totalCapital));
+  var _detDeuda = '<p><strong>Saldo por pagar</strong></p><p>Lo que aún debes de tus créditos activos (total pactado − abonado).</p>' + _tablaCred(_act.map(function (c) { return [c.acreedor, formatCOP(c.saldo_pendiente)]; }), 'Acreedor · saldo', formatCOP(stats.totalDeuda));
+  var _detMora = '<p><strong>En mora</strong></p><p>Créditos activos con cuotas vencidas sin pagar.</p>' + _tablaCred(_moraCred.map(function (c) { return [c.acreedor, formatCOP(c.saldo_pendiente)]; }), 'Acreedor · saldo');
+%>
+<div class="flex items-center justify-between mb-2">
+  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Resumen</span>
+  <button id="btn-toggle-ct-stats" title="Mostrar / ocultar" class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 transition">
+    <svg id="ico-ct-stats" style="width:14px;height:14px;transition:transform .25s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 15-6-6-6 6"/></svg>
+    <span id="lbl-ct-stats">Ocultar</span>
+  </button>
 </div>
+<div id="ct-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <%- include('../../partials/kpi-card', { titulo: 'Créditos activos', valor: stats.activos, explicaHtml: _detActivos }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'Capital recibido (activos)', valor: formatCOP(stats.totalCapital), explicaHtml: _detCapital }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'Saldo por pagar', valor: formatCOP(stats.totalDeuda), explicaHtml: _detDeuda }) %>
+  <%- include('../../partials/kpi-card', { titulo: 'En mora', valor: stats.enMora, nota: 'créditos con cuotas vencidas', explicaHtml: _detMora }) %>
+</div>
+<script>
+  (function () {
+    var DUR = 220, KEY = 'ct-stats-v';
+    var btn = document.getElementById('btn-toggle-ct-stats'), sec = document.getElementById('ct-stats');
+    var ico = document.getElementById('ico-ct-stats'), lbl = document.getElementById('lbl-ct-stats');
+    if (!btn || !sec) return;
+    var collapsed = false, busy = false;
+    sec.style.transition = 'opacity ' + DUR + 'ms ease';
+    function estilo(col) {
+      btn.style.background = col ? '#fbf4d6' : ''; btn.style.color = col ? '#15803d' : '';
+      btn.style.fontWeight = col ? '600' : ''; btn.style.boxShadow = col ? 'inset 0 0 0 1px #e4c451' : '';
+      btn.classList.toggle('text-slate-400', !col);
+    }
+    function setBusy(on) { busy = on; btn.disabled = on; btn.style.opacity = on ? '0.45' : ''; if (lbl) lbl.textContent = on ? '...' : (collapsed ? 'Mostrar' : 'Ocultar'); }
+    function aplicar(col, animate) {
+      collapsed = col;
+      try { localStorage.setItem(KEY, col ? '1' : '0'); } catch (e) {}
+      if (ico) ico.style.transform = col ? 'rotate(180deg)' : 'rotate(0deg)';
+      estilo(col);
+      if (!animate) { sec.style.display = col ? 'none' : 'grid'; if (lbl) lbl.textContent = col ? 'Mostrar' : 'Ocultar'; return; }
+      setBusy(true);
+      if (col) { sec.style.opacity = '0'; setTimeout(function () { sec.style.display = 'none'; sec.style.opacity = ''; setBusy(false); }, DUR); }
+      else { sec.style.opacity = '0'; sec.style.display = 'grid'; requestAnimationFrame(function () { requestAnimationFrame(function () { sec.style.opacity = '1'; setTimeout(function () { sec.style.opacity = ''; setBusy(false); }, DUR); }); }); }
+    }
+    var g = false; try { g = localStorage.getItem(KEY) === '1'; } catch (e) {}
+    aplicar(g, false);
+    btn.addEventListener('click', function () { if (!busy) aplicar(!collapsed, true); });
+  })();
+</script>
 
 <!-- Tabla -->
 <% if (creditos.length === 0) { %>

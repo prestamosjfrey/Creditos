@@ -1,102 +1,124 @@
-<div class="max-w-lg mx-auto">
+<div class="max-w-lg mx-auto" id="cn-wrap">
   <div class="card">
     <style>
-      @keyframes nc-float  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-      @keyframes nc-orbit  { from{transform:rotateX(72deg) rotateZ(0deg)}   to{transform:rotateX(72deg) rotateZ(360deg)} }
-      @keyframes nc-orbit2 { from{transform:rotateX(72deg) rotateZ(180deg)} to{transform:rotateX(72deg) rotateZ(540deg)} }
-      @keyframes nc-shadow { 0%,100%{transform:translateX(-50%) scale(1);opacity:.3} 50%{transform:translateX(-50%) scale(.8);opacity:.15} }
-      @keyframes nc-glow   { 0%,100%{opacity:.5} 50%{opacity:.9} }
+      @keyframes nc-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+      #cn-wrap > .card { border:2px solid #d4af37; box-shadow:0 0 0 5px rgba(212,175,55,.12), 0 24px 50px -20px rgba(14,59,43,.25), 0 8px 20px -12px rgba(14,59,43,.12); }
+      /* Inputs con foco estilo login: borde verde + halo verde suave. */
+      #cn-wrap .input-field { transition:border-color .18s, box-shadow .18s, background .18s; }
+      #cn-wrap .input-field:hover { border-color:#cbd5e1; }
+      #cn-wrap .input-field:focus { border-color:#16a34a;background:#fff;box-shadow:0 0 0 4px rgba(22,163,74,.15);outline:none; }
+      #cn-wrap .relative:focus-within > span { color:#16a34a; }
+      /* Todo centrado: secciones, etiquetas y contenido de los campos. */
+      #cn-wrap .cn-sec { justify-content:center; }
+      #cn-wrap .label-field { text-align:center; }
+      #cn-wrap .input-field { text-align:center; padding-right:2.5rem; } /* balancea el ícono de la izquierda (pl-10) */
+      #cn-wrap .cn-eyebrow { display:flex;align-items:center;justify-content:center;gap:9px;font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#15803d; }
+      #cn-wrap .cn-eyebrow::before, #cn-wrap .cn-eyebrow::after { content:"";width:18px;height:2px;border-radius:2px;background:#d4af37; }
+      #cn-wrap .cn-sec { display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#15803d; }
+      #cn-wrap .cn-sec svg { width:16px;height:16px;flex:none; }
+      #cn-wrap .cn-btn-cancel { flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.7rem 1.4rem;border-radius:.85rem;font-size:.9rem;font-weight:600;background:#fff;color:#dc2626;border:1.5px solid #fecaca;transition:all .15s ease;text-decoration:none;cursor:pointer; }
+      #cn-wrap .cn-btn-cancel:hover { border-color:#dc2626;background:#fef2f2; }
+      #cn-wrap .cn-btn-crear { flex:1;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.7rem 1.4rem;border-radius:.85rem;font-size:.9rem;font-weight:700;color:#fff;border:none;cursor:pointer;background:linear-gradient(160deg,#22c55e 0%,#16a34a 55%,#15803d 100%);box-shadow:0 6px 16px -4px rgba(21,128,61,.55),inset 0 1px 0 rgba(255,255,255,.18);transition:all .15s ease; }
+      #cn-wrap .cn-btn-crear:hover { filter:brightness(1.05);transform:translateY(-1px);box-shadow:0 10px 22px -6px rgba(21,128,61,.6),inset 0 1px 0 rgba(255,255,255,.18); }
+      #cn-wrap .cn-btn-crear .arrow { transition:transform .2s ease; }
+      #cn-wrap .cn-btn-crear:hover .arrow { transform:translateX(3px); }
     </style>
+
+    <!-- Encabezado -->
     <div class="flex flex-col items-center text-center mb-6">
-      <div style="position:relative;width:72px;height:80px;display:flex;align-items:center;justify-content:center;margin-bottom:.5rem">
-        <div style="position:absolute;bottom:0;left:50%;width:60px;height:10px;background:radial-gradient(ellipse,rgba(22, 163, 74,.45) 0%,transparent 70%);border-radius:50%;animation:nc-shadow 3s ease-in-out infinite;"></div>
-        <div style="animation:nc-float 3s ease-in-out infinite;position:relative;width:58px;height:58px;">
-          <div style="position:absolute;inset:-14px;border-radius:50%;background:radial-gradient(circle,rgba(22, 163, 74,.18) 0%,transparent 65%);animation:nc-glow 3s ease-in-out infinite;pointer-events:none;"></div>
-          <div style="position:absolute;inset:-12px;border-radius:50%;border:2px solid transparent;border-top:2px solid rgba(74, 222, 128,.85);border-bottom:2px solid rgba(74, 222, 128,.2);transform:rotateX(72deg);animation:nc-orbit 3.5s linear infinite;pointer-events:none;"></div>
-          <div style="position:absolute;inset:-5px;border-radius:50%;border:1.5px solid transparent;border-right:1.5px solid rgba(134, 239, 172,.7);border-left:1.5px solid rgba(134, 239, 172,.15);transform:rotateX(72deg) rotateZ(180deg);animation:nc-orbit2 5s linear infinite;pointer-events:none;"></div>
-          <div style="width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 33% 28%,#bbf7d0 0%,#22c55e 28%,#16a34a 52%,#15803d 70%,#14532d 88%,#052e16 100%);box-shadow:0 10px 30px rgba(22, 163, 74,.6),0 4px 10px rgba(0,0,0,.2),inset 0 -6px 14px rgba(0,0,0,.3),inset 2px 2px 5px rgba(255,255,255,.1);position:relative;display:flex;align-items:center;justify-content:center;"
-            onmouseover="this.parentElement.style.animationPlayState='paused';this.style.transform='scale(1.07)'"
-            onmouseout="this.parentElement.style.animationPlayState='running';this.style.transform='scale(1)'">
-            <div style="position:absolute;top:12%;left:16%;width:38%;height:28%;background:radial-gradient(ellipse at 40% 40%,rgba(255,255,255,.65) 0%,rgba(255,255,255,.1) 55%,transparent 100%);border-radius:50%;filter:blur(2px);pointer-events:none;"></div>
-            <svg style="width:26px;height:26px;color:white;filter:drop-shadow(0 2px 5px rgba(0,0,0,.35));position:relative;z-index:1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M12 12v6m-3-3h6"/>
-            </svg>
-          </div>
-        </div>
+      <div style="width:140px;height:86px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto .35rem;animation:nc-float 3s ease-in-out infinite;">
+        <img src="/img/agregar%20cliente.webp" alt="Nuevo cliente" style="width:156px;height:auto;max-width:none;" />
       </div>
-      <h1 class="font-semibold text-slate-800 text-lg">Nuevo cliente</h1>
-      <p class="text-xs text-slate-400">Completa la información básica.</p>
+      <p class="cn-eyebrow">Nuevo cliente</p>
+      <h1 class="mt-1 text-2xl font-bold" style="color:#0e3b2b">Registrar nuevo cliente</h1>
+      <p class="mt-1 text-sm text-slate-400">Completa la información básica para registrar un nuevo cliente en el sistema.</p>
     </div>
 
-    <form action="/admin/clientes" method="POST" class="space-y-4" data-loading-title="Guardando cliente…">
+    <form action="/admin/clientes" method="POST" data-loading-title="Guardando cliente…">
+
+      <!-- ===== Información personal ===== -->
+      <div class="cn-sec mb-3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Información personal
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="label-field" for="nombre_completo">Nombre completo <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <input class="input-field pl-10" type="text" id="nombre_completo" name="nombre_completo" placeholder="Ej: Juan Pérez González" value="<%= valores.nombre_completo || '' %>" required />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="label-field" for="numero_documento">Cédula <span class="text-red-500">*</span></label>
+            <div class="relative">
+              <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+              </span>
+              <input class="input-field pl-10" type="text" id="numero_documento" name="numero_documento" placeholder="Ej: 12345678" value="<%= valores.numero_documento || '' %>" required />
+            </div>
+          </div>
+          <div>
+            <label class="label-field" for="telefono">Teléfono <span class="text-red-500">*</span></label>
+            <div class="relative">
+              <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              </span>
+              <input class="input-field pl-10" type="text" id="telefono" name="telefono" placeholder="Ej: 300 123 4567" value="<%= valores.telefono || '' %>" required />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Contacto ===== -->
+      <div class="cn-sec mb-3 mt-6">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        Contacto
+      </div>
+
       <div>
-        <label class="label-field text-center" for="nombre_completo">Nombre completo <span class="text-red-500">*</span></label>
+        <label class="label-field" for="email">Correo electrónico <span class="text-slate-400 text-xs font-normal">(opcional)</span></label>
         <div class="relative">
           <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
           </span>
-          <input class="input-field pl-10" type="text" id="nombre_completo" name="nombre_completo" placeholder="Ej: Juan Pérez González" value="<%= valores.nombre_completo || '' %>" required />
+          <input class="input-field pl-10" type="email" id="email" name="email" placeholder="Ej: juan@correo.com" value="<%= valores.email || '' %>" />
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="label-field text-center" for="numero_documento">Cédula <span class="text-red-500">*</span></label>
-          <div class="relative">
-            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
-            </span>
-            <input class="input-field pl-10" type="text" id="numero_documento" name="numero_documento" placeholder="Ej: 12345678" value="<%= valores.numero_documento || '' %>" required />
-          </div>
-        </div>
-        <div>
-          <label class="label-field text-center" for="telefono">Teléfono <span class="text-red-500">*</span></label>
-          <div class="relative">
-            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            </span>
-            <input class="input-field pl-10" type="text" id="telefono" name="telefono" placeholder="Ej: 300 123 4567" value="<%= valores.telefono || '' %>" required />
-          </div>
+      <!-- ===== Ubicación ===== -->
+      <div class="cn-sec mb-3 mt-6">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        Ubicación
+      </div>
+
+      <div>
+        <label class="label-field" for="direccion">Dirección</label>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          </span>
+          <input class="input-field pl-10" type="text" id="direccion" name="direccion" placeholder="Ej: Calle 123 # 45-67, Barrio, Ciudad" value="<%= valores.direccion || '' %>" />
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="label-field text-center" for="direccion">Dirección</label>
-          <div class="relative">
-            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-            </span>
-            <input class="input-field pl-10" type="text" id="direccion" name="direccion" placeholder="Ej: Calle 123 # 45-67, Barrio" value="<%= valores.direccion || '' %>" />
-          </div>
-        </div>
-        <div>
-          <label class="label-field text-center" for="email">Correo electrónico <span class="text-red-500">*</span></label>
-          <div class="relative">
-            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-            </span>
-            <input class="input-field pl-10" type="email" id="email" name="email" placeholder="Ej: juan@correo.com" value="<%= valores.email || '' %>" required />
-          </div>
-        </div>
-      </div>
+      <hr class="border-slate-100 mt-8 mb-2" />
 
-      <hr class="border-slate-100" />
-
-      <div class="flex gap-3 justify-center pt-2">
-        <a href="/admin/clientes"
-          style="display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.25rem;border-radius:.75rem;font-size:.875rem;font-weight:600;background:linear-gradient(160deg,#f87171 0%,#ef4444 55%,#dc2626 100%);color:white;border:none;box-shadow:0 4px 14px rgba(220,38,38,.4),0 1px 3px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.15);transition:all .15s ease;text-decoration:none"
-          onmouseover="this.style.boxShadow='0 6px 20px rgba(220,38,38,.5),0 2px 6px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.15)';this.style.transform='translateY(-1px)'"
-          onmouseout="this.style.boxShadow='0 4px 14px rgba(220,38,38,.4),0 1px 3px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.15)';this.style.transform='translateY(0)'">
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M6 18 18 6M6 6l12 12" /></svg>
+      <!-- Botones -->
+      <div class="flex gap-3 pt-4">
+        <a href="/admin/clientes" class="cn-btn-cancel">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" d="M6 18 18 6M6 6l12 12" /></svg>
           Cancelar
         </a>
-        <button type="submit"
-          style="display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.4rem;border-radius:.75rem;font-size:.875rem;font-weight:600;background:linear-gradient(160deg,#22c55e 0%,#16a34a 55%,#15803d 100%);color:white;border:none;box-shadow:0 4px 14px rgba(22, 163, 74,.45),0 1px 3px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.15);transition:all .15s ease;cursor:pointer"
-          onmouseover="this.style.boxShadow='0 6px 20px rgba(22, 163, 74,.55),0 2px 6px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.15)';this.style.transform='translateY(-1px)'"
-          onmouseout="this.style.boxShadow='0 4px 14px rgba(22, 163, 74,.45),0 1px 3px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.15)';this.style.transform='translateY(0)'">
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+        <button type="submit" class="cn-btn-crear">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
           Crear cliente
+          <svg class="arrow h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </div>
     </form>

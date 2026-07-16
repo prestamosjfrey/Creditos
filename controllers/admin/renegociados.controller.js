@@ -12,7 +12,7 @@ async function mostrarRenegociados(req, res, next) {
         prestamos:prestamo_id(
           id, numero, numero_cuotas, monto_capital, monto_total_a_pagar,
           valor_cuota, frecuencia_pago, fecha_inicio, estado,
-          perfiles:cliente_id(nombre_completo, numero_documento, telefono)
+          perfiles:clientes(nombre_completo, numero_documento, telefono)
         )
       `)
       .eq('tipo', 'interes')

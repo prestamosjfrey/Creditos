@@ -162,10 +162,12 @@
   </div>
 </div>
 
-<!-- ===================== PLAN DE CUOTAS + REGISTRAR ABONO ===================== -->
-<div class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-  <!-- Plan de cuotas -->
-  <div class="lg:col-span-2 card">
+<!-- ========== PLAN + HISTORIAL (izq) | ABONO + RESUMEN (der) ========== -->
+<div class="mb-6 flex flex-col lg:flex-row gap-6 lg:items-start">
+  <!-- Izquierda -->
+  <div class="flex-1 min-w-0 flex flex-col gap-6">
+    <!-- Plan de cuotas -->
+  <div class="card">
     <h2 class="font-semibold text-slate-800 mb-4">Plan de cuotas</h2>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -206,8 +208,49 @@
       <div><p class="text-[11px] text-slate-400">Días restantes</p><p class="num text-base font-bold text-blue-600"><%= proxima ? (diasRestantes >= 0 ? diasRestantes + ' días' : 'Vencida') : '—' %></p></div>
     </div>
   </div>
-
-  <!-- Registrar abono -->
+    <!-- Historial de abonos -->
+  <div class="card">
+    <h2 class="font-semibold text-slate-800 mb-4">Historial de abonos</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" data-datatable data-no-search>
+        <thead>
+          <tr class="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <th class="pb-3 pr-3">Fecha</th><th class="pb-3 pr-3 text-right">Monto</th><th class="pb-3 pr-3">Método</th><th class="pb-3 pr-3">Aplicado a</th><th class="pb-3">Comprobante</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          <% if (pagos.length === 0) { %>
+            <tr><td colspan="5" class="py-8 text-center text-slate-400">Aún no se han registrado abonos.</td></tr>
+          <% } %>
+          <% pagos.forEach(function(p) {
+              var apl = (p.distribucion && Array.isArray(p.distribucion.aplicaciones)) ? p.distribucion.aplicaciones : [];
+              var aplTxt = apl.length ? apl.map(function(a){ return 'Cuota ' + a.cuota_numero; }).join(', ') : '—';
+              var esInteresPago = p.tipo === 'interes';
+          %>
+            <tr>
+              <td class="py-3 pr-3 whitespace-nowrap text-slate-600"><%= p.fecha_pago %></td>
+              <td class="py-3 pr-3 text-right num font-semibold text-slate-800"><%= formatCOP(p.monto) %></td>
+              <td class="py-3 pr-3 whitespace-nowrap">
+                <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"><%= METODOS_LBL[p.metodo] || p.metodo || '—' %></span>
+                <% if (esInteresPago) { %><span class="ml-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-600">Solo interés</span><% } %>
+              </td>
+              <td class="py-3 pr-3 text-slate-500"><%= aplTxt %></td>
+              <td class="py-3">
+                <a href="/admin/prestamos/<%= prestamo.id %>/pagos/<%= p.id %>/comprobante?ver=1" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-blue-600 hover:underline text-xs font-medium">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+                  Ver recibo
+                </a>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  </div>
+  <!-- Derecha -->
+  <div class="w-full lg:w-96 lg:shrink-0 flex flex-col gap-6">
+    <!-- Registrar abono -->
   <div class="card">
     <h2 class="flex items-center gap-2 font-semibold text-slate-800 mb-4">
       <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-500"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
@@ -222,7 +265,7 @@
       <form action="/admin/prestamos/<%= prestamo.id %>/pagos" method="POST" id="form-abono"
             data-loading-title="Registrando abono…" data-ratio-capital="<%= ratioCapital %>" data-saldo="<%= saldo %>" data-interes-cuota="<%= interesPorCuota %>">
         <input type="hidden" name="fecha_pago" value="<%= hoyISOv %>" />
-        <input type="hidden" name="cuota_id" id="abono-cuota-id" value="<%= proxima ? proxima.id : '' %>" />
+        <input type="hidden" name="cuota_id" id="abono-cuota-id" value="" />
 
         <div class="grid grid-cols-1 gap-3">
           <div>
@@ -268,7 +311,7 @@
           <p class="label-field mt-4 mb-2">Aplicar a</p>
           <div class="grid grid-cols-3 gap-2">
             <% pend.slice(0, 3).forEach(function(c) { %>
-              <button type="button" class="chip-cuota-abono <%= proxima && c.id === proxima.id ? 'chip-abono-activo' : '' %>" data-cuota="<%= c.id %>">
+              <button type="button" class="chip-cuota-abono" data-cuota="<%= c.id %>" data-saldo="<%= Number(c.monto_esperado) - Number(c.monto_pagado) %>">
                 <span class="font-semibold text-slate-700">Cuota <%= c.numero_cuota %></span>
                 <span class="text-slate-400"><%= fCorta(c.fecha_vencimiento) %></span>
               </button>
@@ -278,7 +321,7 @@
             <select class="input-field mt-2 text-sm" id="abono-cuota-mas">
               <option value="">Más cuotas…</option>
               <% pend.slice(3).forEach(function(c) { %>
-                <option value="<%= c.id %>">Cuota <%= c.numero_cuota %> · <%= fCorta(c.fecha_vencimiento) %></option>
+                <option value="<%= c.id %>" data-saldo="<%= Number(c.monto_esperado) - Number(c.monto_pagado) %>">Cuota <%= c.numero_cuota %> · <%= fCorta(c.fecha_vencimiento) %></option>
               <% }); %>
             </select>
           <% } %>
@@ -299,51 +342,7 @@
       </form>
     <% } %>
   </div>
-</div>
-
-<!-- ===================== HISTORIAL + RESUMEN DEL CRÉDITO ===================== -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-  <!-- Historial de abonos -->
-  <div class="lg:col-span-2 card">
-    <h2 class="font-semibold text-slate-800 mb-4">Historial de abonos</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm" data-datatable data-no-search>
-        <thead>
-          <tr class="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-            <th class="pb-3 pr-3">Fecha</th><th class="pb-3 pr-3 text-right">Monto</th><th class="pb-3 pr-3">Método</th><th class="pb-3 pr-3">Aplicado a</th><th class="pb-3">Comprobante</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-50">
-          <% if (pagos.length === 0) { %>
-            <tr><td colspan="5" class="py-8 text-center text-slate-400">Aún no se han registrado abonos.</td></tr>
-          <% } %>
-          <% pagos.forEach(function(p) {
-              var apl = (p.distribucion && Array.isArray(p.distribucion.aplicaciones)) ? p.distribucion.aplicaciones : [];
-              var aplTxt = apl.length ? apl.map(function(a){ return 'Cuota ' + a.cuota_numero; }).join(', ') : '—';
-              var esInteresPago = p.tipo === 'interes';
-          %>
-            <tr>
-              <td class="py-3 pr-3 whitespace-nowrap text-slate-600"><%= p.fecha_pago %></td>
-              <td class="py-3 pr-3 text-right num font-semibold text-slate-800"><%= formatCOP(p.monto) %></td>
-              <td class="py-3 pr-3 whitespace-nowrap">
-                <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"><%= METODOS_LBL[p.metodo] || p.metodo || '—' %></span>
-                <% if (esInteresPago) { %><span class="ml-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-600">Solo interés</span><% } %>
-              </td>
-              <td class="py-3 pr-3 text-slate-500"><%= aplTxt %></td>
-              <td class="py-3">
-                <a href="/admin/prestamos/<%= prestamo.id %>/pagos/<%= p.id %>/comprobante?ver=1" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-blue-600 hover:underline text-xs font-medium">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
-                  Ver recibo
-                </a>
-              </td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Resumen del crédito -->
+    <!-- Resumen del crédito -->
   <div class="card">
     <h2 class="font-semibold text-slate-800 mb-4">Resumen del crédito</h2>
     <div class="flex items-center gap-4 mb-4">
@@ -365,6 +364,7 @@
       <div class="flex items-center justify-between py-2"><dt class="text-slate-400">Próxima cuota</dt><dd class="font-medium text-slate-700"><%= proxima ? fCorta(proxima.fecha_vencimiento) : '—' %></dd></div>
       <div class="flex items-center justify-between py-2"><dt class="text-slate-400">Saldo pendiente</dt><dd class="num font-semibold text-slate-800"><%= formatCOP(saldo) %></dd></div>
     </dl>
+  </div>
   </div>
 </div>
 

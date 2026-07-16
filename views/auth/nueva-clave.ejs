@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nueva contraseña · Cash R&amp;R</title>
+  <link rel="icon" type="image/svg+xml" href="/img/favicon.svg" />
+  <link rel="icon" type="image/x-icon" href="/img/favIcon.ico" />
+  <link rel="shortcut icon" type="image/x-icon" href="/img/favIcon.ico" />
+  <link rel="stylesheet" href="/css/output.css?v=<%= typeof assetV !== 'undefined' ? assetV : '1' %>" />
+  <%- include('../partials/auth-styles') %>
+</head>
+<body class="login-body">
+  <main class="login-wrap">
+    <!-- Marca -->
+    <section class="brand">
+      <div class="brand-frame">
+        <img src="/img/login%20mejorado.webp" alt="Cash R&amp;R Financiadora" />
+      </div>
+    </section>
+
+    <!-- Formulario -->
+    <section class="login-card">
+      <p class="eyebrow">Restablecer contraseña</p>
+      <h1 class="login-title">Nueva contraseña</h1>
+      <p class="login-sub">Elige una contraseña nueva para tu cuenta.</p>
+
+      <% if (error) { %>
+        <div class="aviso aviso-err">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span><%= error %></span>
+        </div>
+      <% } %>
+
+      <!-- Aviso de enlace inválido (lo muestra el script si no hay token válido en el #) -->
+      <div class="aviso aviso-err" id="aviso-enlace" style="display:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <span id="aviso-enlace-txt">El enlace es inválido o expiró. Solicita uno nuevo.</span>
+      </div>
+
+      <form action="/auth/nueva-clave" method="POST" id="form-clave" data-no-loading>
+        <input type="hidden" name="access_token" id="access_token" value="<%= typeof access_token !== 'undefined' ? access_token : '' %>" />
+
+        <div class="field">
+          <label for="password">Nueva contraseña</label>
+          <div class="control">
+            <span class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </span>
+            <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required minlength="8" autocomplete="new-password" />
+            <button type="button" class="toggle-eye" data-toggle="password" aria-label="Mostrar contraseña">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="password2">Repetir contraseña</label>
+          <div class="control">
+            <span class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </span>
+            <input type="password" id="password2" name="password2" placeholder="Repite la contraseña" required minlength="8" autocomplete="new-password" />
+            <button type="button" class="toggle-eye" data-toggle="password2" aria-label="Mostrar contraseña">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-entrar" id="btn-guardar">
+          Guardar contraseña
+          <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+
+      <div class="forgot">
+        <a href="/auth/recuperar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Solicitar un enlace nuevo
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      // 1) Toggle de mostrar/ocultar para ambos campos.
+      document.querySelectorAll('.toggle-eye[data-toggle]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var input = document.getElementById(btn.getAttribute('data-toggle'));
+          if (!input) return;
+          input.type = input.type === 'password' ? 'text' : 'password';
+          input.focus();
+        });
+      });
+
+      // 2) Leer los tokens del fragmento (#access_token=...&type=recovery).
+      //    Solo el navegador ve el #, así que lo pasamos al campo oculto para
+      //    que el servidor pueda validarlo y actualizar la contraseña.
+      var hash = window.location.hash ? window.location.hash.substring(1) : '';
+      var params = new URLSearchParams(hash);
+
+      var errorDesc = params.get('error_description') || params.get('error');
+      var accessToken = params.get('access_token');
+      var type = params.get('type');
+
+      var form = document.getElementById('form-clave');
+      var avisoEnlace = document.getElementById('aviso-enlace');
+      var avisoTxt = document.getElementById('aviso-enlace-txt');
+      var btn = document.getElementById('btn-guardar');
+
+      function bloquear(mensaje) {
+        if (mensaje && avisoTxt) avisoTxt.textContent = mensaje;
+        if (avisoEnlace) avisoEnlace.style.display = 'flex';
+        if (form) form.style.display = 'none';
+        if (btn) btn.disabled = true;
+      }
+
+      if (errorDesc) {
+        bloquear('El enlace es inválido o expiró (' + errorDesc + '). Solicita uno nuevo.');
+      } else if (accessToken && (type === 'recovery' || !type)) {
+        document.getElementById('access_token').value = accessToken;
+        // Limpiar el # de la barra de direcciones (no deja el token a la vista).
+        history.replaceState(null, '', window.location.pathname);
+      } else if (!document.getElementById('access_token').value) {
+        // Sin token en el # y sin error de servidor renderizado: enlace inválido.
+        var yaHayErrorServidor = <%= error ? 'true' : 'false' %>;
+        if (!yaHayErrorServidor) {
+          bloquear('El enlace es inválido o expiró. Solicita uno nuevo.');
+        }
+      }
+
+      // 3) Validación rápida en el navegador antes de enviar.
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          var p1 = document.getElementById('password').value;
+          var p2 = document.getElementById('password2').value;
+          if (p1.length < 8) {
+            e.preventDefault();
+            alert('La contraseña debe tener al menos 8 caracteres.');
+            return;
+          }
+          if (p1 !== p2) {
+            e.preventDefault();
+            alert('Las contraseñas no coinciden.');
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

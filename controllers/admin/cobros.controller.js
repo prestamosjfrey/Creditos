@@ -13,7 +13,7 @@ async function obtenerCobros(diasAdelante = 30) {
     id, numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, estado, prestamo_id,
     prestamos:prestamo_id(
       id, numero, numero_cuotas, estado,
-      perfiles:cliente_id(nombre_completo, numero_documento, telefono)
+      perfiles:clientes(nombre_completo, numero_documento, telefono)
     )
   `;
 
@@ -74,7 +74,7 @@ async function mostrarCobros(req, res, next) {
     const semanaItems = cobros.filter((c) => c.estaEnSemana);
 
     const { data: inactivosData } = await supabaseAdmin
-      .from('perfiles').select('activo', { count: 'exact' }).eq('rol', 'cliente').eq('activo', false);
+      .from('clientes').select('activo', { count: 'exact' }).eq('activo', false);
 
     const moraItems = cobros.filter((c) => c.enMora);
     const stats = {

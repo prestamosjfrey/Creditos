@@ -61,12 +61,12 @@ async function obtenerCentroMora() {
     { data: pagos },
   ] = await Promise.all([
     supabaseAdmin.from('cuotas')
-      .select('id, numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, estado, prestamo_id, prestamos:prestamo_id(id, numero, numero_cuotas, monto_capital, monto_total_a_pagar, valor_cuota, frecuencia_pago, cliente_id, perfiles:cliente_id(nombre_completo, numero_documento, telefono))')
+      .select('id, numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, estado, prestamo_id, prestamos:prestamo_id(id, numero, numero_cuotas, monto_capital, monto_total_a_pagar, valor_cuota, frecuencia_pago, cliente_id, perfiles:clientes(nombre_completo, numero_documento, telefono))')
       .in('estado', ['pendiente', 'parcial', 'vencida'])
       .lt('fecha_vencimiento', hoyISO)
       .order('fecha_vencimiento', { ascending: true }),
     supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('perfiles').select('id', { count: 'exact', head: true }).eq('rol', 'cliente'),
+    supabaseAdmin.from('clientes').select('id', { count: 'exact', head: true }),
     supabaseAdmin.from('prestamos').select('monto_capital').in('estado', ['activo', 'en_mora']),
     supabaseAdmin.from('pagos').select('monto, fecha_pago').gte('fecha_pago', formatoISO(inicioMesAnt)),
   ]);

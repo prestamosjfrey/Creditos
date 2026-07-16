@@ -27,7 +27,7 @@ async function crearCredito(req, res, next) {
     fecha_inicio, fecha_primer_pago, notas,
   } = req.body;
 
-  const esAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.accepts('json');
+  const esAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
 
   try {
     const credito = await creditosService.crearCreditoConPlan({
@@ -63,12 +63,13 @@ async function crearCredito(req, res, next) {
 
 async function mostrarDetalle(req, res, next) {
   try {
-    const { credito, cuotas } = await creditosService.obtenerCreditoConCuotas(req.params.id);
+    const { credito, cuotas, pagos } = await creditosService.obtenerCreditoConCuotas(req.params.id);
     if (!credito) return res.status(404).render('errores/404');
     res.render('admin/creditos-tomados/detalle', {
       titulo: `Crédito — ${credito.acreedor}`,
       credito,
       cuotas,
+      pagos,
       recienCreado: req.query.creado === '1',
     });
   } catch (err) { next(err); }
@@ -90,4 +91,22 @@ async function pagarCuota(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listarTodos, mostrarFormularioNuevo, crearCredito, mostrarDetalle, pagarCuota };
+async function registrarPago(req, res, next) {
+  const { id } = req.params;
+  const { monto, metodo, fecha_pago, notas } = req.body;
+  try {
+    await creditosService.registrarPagoCreditoTomado({
+      creditoId: id,
+      monto: parsearNumero(monto),
+      metodo,
+      fechaPago: fecha_pago,
+      notas: notas || null,
+      registradoPor: req.usuario.id,
+    });
+    res.redirect(`/admin/creditos-tomados/${id}?pago=1`);
+  } catch (err) {
+    res.redirect(`/admin/creditos-tomados/${id}?error=${encodeURIComponent(err.message || 'No se pudo registrar el pago.')}`);
+  }
+}
+
+module.exports = { listarTodos, mostrarFormularioNuevo, crearCredito, mostrarDetalle, pagarCuota, registrarPago };

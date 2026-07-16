@@ -71,12 +71,12 @@
       </div>
 
       <div>
-        <label class="label-field text-center" for="email">Correo electrónico <span class="text-red-500">*</span></label>
+        <label class="label-field text-center" for="email">Correo electrónico <span class="text-slate-400 text-xs font-normal">(opcional)</span></label>
         <div class="relative">
           <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
             <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
           </span>
-          <input class="input-field pl-10 text-center" type="email" id="email" name="email" placeholder="Ej: juan@correo.com" value="<%= cliente.email || '' %>" required />
+          <input class="input-field pl-10 text-center" type="email" id="email" name="email" placeholder="Ej: juan@correo.com" value="<%= cliente.email || '' %>" />
         </div>
       </div>
 
