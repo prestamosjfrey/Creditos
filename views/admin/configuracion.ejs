@@ -1,60 +1,286 @@
-<div class="max-w-lg mx-auto">
-  <div class="mb-6 text-center">
-    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xl font-semibold">
-      <%= (usuario.nombre_completo || 'A').charAt(0).toUpperCase() %>
-    </div>
-    <h1 class="mt-3 text-xl font-semibold text-slate-800"><%= usuario.nombre_completo %></h1>
-    <p class="text-sm text-slate-400">Administrador</p>
-  </div>
+<%
+  var _tab = ['cuenta', 'seguridad', 'usuarios', 'caja'].indexOf(tab) >= 0 ? tab : 'cuenta';
+  var _inicial = (perfil && perfil.nombre_completo ? perfil.nombre_completo : 'A').charAt(0).toUpperCase();
+%>
 
-  <div class="card divide-y divide-slate-100">
-    <div class="py-3 flex justify-between">
-      <span class="text-sm text-slate-400">Correo</span>
-      <span class="text-sm font-medium text-slate-800"><%= usuario.email || '—' %></span>
+<div class="mx-auto max-w-3xl">
+  <!-- Cabecera -->
+  <div class="mb-6 flex items-center gap-4">
+    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl font-semibold text-blue-600">
+      <%= _inicial %>
     </div>
-    <div class="py-3 flex justify-between">
-      <span class="text-sm text-slate-400">Teléfono</span>
-      <span class="text-sm font-medium text-slate-800"><%= usuario.telefono || '—' %></span>
-    </div>
-    <div class="py-3 flex justify-between">
-      <span class="text-sm text-slate-400">Cédula</span>
-      <span class="text-sm font-medium text-slate-800"><%= usuario.numero_documento || '—' %></span>
+    <div class="min-w-0">
+      <h1 class="truncate text-xl font-semibold text-slate-800"><%= perfil.nombre_completo || 'Sin nombre' %></h1>
+      <p class="text-sm text-slate-400">
+        <span class="font-medium text-slate-500"><%= perfil.usuario %></span>
+        · <%= perfil.rol === 'admin' ? 'Administrador' : 'Cobrador' %>
+      </p>
     </div>
   </div>
 
-  <div class="card mt-6">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <p class="text-sm text-slate-400">Disponible para préstamo</p>
-        <p class="num text-2xl font-semibold text-slate-800"><%= formatCOP(saldoDisponible) %></p>
-      </div>
-      <a href="/admin/caja" class="text-sm font-medium text-blue-600 hover:underline">Ver historial completo</a>
-    </div>
+  <!-- Pestañas -->
+  <div class="mb-5 flex flex-wrap gap-1 border-b border-slate-200">
+    <% var tabs = [
+         { id: 'cuenta',    txt: 'Mi cuenta' },
+         { id: 'seguridad', txt: 'Seguridad' },
+         { id: 'usuarios',  txt: 'Usuarios', soloAdmin: true },
+         { id: 'caja',      txt: 'Caja' }
+       ];
+       tabs.forEach(function (t) { if (t.soloAdmin && !esAdmin) return; %>
+      <a href="/admin/configuracion?tab=<%= t.id %>"
+         class="-mb-px border-b-2 px-4 py-2 text-sm font-medium transition <%= _tab === t.id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-600' %>">
+        <%= t.txt %>
+      </a>
+    <% }); %>
+  </div>
 
-    <form action="/admin/caja" method="POST" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <input type="hidden" name="volver_a" value="/admin/configuracion" />
+  <!-- ============ MI CUENTA ============ -->
+  <% if (_tab === 'cuenta') { %>
+    <form action="/admin/configuracion/perfil" method="POST" class="card space-y-4">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
       <div>
-        <label class="label-field" for="tipo">Tipo</label>
-        <select class="input-field" id="tipo" name="tipo" required>
-          <option value="ingreso">Ingreso (entra dinero)</option>
-          <option value="egreso">Egreso (sale dinero)</option>
-        </select>
+        <label class="label-field" for="usuario_ro">Usuario</label>
+        <input class="input-field bg-slate-50 text-slate-500" type="text" id="usuario_ro" value="<%= perfil.usuario %>" disabled />
+        <p class="mt-1 text-xs text-slate-400">Con esto inicias sesión. No se puede cambiar.</p>
       </div>
+
       <div>
-        <label class="label-field" for="monto">Monto</label>
-        <input class="input-field input-moneda" type="text" inputmode="numeric" id="monto" name="monto" required />
+        <label class="label-field" for="nombre_completo">Nombre completo</label>
+        <input class="input-field" type="text" id="nombre_completo" name="nombre_completo" required
+               value="<%= perfil.nombre_completo || '' %>" />
       </div>
-      <div class="sm:col-span-2">
-        <label class="label-field" for="concepto">Concepto</label>
-        <input class="input-field" type="text" id="concepto" name="concepto" maxlength="200" placeholder="Ej. Saldo inicial de caja" required />
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="label-field" for="email">Correo</label>
+          <input class="input-field" type="email" id="email" name="email" value="<%= perfil.email || '' %>" />
+          <p class="mt-1 text-xs text-slate-400">Solo contacto. No se usa para entrar.</p>
+        </div>
+        <div>
+          <label class="label-field" for="telefono">Teléfono (WhatsApp)</label>
+          <input class="input-field" type="text" id="telefono" name="telefono" value="<%= perfil.telefono || '' %>"
+                 placeholder="ej. 573001234567" />
+        </div>
       </div>
-      <div class="sm:col-span-2">
-        <button type="submit" class="btn-primary w-full justify-center">Registrar movimiento</button>
+
+      <div>
+        <label class="label-field" for="numero_documento">Cédula</label>
+        <input class="input-field" type="text" id="numero_documento" name="numero_documento"
+               value="<%= perfil.numero_documento || '' %>" />
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit" class="btn-primary">Guardar cambios</button>
       </div>
     </form>
-  </div>
+  <% } %>
 
-  <form action="/auth/logout" method="POST" class="mt-6">
-    <button type="submit" class="btn-secondary w-full">Cerrar sesión</button>
-  </form>
+  <!-- ============ SEGURIDAD ============ -->
+  <% if (_tab === 'seguridad') { %>
+    <form action="/admin/configuracion/clave" method="POST" class="card space-y-4" id="form-mi-clave">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <p class="text-sm font-medium text-slate-700">Cambiar mi contraseña</p>
+
+      <div>
+        <label class="label-field" for="password_actual">Contraseña actual</label>
+        <input class="input-field" type="password" id="password_actual" name="password_actual" required
+               autocomplete="current-password" />
+        <p class="mt-1 text-xs text-slate-400">
+          Se pide por seguridad: evita que alguien que tome tu sesión abierta pueda quedarse con la cuenta.
+        </p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="label-field" for="password">Contraseña nueva</label>
+          <input class="input-field" type="password" id="password" name="password" required minlength="8"
+                 autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+        </div>
+        <div>
+          <label class="label-field" for="password2">Repetir la nueva</label>
+          <input class="input-field" type="password" id="password2" name="password2" required minlength="8"
+                 autocomplete="new-password" />
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit" class="btn-primary">Cambiar contraseña</button>
+      </div>
+    </form>
+
+    <!-- Recuperación por WhatsApp -->
+    <form action="/admin/configuracion/perfil" method="POST" class="card mt-5 space-y-4">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <!-- Se reenvían los datos actuales: este formulario solo toca la apikey,
+           pero comparte la ruta de edición de perfil. -->
+      <input type="hidden" name="nombre_completo" value="<%= perfil.nombre_completo || '' %>" />
+      <input type="hidden" name="email" value="<%= perfil.email || '' %>" />
+      <input type="hidden" name="telefono" value="<%= perfil.telefono || '' %>" />
+      <input type="hidden" name="numero_documento" value="<%= perfil.numero_documento || '' %>" />
+
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-sm font-medium text-slate-700">Recuperación por WhatsApp</p>
+          <p class="mt-0.5 text-xs text-slate-400">Para poder recuperar tu contraseña sin ayuda de nadie.</p>
+        </div>
+        <% if (tieneApikey && perfil.telefono) { %>
+          <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Configurado
+          </span>
+        <% } else { %>
+          <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
+            <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span> Sin configurar
+          </span>
+        <% } %>
+      </div>
+
+      <% if (!perfil.telefono) { %>
+        <div class="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+          Primero pon tu <strong>teléfono</strong> en la pestaña «Mi cuenta»: es donde llegaría el código.
+        </div>
+      <% } %>
+
+      <div>
+        <label class="label-field" for="callmebot_apikey">Apikey de CallMeBot</label>
+        <input class="input-field" type="text" id="callmebot_apikey" name="callmebot_apikey" autocomplete="off"
+               placeholder="<%= tieneApikey ? 'Ya tienes una guardada. Escribe otra para cambiarla.' : 'ej. 123456' %>" />
+        <p class="mt-1 text-xs text-slate-400">
+          Vacío = no se toca. Escribe <code class="rounded bg-slate-100 px-1">-</code> para borrarla.
+        </p>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
+        <p class="mb-1 font-medium text-slate-600">Cómo conseguir tu apikey</p>
+        <ol class="list-decimal space-y-0.5 pl-4">
+          <li>Guarda en tus contactos el número de CallMeBot: <strong>+34 644 91 07 79</strong></li>
+          <li>Envíale por WhatsApp, tal cual y en inglés: <em>«I allow callmebot to send me messages»</em></li>
+          <li>En un par de minutos te responde con tu apikey personal</li>
+          <li>Pégala aquí y guarda</li>
+        </ol>
+        <p class="mt-2">
+          Instrucciones oficiales:
+          <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener noreferrer"
+             class="text-blue-600 underline">callmebot.com</a>
+        </p>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit" class="btn-primary">Guardar apikey</button>
+      </div>
+    </form>
+
+    <form action="/auth/logout" method="POST" class="mt-5">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button type="submit" class="btn-secondary w-full">Cerrar sesión</button>
+    </form>
+  <% } %>
+
+  <!-- ============ USUARIOS ============ -->
+  <% if (_tab === 'usuarios' && esAdmin) { %>
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-slate-400">Quién puede entrar al sistema y con qué permisos.</p>
+      <a href="/admin/usuarios/nuevo" class="btn-primary inline-flex items-center gap-1.5">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+        Nuevo usuario
+      </a>
+    </div>
+
+    <div class="card overflow-hidden p-0">
+      <div class="overflow-x-auto">
+        <table class="table-base w-full">
+          <thead class="bg-slate-50">
+            <tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>WhatsApp</th><th>Estado</th><th></th></tr>
+          </thead>
+          <tbody>
+            <% usuarios.forEach(function (u) { %>
+              <tr class="<%= u.id === perfil.id ? 'bg-blue-50/40' : '' %>">
+                <td class="font-medium text-slate-800">
+                  <%= u.usuario %>
+                  <% if (u.id === perfil.id) { %><span class="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">tú</span><% } %>
+                </td>
+                <td><%= u.nombre_completo || '—' %></td>
+                <td>
+                  <span class="rounded-full px-2 py-0.5 text-xs font-medium <%= u.rol === 'admin' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600' %>">
+                    <%= u.rol === 'admin' ? 'Admin' : 'Cobrador' %>
+                  </span>
+                </td>
+                <td>
+                  <span class="text-xs <%= u.tieneWhatsApp ? 'text-emerald-600' : 'text-slate-400' %>">
+                    <%= u.tieneWhatsApp ? 'Configurado' : '—' %>
+                  </span>
+                </td>
+                <td>
+                  <span class="rounded-full px-2 py-0.5 text-xs font-medium <%= u.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' %>">
+                    <%= u.activo ? 'Activo' : 'Inactivo' %>
+                  </span>
+                </td>
+                <td class="text-right">
+                  <a href="/admin/usuarios/<%= u.id %>/editar" class="text-xs font-medium text-blue-600 hover:underline">Editar</a>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="mt-3 text-center text-xs text-slate-400">
+      Para restablecer contraseñas y activar o desactivar cuentas, entra a
+      <a href="/admin/usuarios" class="text-blue-600 hover:underline">la gestión completa de usuarios</a>.
+    </p>
+  <% } %>
+
+  <!-- ============ CAJA ============ -->
+  <% if (_tab === 'caja') { %>
+    <div class="card">
+      <div class="mb-4 flex items-center justify-between">
+        <div>
+          <p class="text-sm text-slate-400">Disponible para préstamo</p>
+          <p class="num text-2xl font-semibold text-slate-800"><%= formatCOP(saldoDisponible) %></p>
+        </div>
+        <a href="/admin/caja" class="text-sm font-medium text-blue-600 hover:underline">Ver historial completo</a>
+      </div>
+
+      <form action="/admin/caja" method="POST" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <input type="hidden" name="volver_a" value="/admin/configuracion?tab=caja" />
+        <div>
+          <label class="label-field" for="tipo">Tipo</label>
+          <select class="input-field" id="tipo" name="tipo" required>
+            <option value="ingreso">Ingreso (entra dinero)</option>
+            <option value="egreso">Egreso (sale dinero)</option>
+          </select>
+        </div>
+        <div>
+          <label class="label-field" for="monto">Monto</label>
+          <input class="input-field input-moneda" type="text" inputmode="numeric" id="monto" name="monto" required />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="label-field" for="concepto">Concepto</label>
+          <input class="input-field" type="text" id="concepto" name="concepto" maxlength="200" placeholder="Ej. Saldo inicial de caja" required />
+        </div>
+        <div class="sm:col-span-2">
+          <button type="submit" class="btn-primary w-full justify-center">Registrar movimiento</button>
+        </div>
+      </form>
+    </div>
+  <% } %>
 </div>
+
+<script>
+  (function () {
+    // Aviso temprano si las contraseñas nuevas no coinciden: el servidor lo
+    // vuelve a comprobar, esto solo evita el viaje de ida y vuelta.
+    var form = document.getElementById('form-mi-clave');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      var p1 = document.getElementById('password').value;
+      var p2 = document.getElementById('password2').value;
+      if (p1 !== p2) {
+        e.preventDefault();
+        Swal.fire({ icon: 'error', title: 'No coinciden', text: 'Las dos contraseñas nuevas deben ser iguales.', confirmButtonColor: '#16a34a' });
+      }
+    });
+  })();
+</script>

@@ -20,6 +20,19 @@ async function mostrarFormularioNuevo(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// Repinta el formulario conservando lo escrito. Este formulario puede enviarse
+// por AJAX, así que respeta ese canal cuando corresponde (lo llama el validador).
+function renderCrearConError(req, res, mensaje) {
+  if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
+    return res.status(400).json({ ok: false, mensaje });
+  }
+  res.status(400).render('admin/creditos-tomados/crear', {
+    titulo: 'Nuevo crédito tomado',
+    error: mensaje,
+    valores: req.body,
+  });
+}
+
 async function crearCredito(req, res, next) {
   const {
     acreedor, monto_capital, tipo_interes, valor_interes, tasa_interes,
@@ -109,4 +122,4 @@ async function registrarPago(req, res, next) {
   }
 }
 
-module.exports = { listarTodos, mostrarFormularioNuevo, crearCredito, mostrarDetalle, pagarCuota, registrarPago };
+module.exports = { listarTodos, mostrarFormularioNuevo, renderCrearConError, crearCredito, mostrarDetalle, pagarCuota, registrarPago };

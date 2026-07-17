@@ -1,0 +1,145 @@
+<%
+  var esEdicion = !!usuario;
+  var accion = esEdicion ? '/admin/usuarios/' + usuario.id + '/editar' : '/admin/usuarios';
+%>
+
+<div class="mb-6">
+  <a href="/admin/usuarios" class="mb-1 inline-flex items-center gap-1 text-sm text-slate-400 transition hover:text-blue-600">
+    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+    Usuarios
+  </a>
+  <h1 class="text-2xl font-bold text-slate-800"><%= esEdicion ? 'Editar usuario' : 'Nuevo usuario' %></h1>
+</div>
+
+<form action="<%= accion %>" method="POST" class="mx-auto max-w-2xl space-y-5">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+  <!-- Acceso -->
+  <div class="card space-y-4">
+    <p class="text-sm font-medium text-slate-700">Acceso</p>
+
+    <div>
+      <label class="label-field" for="usuario">Nombre de usuario</label>
+      <% if (esEdicion) { %>
+        <input class="input-field bg-slate-50 text-slate-500" type="text" id="usuario" value="<%= usuario.usuario %>" disabled />
+        <p class="mt-1 text-xs text-slate-400">El usuario no se puede cambiar: es su identidad de acceso.</p>
+      <% } else { %>
+        <input class="input-field" type="text" id="usuario" name="usuario" required minlength="3" maxlength="30"
+               pattern="[a-zA-Z0-9._-]+" value="<%= valores.usuario || '' %>"
+               placeholder="ej. juan.cobrador" autocomplete="off" />
+        <p class="mt-1 text-xs text-slate-400">
+          Con esto inicia sesión. Solo letras, números, punto, guion y guion bajo. No se podrá cambiar después.
+        </p>
+      <% } %>
+    </div>
+
+    <% if (!esEdicion) { %>
+      <div>
+        <label class="label-field" for="password">Contraseña inicial</label>
+        <div class="flex gap-2">
+          <input class="input-field" type="text" id="password" name="password" required minlength="8"
+                 value="<%= valores.password || '' %>" placeholder="Mínimo 8 caracteres" autocomplete="new-password" />
+          <button type="button" id="btn-generar" class="btn-secondary whitespace-nowrap text-xs">Generar</button>
+        </div>
+        <p class="mt-1 text-xs text-slate-400">Se la dictas al empleado. Podrá cambiarla después.</p>
+      </div>
+    <% } %>
+
+    <div>
+      <label class="label-field" for="rol">Rol</label>
+      <select class="input-field" id="rol" name="rol" required>
+        <option value="cobrador" <%= valores.rol === 'cobrador' ? 'selected' : '' %>>Cobrador</option>
+        <option value="admin" <%= valores.rol === 'admin' ? 'selected' : '' %>>Administrador</option>
+      </select>
+      <p class="mt-1 text-xs text-slate-400">
+        El administrador ve y hace todo, incluido crear usuarios y restablecer contraseñas.
+      </p>
+    </div>
+  </div>
+
+  <!-- Datos -->
+  <div class="card space-y-4">
+    <p class="text-sm font-medium text-slate-700">Datos de contacto</p>
+
+    <div>
+      <label class="label-field" for="nombre_completo">Nombre completo</label>
+      <input class="input-field" type="text" id="nombre_completo" name="nombre_completo" required
+             value="<%= valores.nombre_completo || '' %>" placeholder="ej. Juan Pérez" />
+    </div>
+
+    <div>
+      <label class="label-field" for="email">Correo</label>
+      <input class="input-field" type="email" id="email" name="email"
+             value="<%= valores.email || '' %>" placeholder="ej. jefe@gmail.com" />
+      <p class="mt-1 text-xs text-slate-400">
+        Solo es un dato de contacto: <strong>puede repetirse</strong> entre varios usuarios. No se usa para entrar.
+      </p>
+    </div>
+
+    <div>
+      <label class="label-field" for="telefono">Teléfono (WhatsApp)</label>
+      <input class="input-field" type="text" id="telefono" name="telefono"
+             value="<%= valores.telefono || '' %>" placeholder="ej. 573001234567" />
+      <p class="mt-1 text-xs text-slate-400">Con indicativo del país y sin espacios. Aquí llegará el código de recuperación.</p>
+    </div>
+  </div>
+
+  <!-- WhatsApp -->
+  <div class="card space-y-4">
+    <p class="text-sm font-medium text-slate-700">Recuperación por WhatsApp</p>
+
+    <div>
+      <label class="label-field" for="callmebot_apikey">Apikey de CallMeBot</label>
+      <input class="input-field" type="text" id="callmebot_apikey" name="callmebot_apikey"
+             value="" placeholder="<%= esEdicion ? 'Dejar vacío para no cambiarla' : 'ej. 123456' %>" autocomplete="off" />
+      <% if (esEdicion) { %>
+        <p class="mt-1 text-xs text-slate-400">Vacío = no se toca. Escribe <code class="rounded bg-slate-100 px-1">-</code> para borrarla.</p>
+      <% } %>
+    </div>
+
+    <div class="rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
+      <p class="mb-1 font-medium text-slate-600">Cómo consigue el empleado su apikey</p>
+      <ol class="list-decimal space-y-0.5 pl-4">
+        <li>Guarda en sus contactos el número de CallMeBot: <strong>+34 644 91 07 79</strong></li>
+        <li>Le envía por WhatsApp, tal cual y en inglés: <em>«I allow callmebot to send me messages»</em></li>
+        <li>En un par de minutos el bot le responde con su apikey personal</li>
+        <li>Te la pasa y la pegas aquí</li>
+      </ol>
+      <p class="mt-1">
+        Instrucciones oficiales:
+        <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener noreferrer"
+           class="text-blue-600 underline">callmebot.com</a>
+      </p>
+      <p class="mt-2">
+        Sin esto, el empleado <strong>no podrá recuperar su contraseña solo</strong>: tendrás que restablecérsela tú
+        desde la lista de usuarios.
+      </p>
+    </div>
+  </div>
+
+  <div class="flex justify-center gap-3">
+    <a href="/admin/usuarios" class="btn-secondary">Cancelar</a>
+    <button type="submit" class="btn-primary"><%= esEdicion ? 'Guardar cambios' : 'Crear usuario' %></button>
+  </div>
+</form>
+
+<% if (error) { %>
+  <%- include('../../partials/flash-script', { flashError: error, flashExito: null }) %>
+<% } %>
+
+<script>
+  (function () {
+    // Generador de contraseña legible: se evitan caracteres que se confunden al
+    // dictarlos (0/O, 1/l/I).
+    var btn = document.getElementById('btn-generar');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var abc = 'abcdefghijkmnpqrstuvwxyz';
+      var ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+      var num = '23456789';
+      var pick = function (s) { return s[Math.floor(Math.random() * s.length)]; };
+      var out = pick(ABC) + pick(abc) + pick(abc) + pick(abc) + pick(num) + pick(num) + pick(abc) + pick(num);
+      document.getElementById('password').value = out;
+    });
+  })();
+</script>

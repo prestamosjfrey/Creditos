@@ -8,6 +8,8 @@
   <link rel="icon" type="image/x-icon" href="/img/favIcon.ico" />
   <link rel="shortcut icon" type="image/x-icon" href="/img/favIcon.ico" />
   <link rel="stylesheet" href="/css/output.css?v=<%= typeof assetV !== 'undefined' ? assetV : '1' %>" />
+  <link rel="stylesheet" href="/vendor/sweetalert2/sweetalert2.min.css" />
+  <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
   <%- include('../partials/auth-styles') %>
 </head>
 <body class="login-body">
@@ -23,7 +25,14 @@
     <section class="login-card">
       <p class="eyebrow">Restablecer contraseña</p>
       <h1 class="login-title">Nueva contraseña</h1>
-      <p class="login-sub">Elige una contraseña nueva para tu cuenta.</p>
+      <p class="login-sub">Escribe el código que recibiste por WhatsApp y elige tu contraseña nueva.</p>
+
+      <% if (typeof exito !== 'undefined' && exito) { %>
+        <div class="aviso aviso-ok">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m22 4-10 10.01-3-3"/></svg>
+          <span><%= exito %></span>
+        </div>
+      <% } %>
 
       <% if (error) { %>
         <div class="aviso aviso-err">
@@ -32,14 +41,31 @@
         </div>
       <% } %>
 
-      <!-- Aviso de enlace inválido (lo muestra el script si no hay token válido en el #) -->
-      <div class="aviso aviso-err" id="aviso-enlace" style="display:none">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-        <span id="aviso-enlace-txt">El enlace es inválido o expiró. Solicita uno nuevo.</span>
-      </div>
-
       <form action="/auth/nueva-clave" method="POST" id="form-clave" data-no-loading>
-        <input type="hidden" name="access_token" id="access_token" value="<%= typeof access_token !== 'undefined' ? access_token : '' %>" />
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <div class="field">
+          <label for="usuario">Usuario</label>
+          <div class="control">
+            <span class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <input type="text" id="usuario" name="usuario" required autocomplete="username"
+                   value="<%= typeof usuario !== 'undefined' ? usuario : '' %>" placeholder="ej. juan.cobrador" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="codigo">Código de WhatsApp</label>
+          <div class="control">
+            <span class="ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </span>
+            <input type="text" id="codigo" name="codigo" required inputmode="numeric" pattern="[0-9]{6}"
+                   maxlength="6" placeholder="6 dígitos" autocomplete="one-time-code"
+                   style="letter-spacing:.4em;font-weight:600;" />
+          </div>
+        </div>
 
         <div class="field">
           <label for="password">Nueva contraseña</label>
@@ -76,7 +102,7 @@
       <div class="forgot">
         <a href="/auth/recuperar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-          Solicitar un enlace nuevo
+          Solicitar un código nuevo
         </a>
       </div>
     </section>
@@ -84,7 +110,7 @@
 
   <script>
     (function () {
-      // 1) Toggle de mostrar/ocultar para ambos campos.
+      // Mostrar/ocultar contraseña.
       document.querySelectorAll('.toggle-eye[data-toggle]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var input = document.getElementById(btn.getAttribute('data-toggle'));
@@ -94,55 +120,29 @@
         });
       });
 
-      // 2) Leer los tokens del fragmento (#access_token=...&type=recovery).
-      //    Solo el navegador ve el #, así que lo pasamos al campo oculto para
-      //    que el servidor pueda validarlo y actualizar la contraseña.
-      var hash = window.location.hash ? window.location.hash.substring(1) : '';
-      var params = new URLSearchParams(hash);
+      // El código es numérico: se descarta cualquier otra cosa al pegar o teclear.
+      var codigo = document.getElementById('codigo');
+      if (codigo) {
+        codigo.addEventListener('input', function () {
+          codigo.value = codigo.value.replace(/\D/g, '').slice(0, 6);
+        });
+      }
 
-      var errorDesc = params.get('error_description') || params.get('error');
-      var accessToken = params.get('access_token');
-      var type = params.get('type');
-
+      // Validación rápida antes de enviar (el servidor la repite: esto es solo
+      // para no hacer un viaje de ida y vuelta por un error obvio).
       var form = document.getElementById('form-clave');
-      var avisoEnlace = document.getElementById('aviso-enlace');
-      var avisoTxt = document.getElementById('aviso-enlace-txt');
-      var btn = document.getElementById('btn-guardar');
-
-      function bloquear(mensaje) {
-        if (mensaje && avisoTxt) avisoTxt.textContent = mensaje;
-        if (avisoEnlace) avisoEnlace.style.display = 'flex';
-        if (form) form.style.display = 'none';
-        if (btn) btn.disabled = true;
-      }
-
-      if (errorDesc) {
-        bloquear('El enlace es inválido o expiró (' + errorDesc + '). Solicita uno nuevo.');
-      } else if (accessToken && (type === 'recovery' || !type)) {
-        document.getElementById('access_token').value = accessToken;
-        // Limpiar el # de la barra de direcciones (no deja el token a la vista).
-        history.replaceState(null, '', window.location.pathname);
-      } else if (!document.getElementById('access_token').value) {
-        // Sin token en el # y sin error de servidor renderizado: enlace inválido.
-        var yaHayErrorServidor = <%= error ? 'true' : 'false' %>;
-        if (!yaHayErrorServidor) {
-          bloquear('El enlace es inválido o expiró. Solicita uno nuevo.');
-        }
-      }
-
-      // 3) Validación rápida en el navegador antes de enviar.
       if (form) {
         form.addEventListener('submit', function (e) {
           var p1 = document.getElementById('password').value;
           var p2 = document.getElementById('password2').value;
           if (p1.length < 8) {
             e.preventDefault();
-            alert('La contraseña debe tener al menos 8 caracteres.');
+            Swal.fire({ icon: 'error', title: 'Contraseña muy corta', text: 'Debe tener al menos 8 caracteres.', confirmButtonColor: '#16a34a' });
             return;
           }
           if (p1 !== p2) {
             e.preventDefault();
-            alert('Las contraseñas no coinciden.');
+            Swal.fire({ icon: 'error', title: 'No coinciden', text: 'Las dos contraseñas deben ser iguales.', confirmButtonColor: '#16a34a' });
           }
         });
       }

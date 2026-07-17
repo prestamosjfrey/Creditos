@@ -1,0 +1,48 @@
+<%
+  // Filtro de rango compartido por el índice y por cada reporte.
+  // `accion` es la URL a la que envía (la propia página).
+  var _accion = typeof accion !== 'undefined' ? accion : '/admin/reportes';
+  var _rango = rango || {};
+  var _esPersonalizado = _rango.periodo === 'personalizado';
+%>
+<form method="GET" action="<%= _accion %>" class="card mb-5" id="filtro-reportes">
+  <div class="flex flex-wrap items-end gap-3">
+    <div class="min-w-[170px] flex-1">
+      <label class="label-field" for="periodo">Periodo</label>
+      <select class="input-field" id="periodo" name="periodo">
+        <% periodos.forEach(function (p) { %>
+          <option value="<%= p.clave %>" <%= _rango.periodo === p.clave ? 'selected' : '' %>><%= p.etiqueta %></option>
+        <% }); %>
+      </select>
+    </div>
+
+    <div class="campo-fecha <%= _esPersonalizado ? '' : 'hidden' %>">
+      <label class="label-field" for="desde">Desde</label>
+      <input class="input-field" type="date" id="desde" name="desde" value="<%= _rango.desde || '' %>" />
+    </div>
+
+    <div class="campo-fecha <%= _esPersonalizado ? '' : 'hidden' %>">
+      <label class="label-field" for="hasta">Hasta</label>
+      <input class="input-field" type="date" id="hasta" name="hasta" value="<%= _rango.hasta || '' %>" />
+    </div>
+
+    <button type="submit" class="btn-primary">Aplicar</button>
+  </div>
+</form>
+
+<script>
+  (function () {
+    // Los campos de fecha solo tienen sentido con "Personalizado". Al elegir
+    // cualquier otro periodo se envía solo, porque no hay nada más que decidir.
+    var form = document.getElementById('filtro-reportes');
+    if (!form) return;
+    var periodo = form.querySelector('#periodo');
+    var campos = form.querySelectorAll('.campo-fecha');
+
+    periodo.addEventListener('change', function () {
+      var personalizado = periodo.value === 'personalizado';
+      campos.forEach(function (c) { c.classList.toggle('hidden', !personalizado); });
+      if (!personalizado) form.submit();
+    });
+  })();
+</script>

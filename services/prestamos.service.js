@@ -1,7 +1,5 @@
 const { supabaseAdmin } = require('../config/supabase');
-const { siguienteFecha, formatoISO } = require('../utils/fechas');
-const { formatCOP } = require('../utils/moneda');
-const cajaService = require('./caja.service');
+const { fechaDeCuota, formatoISO } = require('../utils/fechas');
 const auditoria = require('./auditoria.service');
 const scoreService = require('./score.service');
 const realtime = require('./realtime');
@@ -13,7 +11,7 @@ function calcularPlanDeCuotas(prestamo) {
   const { numero_cuotas, valor_cuota, monto_total_a_pagar, frecuencia_pago, fecha_primer_pago } = prestamo;
 
   const cuotas = [];
-  let fecha = new Date(`${fecha_primer_pago}T00:00:00`);
+  const primerPago = new Date(`${fecha_primer_pago}T00:00:00`);
   let acumulado = 0;
 
   for (let i = 1; i <= numero_cuotas; i++) {
@@ -26,87 +24,46 @@ function calcularPlanDeCuotas(prestamo) {
 
     cuotas.push({
       numero_cuota: i,
-      fecha_vencimiento: formatoISO(fecha),
+      // Cada fecha se calcula desde el primer pago, nunca desde la cuota
+      // anterior: así un mes corto no desplaza todo el resto del plan.
+      fecha_vencimiento: formatoISO(fechaDeCuota(primerPago, frecuencia_pago, i - 1)),
       monto_esperado: montoEsperado,
       monto_pagado: 0,
       estado: 'pendiente',
     });
 
     acumulado += montoEsperado;
-    fecha = siguienteFecha(fecha, frecuencia_pago);
   }
 
   return cuotas;
 }
 
+// Crea el préstamo junto con su plan de cuotas, el egreso de caja y la entrada
+// de bitácora en UNA sola transacción (ver supabase/rpc-registrar-abono.sql).
+//
+// Antes eran cuatro escrituras sueltas: si fallaba la segunda, quedaba un
+// préstamo SIN cuotas — irrecuperable desde la interfaz. El plan se sigue
+// calculando aquí (las reglas de fechas por frecuencia viven en utils/fechas)
+// y se envía ya resuelto al RPC.
 async function crearPrestamoConPlan(datosPrestamo) {
-  const { data: prestamo, error } = await supabaseAdmin
-    .from('prestamos')
-    .insert(datosPrestamo)
-    .select()
-    .single();
+  const cuotas = calcularPlanDeCuotas(datosPrestamo);
 
+  const { data: prestamoId, error } = await supabaseAdmin.rpc('crear_prestamo_con_plan', {
+    p_prestamo: datosPrestamo,
+    p_cuotas: cuotas,
+  });
   if (error) throw error;
 
-  const cuotas = calcularPlanDeCuotas(prestamo).map((cuota) => ({
-    ...cuota,
-    prestamo_id: prestamo.id,
-  }));
-
-  const { error: errorCuotas } = await supabaseAdmin.from('cuotas').insert(cuotas);
-  if (errorCuotas) throw errorCuotas;
-
-  const { data: cliente } = await supabaseAdmin
-    .from('clientes')
-    .select('nombre_completo')
-    .eq('id', prestamo.cliente_id)
+  const { data: prestamo, error: errorLectura } = await supabaseAdmin
+    .from('prestamos')
+    .select('*')
+    .eq('id', prestamoId)
     .single();
-
-  // El capital prestado sale de la caja disponible. Solo se advierte si no
-  // alcanza el saldo (no se bloquea la creación del préstamo).
-  await cajaService.registrarMovimiento({
-    tipo: 'egreso',
-    monto: prestamo.monto_capital,
-    concepto: `Capital prestado a ${cliente?.nombre_completo || 'cliente'}`,
-    origen: 'prestamo',
-    referenciaId: prestamo.id,
-    registradoPor: prestamo.creado_por,
-  });
-
-  await auditoria.registrar({
-    tipo: 'prestamo_creado',
-    descripcion: `Préstamo creado a ${cliente?.nombre_completo || 'cliente'}: capital ${formatCOP(prestamo.monto_capital)} en ${prestamo.numero_cuotas} cuotas (${prestamo.frecuencia_pago}).`,
-    prestamoId: prestamo.id,
-    clienteId: prestamo.cliente_id,
-    detalle: {
-      monto_capital: prestamo.monto_capital,
-      monto_total_a_pagar: prestamo.monto_total_a_pagar,
-      numero_cuotas: prestamo.numero_cuotas,
-      frecuencia_pago: prestamo.frecuencia_pago,
-    },
-    actorId: prestamo.creado_por,
-  });
+  if (errorLectura) throw errorLectura;
 
   realtime.emitir('datos:cambio', { origen: 'prestamo' });
 
   return prestamo;
-}
-
-// Sugerencia de valor_cuota para ayudar en el formulario — siempre editable a mano.
-function sugerirValorCuota({ tipo_interes, monto_capital, valor_interes, tasa_interes, numero_cuotas }) {
-  let montoTotalAPagar;
-
-  if (tipo_interes === 'fijo_total') {
-    montoTotalAPagar = monto_capital + (valor_interes || 0);
-  } else if (tipo_interes === 'porcentaje_periodico') {
-    const interesTotal = monto_capital * ((tasa_interes || 0) / 100) * numero_cuotas;
-    montoTotalAPagar = monto_capital + interesTotal;
-  } else {
-    montoTotalAPagar = monto_capital;
-  }
-
-  const valorCuota = Math.round((montoTotalAPagar / numero_cuotas) * 100) / 100;
-  return { montoTotalAPagar, valorCuota };
 }
 
 async function obtenerPrestamoConCuotas(prestamoId) {
@@ -146,25 +103,33 @@ async function marcarCuotasVencidas() {
     .in('estado', ['pendiente', 'parcial'])
     .select('id, prestamo_id, numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado');
 
-  // Clientes afectados por la mora (para recalcular score).
-  const clientesEnMora = new Set();
+  const cuotas = nuevasEnMora || [];
+  if (cuotas.length === 0) return;
 
-  for (const cuota of nuevasEnMora || []) {
+  // Los clientes de todos los préstamos afectados, en UNA sola consulta. Antes
+  // se consultaba el préstamo dentro del bucle: con 500 cuotas entrando en mora
+  // eran 500 viajes a la base.
+  const prestamoIds = [...new Set(cuotas.map((c) => c.prestamo_id))];
+  const { data: prestamos } = await supabaseAdmin
+    .from('prestamos')
+    .select('id, cliente_id')
+    .in('id', prestamoIds);
+
+  const clientePorPrestamo = new Map((prestamos || []).map((p) => [p.id, p.cliente_id]));
+  const clientesEnMora = new Set([...clientePorPrestamo.values()].filter(Boolean));
+
+  for (const cuota of cuotas) {
     await auditoria.registrar({
       tipo: 'cuota_mora',
       descripcion: `Cuota #${cuota.numero_cuota} entró en mora (vencía ${cuota.fecha_vencimiento}).`,
       prestamoId: cuota.prestamo_id,
+      clienteId: clientePorPrestamo.get(cuota.prestamo_id) || null,
       detalle: {
         cuota_id: cuota.id,
         saldo_cuota: Number(cuota.monto_esperado) - Number(cuota.monto_pagado),
       },
       actorId: null,
     });
-
-    // Buscar el cliente_id de este préstamo para recalcular su score.
-    const { data: pr } = await supabaseAdmin
-      .from('prestamos').select('cliente_id').eq('id', cuota.prestamo_id).single();
-    if (pr?.cliente_id) clientesEnMora.add(pr.cliente_id);
   }
 
   // Recalcular score de cada cliente afectado (fail-soft).
@@ -172,13 +137,12 @@ async function marcarCuotasVencidas() {
     await scoreService.recalcularYGuardar(clienteId);
   }
 
-  if ((nuevasEnMora || []).length) realtime.emitir('datos:cambio', { origen: 'mora' });
+  realtime.emitir('datos:cambio', { origen: 'mora' });
 }
 
 module.exports = {
   calcularPlanDeCuotas,
   crearPrestamoConPlan,
-  sugerirValorCuota,
   obtenerPrestamoConCuotas,
   marcarCuotasVencidas,
 };

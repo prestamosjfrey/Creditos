@@ -1,29 +1,42 @@
 const { supabaseAnon, supabaseAdmin } = require('../config/supabase');
 const { setSessionCookies, clearSessionCookies } = require('../middlewares/auth');
+const usuariosService = require('../services/usuarios.service');
+const recuperacionService = require('../services/recuperacion.service');
 
 function mostrarLogin(req, res) {
   res.render('auth/login', { error: null, layout: false });
 }
 
+// El login NO usa el correo real: varios empleados comparten el correo del jefe
+// y Supabase Auth exige que sea único. Se entra con el nombre de usuario, que
+// se traduce al correo interno (usuario@cartera.local) antes de autenticar.
+//
+// También se acepta el correo directamente: así las cuentas creadas antes de
+// que existiera el campo `usuario` siguen entrando igual que siempre.
 async function procesarLogin(req, res) {
-  const { email, password } = req.body;
+  const { usuario, email, password } = req.body;
+  const identificador = (usuario || email || '').trim();
 
-  const { data, error } = await supabaseAnon.auth.signInWithPassword({ email, password });
-
-  if (error || !data.session) {
-    return res.status(401).render('auth/login', {
-      error: 'Correo o contraseña incorrectos.',
+  const fallo = () =>
+    res.status(401).render('auth/login', {
+      error: 'Usuario o contraseña incorrectos.',
       layout: false,
     });
-  }
 
-  const { data: perfil } = await supabaseAdmin
-    .from('usuarios')
-    .select('*')
-    .eq('id', data.user.id)
-    .single();
+  if (!identificador || !password) return fallo();
 
-  if (!perfil || !perfil.activo) {
+  const perfil = await usuariosService.buscarPorIdentificador(identificador);
+  // Mensaje idéntico si el usuario no existe o si la clave está mal: distinguirlos
+  // permitiría averiguar qué usuarios existen.
+  if (!perfil || !perfil.email_auth) return fallo();
+
+  const { data, error } = await supabaseAnon.auth.signInWithPassword({
+    email: perfil.email_auth,
+    password,
+  });
+  if (error || !data.session) return fallo();
+
+  if (!perfil.activo) {
     return res.status(403).render('auth/login', {
       error: 'Esta cuenta no está activa. Contacta al administrador.',
       layout: false,
@@ -31,92 +44,98 @@ async function procesarLogin(req, res) {
   }
 
   setSessionCookies(res, data.session);
-
-  if (perfil.rol === 'admin') return res.redirect('/admin/dashboard');
-  return res.redirect('/cliente/panel');
+  return res.redirect('/admin/dashboard');
 }
 
 // --- Recuperación de contraseña (solo staff, que son los que tienen cuenta de Auth) ---
+
+// --- Recuperación de contraseña por WhatsApp ---
+//
+// El correo ya no sirve como identificador: varios empleados comparten el del
+// jefe. Se pide el NOMBRE DE USUARIO y se manda un código de 6 dígitos al
+// WhatsApp que tenga registrado (ver services/recuperacion.service.js).
 
 function mostrarRecuperar(req, res) {
   res.render('auth/recuperar', { error: null, exito: null, valores: {}, layout: false });
 }
 
 async function procesarRecuperar(req, res) {
-  const email = (req.body.email || '').trim();
-
-  // La URL a la que Supabase redirige tras verificar el enlace del correo.
-  // Debe estar en la lista de "Redirect URLs" del proyecto Supabase.
-  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-  const redirectTo = `${baseUrl}/auth/nueva-clave`;
+  const identificador = (req.body.usuario || req.body.email || '').trim();
 
   try {
-    if (email) {
-      const { error } = await supabaseAnon.auth.resetPasswordForEmail(email, { redirectTo });
-      // No revelamos si el error viene de un correo inexistente: solo lo dejamos
-      // en el log para diagnóstico. El usuario siempre ve el mismo mensaje.
-      if (error) console.warn('[recuperar] resetPasswordForEmail:', error.message);
+    if (identificador) {
+      await recuperacionService.solicitarCodigo(identificador, { ip: req.ip });
     }
   } catch (err) {
+    // Nunca se propaga el motivo: la respuesta es siempre la misma.
     console.warn('[recuperar] excepción:', err.message);
   }
 
-  // Respuesta genérica: evita revelar qué correos existen (enumeración).
-  res.render('auth/recuperar', {
+  // Respuesta genérica pase lo que pase (usuario inexistente, sin WhatsApp,
+  // fallo de CallMeBot): así nadie puede averiguar qué usuarios existen.
+  res.render('auth/nueva-clave', {
     error: null,
-    exito: 'Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada (y spam).',
-    valores: {},
+    exito: `Si el usuario existe y tiene WhatsApp registrado, le enviamos un código. Vence en ${recuperacionService.VIGENCIA_MINUTOS} minutos.`,
+    usuario: identificador,
     layout: false,
   });
 }
 
+// Pantalla donde se pega el código recibido por WhatsApp y se elige la clave.
 function mostrarNuevaClave(req, res) {
-  // Los tokens del enlace llegan en el fragmento (#) de la URL, que solo ve el
-  // navegador: un script en la vista los lee y los pone en el formulario.
-  res.render('auth/nueva-clave', { error: null, access_token: '', layout: false });
+  res.render('auth/nueva-clave', {
+    error: null,
+    exito: null,
+    usuario: (req.query.usuario || '').trim(),
+    layout: false,
+  });
 }
 
 async function procesarNuevaClave(req, res) {
-  const { access_token, password, password2 } = req.body;
+  const { usuario, codigo, password, password2 } = req.body;
 
-  // Se devuelve el token al re-renderizar para que el formulario no lo pierda
-  // si hay un error de validación (el # ya no está disponible en ese punto).
   const renderError = (mensaje) =>
-    res.status(400).render('auth/nueva-clave', { error: mensaje, access_token: access_token || '', layout: false });
+    res.status(400).render('auth/nueva-clave', {
+      error: mensaje,
+      exito: null,
+      usuario: (usuario || '').trim(),
+      layout: false,
+    });
 
-  if (!access_token) {
-    return renderError('El enlace es inválido o expiró. Solicita uno nuevo.');
-  }
-  if (!password || password.length < 8) {
-    return renderError('La contraseña debe tener al menos 8 caracteres.');
-  }
-  if (password !== password2) {
-    return renderError('Las contraseñas no coinciden.');
-  }
+  if (!usuario || !codigo) return renderError('Escribe tu usuario y el código que recibiste.');
+  if (!password || password.length < 8) return renderError('La contraseña debe tener al menos 8 caracteres.');
+  if (password !== password2) return renderError('Las contraseñas no coinciden.');
 
   try {
-    // Validamos el token de recuperación obteniendo el usuario dueño de la sesión.
-    const { data, error } = await supabaseAnon.auth.getUser(access_token);
-    if (error || !data?.user) {
-      return renderError('El enlace es inválido o expiró. Solicita uno nuevo.');
-    }
-
-    // Con el id confirmado, actualizamos la contraseña vía service role.
-    const { error: errorUpd } = await supabaseAdmin.auth.admin.updateUserById(data.user.id, { password });
-    if (errorUpd) throw errorUpd;
-
+    await recuperacionService.cambiarPasswordConCodigo(usuario.trim(), String(codigo).trim(), password);
     return res.redirect(`/auth/login?ok=${encodeURIComponent('Contraseña actualizada. Ya puedes iniciar sesión.')}`);
   } catch (err) {
-    console.warn('[nueva-clave] error:', err.message);
-    return renderError('No se pudo actualizar la contraseña. Intenta de nuevo.');
+    // El servicio ya devuelve mensajes pensados para el usuario final y que no
+    // distinguen entre "código malo", "caducado" o "usuario inexistente".
+    return renderError(err.status === 400 ? err.message : 'No se pudo actualizar la contraseña. Intenta de nuevo.');
   }
 }
 
 async function procesarLogout(req, res) {
   const accessToken = req.cookies['sb-access-token'];
+
+  // Antes se llamaba a supabaseAnon.auth.signOut() sin más. Ese cliente se creó
+  // con persistSession:false y es compartido por todo el proceso: no tiene la
+  // sesión de ESTE usuario, así que la llamada no revocaba nada. Se borraban las
+  // cookies y el refresh token seguía vivo en Supabase — quien lo hubiera
+  // copiado podía seguir emitiendo access tokens tras el "cierre de sesión".
+  //
+  // Con el id del usuario se revocan sus sesiones de verdad, vía service role.
   if (accessToken) {
-    await supabaseAnon.auth.signOut();
+    try {
+      const { data } = await supabaseAnon.auth.getUser(accessToken);
+      if (data?.user) await supabaseAdmin.auth.admin.signOut(accessToken, 'global');
+    } catch (err) {
+      // Si el token ya expiró no hay nada que revocar: se sigue al borrado.
+      console.warn('[logout] no se pudo revocar la sesión:', err.message);
+    }
   }
+
   clearSessionCookies(res);
   res.redirect('/auth/login');
 }

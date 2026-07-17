@@ -56,6 +56,7 @@
           Editar información
         </a>
         <form action="/admin/clientes/<%= cliente.id %>/estado" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <button type="submit" class="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
             <% if (cliente.activo) { %>
               <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" x2="12" y1="2" y2="12"/></svg>
@@ -330,6 +331,7 @@
 <div data-panel="notas" class="hidden">
   <div class="card max-w-2xl">
     <form action="/admin/clientes/<%= cliente.id %>/notas" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <label class="label-field" for="notas_admin">Notas internas sobre el cliente</label>
       <textarea class="input-field" id="notas_admin" name="notas_admin" rows="6" placeholder="Anotaciones privadas: acuerdos, referencias, recordatorios..."><%= cliente.notas_admin || '' %></textarea>
       <p class="mt-1 text-xs text-slate-400">Solo tú ves estas notas; el cliente no tiene acceso.</p>
@@ -344,6 +346,7 @@
 <div data-panel="documentos" class="hidden">
   <div class="card max-w-2xl">
     <form action="/admin/clientes/<%= cliente.id %>/documentos" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row sm:items-end gap-3 pb-4 border-b border-slate-100">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <div class="flex-1">
         <label class="label-field" for="documento">Subir documento <span class="text-slate-400">(máx. 10MB)</span></label>
         <input class="input-field" type="file" id="documento" name="documento" required />
@@ -374,6 +377,7 @@
                 <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
               </a>
               <form action="/admin/clientes/<%= cliente.id %>/documentos/<%= doc.id %>/eliminar" method="POST" class="form-eliminar-doc">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                 <button type="submit" class="action-btn hover:text-red-500" title="Eliminar" aria-label="Eliminar">
                   <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>

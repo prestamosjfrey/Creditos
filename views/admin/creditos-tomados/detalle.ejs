@@ -149,6 +149,7 @@
         </div>
       <% } else { %>
         <form action="/admin/creditos-tomados/<%= credito.id %>/pagos" method="POST" id="form-pago-credito" data-loading-title="Registrando pago…">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <div class="grid grid-cols-1 gap-3">
             <div>
               <label class="label-field" for="pago-monto">Monto a pagar</label>

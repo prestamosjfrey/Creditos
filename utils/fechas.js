@@ -1,25 +1,49 @@
 const { addDays, addMonths, differenceInCalendarDays, format, lastDayOfMonth, setDate } = require('date-fns');
 
-// Quincenal fijo: los pagos caen siempre el día 15 y el último día del mes
-// (15 → fin de mes → 15 del mes siguiente → …), sin arrastrar días de calendario.
-function siguienteQuincenaFija(fecha) {
-  const dia = fecha.getDate();
-  if (dia < 15) return setDate(fecha, 15);
-  if (dia === 15) return lastDayOfMonth(fecha);
-  return setDate(addMonths(fecha, 1), 15);
+// Coloca `dia` dentro del mes de `fecha`, recortando al último día si ese mes
+// no llega (pedir el 30 en febrero → 28, o 29 en bisiesto).
+function diaEnMes(fecha, dia) {
+  const ultimoDia = lastDayOfMonth(fecha).getDate();
+  return setDate(fecha, Math.min(dia, ultimoDia));
 }
 
-const SUMAR_POR_FRECUENCIA = {
-  diario: (fecha) => addDays(fecha, 1),
-  semanal: (fecha) => addDays(fecha, 7),
-  quincenal: siguienteQuincenaFija,
-  mensual: (fecha) => addMonths(fecha, 1),
-};
+// Días que dura un periodo, para las frecuencias que son aritmética de
+// calendario pura. Una quincena son 15 días, igual que una semana son 7: no hay
+// "días fijos del mes" ni rejilla 15/30.
+//
+// Ejemplo (validado con el prestamista): primer pago el 10 de febrero →
+//   10/02  +15→  25/02  +15→  12/03   (quedan 3 días de febrero + 12 de marzo)
+//
+// Consecuencia buscada: el periodo SIEMPRE dura 15 días, así que el interés de
+// cada cuota cubre exactamente el mismo tiempo. A cambio, el día del mes se va
+// corriendo (20, 4, 19, 3…) en vez de repetirse.
+const DIAS_POR_PERIODO = { diario: 1, semanal: 7, quincenal: 15 };
 
+// Fecha de la cuota número `indice` (empezando en 0), calculada SIEMPRE desde la
+// fecha del primer pago, nunca encadenando desde la cuota anterior.
+//
+// Para diario/semanal/quincenal da igual (sumar es asociativo), pero en MENSUAL
+// importa: encadenando, un préstamo del día 31 se recortaría al 28 en febrero y
+// se quedaría en el 28 para siempre. Anclando al día original, febrero recorta
+// solo esa cuota y en marzo se vuelve al 31.
+function fechaDeCuota(fechaPrimerPago, frecuenciaPago, indice) {
+  const dias = DIAS_POR_PERIODO[frecuenciaPago];
+  if (dias) return addDays(fechaPrimerPago, indice * dias);
+
+  if (frecuenciaPago === 'mensual') {
+    return diaEnMes(addMonths(fechaPrimerPago, indice), fechaPrimerPago.getDate());
+  }
+
+  throw new Error(`Frecuencia de pago desconocida: ${frecuenciaPago}`);
+}
+
+// Un solo periodo hacia adelante desde `fecha`.
+//
+// Úsala solo para saltos sueltos (p. ej. deducir el primer pago a partir de la
+// fecha de desembolso). Para generar un plan de cuotas usa fechaDeCuota(), que
+// ancla cada fecha al primer pago y no arrastra los recortes de los meses cortos.
 function siguienteFecha(fecha, frecuenciaPago) {
-  const sumar = SUMAR_POR_FRECUENCIA[frecuenciaPago];
-  if (!sumar) throw new Error(`Frecuencia de pago desconocida: ${frecuenciaPago}`);
-  return sumar(fecha);
+  return fechaDeCuota(fecha, frecuenciaPago, 1);
 }
 
 function diasDeAtraso(fechaVencimiento, hoy = new Date()) {
@@ -39,4 +63,4 @@ function formatoRelativoDias(fechaVencimiento, hoy = new Date()) {
   return `Vence en ${dias} días`;
 }
 
-module.exports = { siguienteFecha, diasDeAtraso, formatoISO, formatoRelativoDias };
+module.exports = { fechaDeCuota, siguienteFecha, diasDeAtraso, formatoISO, formatoRelativoDias };

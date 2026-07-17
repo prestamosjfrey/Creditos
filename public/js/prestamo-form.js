@@ -149,19 +149,31 @@
   }
 
   // --- Plan de cuotas (mismo algoritmo que services/prestamos.service.js) ---
-  function siguienteFecha(fecha, frecuencia) {
-    const f = new Date(fecha);
-    if (frecuencia === 'diario') f.setDate(f.getDate() + 1);
-    else if (frecuencia === 'semanal') f.setDate(f.getDate() + 7);
-    else if (frecuencia === 'quincenal') {
-      // Quincenal fijo: siempre el día 15 y el último día del mes.
-      const dia = f.getDate();
-      if (dia < 15) f.setDate(15);
-      else if (dia === 15) f.setDate(new Date(f.getFullYear(), f.getMonth() + 1, 0).getDate());
-      else { f.setMonth(f.getMonth() + 1, 15); }
+
+  // Fecha de la cuota `indice` (base 0), SIEMPRE calculada desde el primer pago.
+  // Debe coincidir EXACTAMENTE con fechaDeCuota() de utils/fechas.js — si las
+  // dos se separan, la vista previa mentiría sobre lo que se va a guardar.
+  //
+  // Una quincena son 15 días, igual que una semana son 7: aritmética de
+  // calendario pura. Ej.: 10/02 → 25/02 → 12/03.
+  const DIAS_POR_PERIODO = { diario: 1, semanal: 7, quincenal: 15 };
+
+  function fechaDeCuota(primerPago, frecuencia, indice) {
+    const dias = DIAS_POR_PERIODO[frecuencia];
+    if (dias) {
+      const f = new Date(primerPago);
+      f.setDate(f.getDate() + indice * dias);
+      return f;
     }
-    else if (frecuencia === 'mensual') f.setMonth(f.getMonth() + 1);
-    return f;
+    if (frecuencia === 'mensual') {
+      // Anclado al día original: un préstamo del día 31 se recorta al 28 en
+      // febrero, pero en marzo vuelve al 31 (no se queda en el 28).
+      const base = new Date(primerPago.getFullYear(), primerPago.getMonth() + indice, 1);
+      const ultimoDia = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+      base.setDate(Math.min(primerPago.getDate(), ultimoDia));
+      return base;
+    }
+    return new Date(primerPago);
   }
 
   function calcularPlanDeCuotas() {
@@ -180,7 +192,7 @@
     const interesRegular = Math.round(interesTotal / cuotas);
 
     const plan = [];
-    let fecha = new Date(`${primerPago}T00:00:00`);
+    const fechaPrimera = new Date(`${primerPago}T00:00:00`);
     let acumuladoMonto = 0;
     let acumuladoInteres = 0;
 
@@ -189,10 +201,9 @@
       const monto = esUltima ? Math.round(totalAPagar - acumuladoMonto) : Math.round(valorCuotaNum);
       const interes = esUltima ? Math.round(interesTotal - acumuladoInteres) : interesRegular;
       const capital = Math.round(monto - interes);
-      plan.push({ numero: i, fecha: new Date(fecha), monto, interes, capital });
+      plan.push({ numero: i, fecha: fechaDeCuota(fechaPrimera, frecuencia, i - 1), monto, interes, capital });
       acumuladoMonto += monto;
       acumuladoInteres += interes;
-      fecha = siguienteFecha(fecha, frecuencia);
     }
     return plan;
   }
@@ -213,6 +224,120 @@
       .map((c) => `<tr><td>${c.numero}</td><td>${formatoFecha(c.fecha)}</td><td class="text-right num">${formatoMoneda(c.capital)}</td><td class="text-right num text-amber-600">${formatoMoneda(c.interes)}</td><td class="text-right num font-medium">${formatoMoneda(c.monto)}</td></tr>`)
       .join('');
   }
+
+  // --- Vista de calendario del cronograma ---
+  //
+  // Las mismas cuotas de la tabla, pintadas sobre los meses que abarcan. Sirve
+  // para ver de un golpe cómo quedan repartidos los cobros y, sobre todo, para
+  // detectar los que caen en domingo antes de cerrar el préstamo.
+
+  const MESES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const CABECERA_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+  // Rejilla de un mes con las cuotas marcadas. La semana empieza en lunes, así
+  // que el domingo (getDay() === 0) queda en la última columna.
+  function calendarioDeMes(anio, mes, cuotasDelMes) {
+    const ultimoDia = new Date(anio, mes + 1, 0).getDate();
+    // getDay(): 0=domingo … 6=sábado. Se rota para que 0=lunes.
+    const huecoInicial = (new Date(anio, mes, 1).getDay() + 6) % 7;
+    const porDia = new Map(cuotasDelMes.map((c) => [c.fecha.getDate(), c]));
+
+    let celdas = '';
+    for (let i = 0; i < huecoInicial; i++) celdas += '<div></div>';
+
+    for (let dia = 1; dia <= ultimoDia; dia++) {
+      const cuota = porDia.get(dia);
+      const esDomingo = new Date(anio, mes, dia).getDay() === 0;
+
+      if (cuota) {
+        // El aviso de domingo se pinta en ámbar; el resto en verde.
+        const color = esDomingo ? 'bg-amber-500' : 'bg-blue-600';
+        celdas +=
+          '<div class="relative flex h-9 items-center justify-center">' +
+            `<span class="flex h-8 w-8 items-center justify-center rounded-full ${color} text-xs font-semibold text-white" ` +
+              `title="Cuota ${cuota.numero} — ${formatoMoneda(cuota.monto)}${esDomingo ? ' (domingo)' : ''}">${dia}</span>` +
+            `<span class="absolute -top-0.5 -right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-slate-800 px-1 text-[9px] font-bold text-white">${cuota.numero}</span>` +
+          '</div>';
+      } else {
+        const tono = esDomingo ? 'text-slate-300' : 'text-slate-500';
+        celdas += `<div class="flex h-9 items-center justify-center text-xs ${tono}">${dia}</div>`;
+      }
+    }
+
+    return (
+      '<div class="rounded-xl border border-slate-100 p-3">' +
+        `<p class="mb-2 text-center text-sm font-semibold capitalize text-slate-700">${MESES_LARGO[mes]} ${anio}</p>` +
+        '<div class="grid grid-cols-7 gap-0.5">' +
+          CABECERA_SEMANA.map((d) => `<div class="pb-1 text-center text-[10px] font-semibold uppercase text-slate-400">${d}</div>`).join('') +
+          celdas +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function mostrarCalendarioDePagos() {
+    const plan = calcularPlanDeCuotas();
+
+    if (plan.length === 0) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Aún no hay cronograma',
+        text: 'Completa el monto, el número de cuotas y la fecha del primer pago para ver el calendario.',
+        confirmButtonColor: '#16a34a',
+      });
+      return;
+    }
+
+    // Agrupar por mes conservando el orden cronológico del plan.
+    const meses = new Map();
+    plan.forEach((c) => {
+      const clave = `${c.fecha.getFullYear()}-${c.fecha.getMonth()}`;
+      if (!meses.has(clave)) {
+        meses.set(clave, { anio: c.fecha.getFullYear(), mes: c.fecha.getMonth(), cuotas: [] });
+      }
+      meses.get(clave).cuotas.push(c);
+    });
+
+    const enDomingo = plan.filter((c) => c.fecha.getDay() === 0);
+    const total = plan.reduce((a, c) => a + c.monto, 0);
+
+    const avisoDomingo = enDomingo.length
+      ? '<div class="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-left text-xs text-amber-800">' +
+          '<svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
+            '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>' +
+          `<span><strong>${enDomingo.length} cuota${enDomingo.length > 1 ? 's caen' : ' cae'} en domingo</strong> ` +
+          `(${enDomingo.map((c) => '#' + c.numero).join(', ')}). Si no cobras ese día, considera mover la fecha del primer pago.</span>` +
+        '</div>'
+      : '';
+
+    const html =
+      '<div class="text-left">' +
+        '<div class="grid gap-3 sm:grid-cols-2">' +
+          Array.from(meses.values()).map((m) => calendarioDeMes(m.anio, m.mes, m.cuotas)).join('') +
+        '</div>' +
+        '<div class="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-slate-500">' +
+          '<span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-blue-600"></span>Día de cobro</span>' +
+          '<span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-amber-500"></span>Cae en domingo</span>' +
+          `<span>${plan.length} cuota${plan.length > 1 ? 's' : ''} · ${formatoMoneda(total)}</span>` +
+        '</div>' +
+        avisoDomingo +
+      '</div>';
+
+    Swal.fire({
+      title: 'Calendario de pagos',
+      html,
+      width: meses.size > 1 ? 720 : 420,
+      showConfirmButton: true,
+      confirmButtonText: 'Cerrar',
+      confirmButtonColor: '#16a34a',
+      background: '#FFFFFF',
+      color: '#1e293b',
+    });
+  }
+
+  const btnCalendario = document.getElementById('btn-ver-calendario');
+  if (btnCalendario) btnCalendario.addEventListener('click', mostrarCalendarioDePagos);
 
   // --- Duración total legible (de fecha_inicio a la última cuota) ---
   function formatoDuracion() {

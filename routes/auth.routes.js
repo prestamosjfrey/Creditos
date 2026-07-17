@@ -1,15 +1,68 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 
+// Sin estos límites, /auth/login acepta intentos ilimitados: un atacante puede
+// probar millones de contraseñas contra cuentas que tienen acceso total a la
+// cartera. `trust proxy` ya está configurado en server.js, así que la IP que se
+// mide es la real del cliente y no la del proxy de Render.
+
+const limitadorLogin = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10,                  // 10 intentos por IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // un login correcto no gasta cupo
+  message: 'Demasiados intentos de inicio de sesión. Espera 15 minutos e inténtalo de nuevo.',
+  handler: (req, res) => {
+    res.status(429).render('auth/login', {
+      error: 'Demasiados intentos fallidos. Por seguridad, espera 15 minutos antes de volver a intentarlo.',
+      layout: false,
+    });
+  },
+});
+
+// Recuperación: más estricto todavía. Cada intento dispara un correo, así que
+// el abuso aquí molesta a terceros (y quema la cuota de envío de Supabase).
+const limitadorRecuperar = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).render('auth/recuperar', {
+      error: 'Demasiadas solicitudes. Espera una hora antes de pedir otro enlace.',
+      exito: null,
+      valores: {},
+      layout: false,
+    });
+  },
+});
+
+// Cambio de contraseña con token: limita la fuerza bruta sobre el access_token.
+const limitadorNuevaClave = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).render('auth/nueva-clave', {
+      error: 'Demasiados intentos. Espera una hora e inténtalo de nuevo.',
+      access_token: '',
+      layout: false,
+    });
+  },
+});
+
 router.get('/login', authController.mostrarLogin);
-router.post('/login', authController.procesarLogin);
+router.post('/login', limitadorLogin, authController.procesarLogin);
 router.post('/logout', authController.procesarLogout);
 
 // Recuperación de contraseña
 router.get('/recuperar', authController.mostrarRecuperar);
-router.post('/recuperar', authController.procesarRecuperar);
+router.post('/recuperar', limitadorRecuperar, authController.procesarRecuperar);
 router.get('/nueva-clave', authController.mostrarNuevaClave);
-router.post('/nueva-clave', authController.procesarNuevaClave);
+router.post('/nueva-clave', limitadorNuevaClave, authController.procesarNuevaClave);
 
 module.exports = router;

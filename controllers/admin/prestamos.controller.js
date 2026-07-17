@@ -103,7 +103,17 @@ async function listarTodos(req, res, next) {
 async function exportarCsv(req, res, next) {
   try {
     const { tabla } = await obtenerListaFiltrada(req.query);
-    const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+
+    // Excel y LibreOffice interpretan como FÓRMULA cualquier celda que empiece
+    // por = + - @ (o tab/CR). Un cliente llamado `=HYPERLINK("http://...")` se
+    // ejecutaría al abrir el CSV en la máquina de quien descarga el reporte.
+    // Entrecomillar no basta: hay que romper el arranque de fórmula con una
+    // comilla simple, que Excel muestra como texto plano.
+    const esc = (v) => {
+      let s = String(v == null ? '' : v);
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
     const cab = ['N°', 'Cliente', 'Documento', 'Fecha inicio', 'Capital', 'Total a pagar', 'Abonado', 'Saldo', 'Cuotas pagadas', 'Cuotas total', 'Estado'];
     const filas = tabla.map((l) => [
       l.numero != null ? String(l.numero).padStart(3, '0') : '',
@@ -150,6 +160,27 @@ async function mostrarFormularioNuevo(req, res, next) {
   }
 }
 
+// Vuelve a pintar el formulario de "nuevo préstamo" conservando lo que el
+// usuario escribió. Lo usan tanto los validadores (middlewares/validar.js) como
+// el catch de crearPrestamo, para no duplicar la carga de clientes y saldo.
+async function renderCrearConError(req, res, mensaje) {
+  const [{ data: clientes }, saldoDisponible] = await Promise.all([
+    supabaseAdmin
+      .from('clientes')
+      .select('id, nombre_completo, numero_documento')
+      .order('nombre_completo', { ascending: true }),
+    cajaService.obtenerSaldoDisponible(),
+  ]);
+
+  res.status(400).render('admin/prestamos/crear', {
+    titulo: 'Nuevo préstamo',
+    clientes: clientes || [],
+    saldoDisponible,
+    error: mensaje || 'No se pudo crear el préstamo.',
+    valores: req.body,
+  });
+}
+
 async function crearPrestamo(req, res, next) {
   const {
     cliente_id,
@@ -185,21 +216,14 @@ async function crearPrestamo(req, res, next) {
 
     res.redirect(`/admin/prestamos/${prestamo.id}?creado=1`);
   } catch (err) {
-    const [{ data: clientes }, saldoDisponible] = await Promise.all([
-      supabaseAdmin
-        .from('clientes')
-        .select('id, nombre_completo, numero_documento')
-        .order('nombre_completo', { ascending: true }),
-      cajaService.obtenerSaldoDisponible(),
-    ]);
-
-    res.status(400).render('admin/prestamos/crear', {
-      titulo: 'Nuevo préstamo',
-      clientes,
-      saldoDisponible,
-      error: err.message || 'No se pudo crear el préstamo.',
-      valores: req.body,
-    });
+    // Los datos ya vienen validados; si algo falla aquí es de la base o de red,
+    // así que no se expone err.message al usuario (iría al log vía errorHandler).
+    console.error('[prestamos] error al crear préstamo:', err.message);
+    try {
+      await renderCrearConError(req, res, 'No se pudo crear el préstamo. Revisa los datos e inténtalo de nuevo.');
+    } catch (e) {
+      next(err);
+    }
   }
 }
 
@@ -326,6 +350,7 @@ module.exports = {
   exportarCsv,
   mostrarFormularioNuevo,
   crearPrestamo,
+  renderCrearConError,
   mostrarDetalle,
   generarComprobante,
   generarComprobanteCuota,

@@ -28,13 +28,17 @@
       <p class="login-sub">Ingresa tus credenciales para acceder al sistema</p>
 
       <form action="/auth/login" method="POST" data-no-loading>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <div class="field">
-          <label for="email">Correo electrónico</label>
+          <label for="usuario">Usuario</label>
           <div class="control">
             <span class="ico">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </span>
-            <input type="email" id="email" name="email" placeholder="correo@ejemplo.com" required autofocus autocomplete="email" />
+            <!-- type="text", no "email": el identificador es el nombre de usuario.
+                 Se sigue aceptando un correo para las cuentas antiguas, así que el
+                 navegador no debe validarlo como correo. -->
+            <input type="text" id="usuario" name="usuario" placeholder="ej. juan.cobrador" required autofocus autocomplete="username" />
           </div>
         </div>
 

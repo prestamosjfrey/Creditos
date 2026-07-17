@@ -40,6 +40,7 @@
       <p class="mt-1 text-sm text-slate-400">Registra un ingreso o egreso del dinero disponible.</p>
     </div>
     <form action="/admin/caja" method="POST" class="space-y-4" data-loading-title="Guardando movimiento…">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="label-field" for="tipo">Tipo de movimiento <span class="text-red-500">*</span></label>

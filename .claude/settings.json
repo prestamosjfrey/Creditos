@@ -47,7 +47,24 @@
       "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\);ejs.compile\\(fs.readFileSync\\('views/admin/dashboard.ejs','utf8'\\),{filename:'views/admin/dashboard.ejs'}\\);console.log\\('OK todo compila'\\);\")",
       "Bash(grep -oE \"focus\\\\\\\\\\\\\\\\:ring-1[^-]|focus\\\\\\\\\\\\\\\\:ring-blue-500|focus\\\\\\\\\\\\\\\\:border-blue-500|focus\\\\\\\\\\\\\\\\:outline-none\" public/css/output.css)",
       "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\);ejs.compile\\(fs.readFileSync\\('views/admin/dashboard.ejs','utf8'\\),{filename:'views/admin/dashboard.ejs'}\\);console.log\\('OK EJS final'\\);\")",
-      "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\),path=require\\('path'\\);const f='views/auth/login.ejs';ejs.compile\\(fs.readFileSync\\(f,'utf8'\\),{filename:path.resolve\\(f\\)}\\);console.log\\('OK EJS login compila'\\);\")"
+      "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\),path=require\\('path'\\);const f='views/auth/login.ejs';ejs.compile\\(fs.readFileSync\\(f,'utf8'\\),{filename:path.resolve\\(f\\)}\\);console.log\\('OK EJS login compila'\\);\")",
+      "Bash(npm uninstall *)",
+      "Bash(git rm *)",
+      "Bash(node \"C:/Users/DEIVER/AppData/Local/Temp/claude/c--Creditos/d291834a-f22d-4d41-97d7-2072d0e3cd2e/scratchpad/add-csrf.js\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/auth/login)",
+      "Bash(tasklist)",
+      "Bash(curl -s -D - -o /dev/null http://localhost:3000/auth/login)",
+      "Bash(curl -s http://localhost:3000/auth/login)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" -X POST http://localhost:3000/auth/login -d \"email=a@b.com&password=x\")",
+      "Bash(curl -s -o /dev/null -w \"/cliente/panel  -> HTTP %{http_code}\\\\n\" http://localhost:3000/cliente/panel)",
+      "Bash(curl -s -o /dev/null -w \"/admin/descargar-app -> HTTP %{http_code}\\\\n\" http://localhost:3000/admin/descargar-app)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(netstat -ano)",
+      "Bash(timeout 5 node server.js)",
+      "Bash(node server.js)",
+      "Bash(docker --version)",
+      "Bash(psql --version)",
+      "Bash(npx supabase *)"
     ]
   }
 }

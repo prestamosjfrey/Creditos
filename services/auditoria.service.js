@@ -45,8 +45,12 @@ async function listar({ prestamoId, clienteId, tipos, limite = 300 } = {}) {
 }
 
 // Conteo de eventos por categoría (todos los registros, no solo la página).
+//
+// El conteo lo hace Postgres y devuelve una fila por tipo (~15 filas). Antes se
+// descargaba la bitácora COMPLETA solo para contarla en memoria: como es una
+// tabla append-only que solo crece, esa consulta se degradaba para siempre.
 async function contarPorCategoria() {
-  const { data, error } = await supabaseAdmin.from('bitacora').select('tipo');
+  const { data, error } = await supabaseAdmin.rpc('conteo_bitacora_por_tipo');
   if (error) throw error;
 
   const tipoACat = {};
@@ -54,9 +58,10 @@ async function contarPorCategoria() {
 
   const conteos = { total: 0, prestamos: 0, pagos: 0, mora: 0, caja: 0, clientes: 0 };
   (data || []).forEach((r) => {
-    conteos.total++;
+    const n = Number(r.total) || 0;
+    conteos.total += n;
     const c = tipoACat[r.tipo];
-    if (c) conteos[c]++;
+    if (c) conteos[c] += n;
   });
   return conteos;
 }

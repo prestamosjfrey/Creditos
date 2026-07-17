@@ -264,6 +264,7 @@
     <% } else { %>
       <form action="/admin/prestamos/<%= prestamo.id %>/pagos" method="POST" id="form-abono"
             data-loading-title="Registrando abono…" data-ratio-capital="<%= ratioCapital %>" data-saldo="<%= saldo %>" data-interes-cuota="<%= interesPorCuota %>">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <input type="hidden" name="fecha_pago" value="<%= hoyISOv %>" />
         <input type="hidden" name="cuota_id" id="abono-cuota-id" value="" />
 

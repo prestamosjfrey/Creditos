@@ -6,7 +6,7 @@ node_modules/
 .env.*
 !.env.example
 
-# Build de Electron
+# Artefactos de build (la app se distribuye como PWA desde el navegador)
 dist/
 
 # CSS compilado — se incluye en el repo para produccion (Render no lo compila)

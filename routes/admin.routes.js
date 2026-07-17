@@ -1,13 +1,45 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const router = express.Router();
 
 // Subida de documentos en memoria (se reenvía el buffer a Supabase Storage).
-const subida = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+// Solo se aceptan los formatos que tienen sentido en un expediente (cédulas,
+// contratos, soportes). Sin esta lista, cualquiera podía cargar un .exe o un
+// .html — este último especialmente peligroso: al abrirlo desde la URL firmada
+// se ejecutaría su JavaScript en el dominio de Supabase Storage.
+const MIMES_PERMITIDOS = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+]);
+
+const subida = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    if (!MIMES_PERMITIDOS.has(file.mimetype)) {
+      return cb(new Error('Formato no permitido. Sube un PDF o una imagen (JPG, PNG, WEBP).'));
+    }
+    cb(null, true);
+  },
+});
 
 const { requireAuth, requireAdmin } = require('../middlewares/auth');
+const {
+  revisar,
+  esUuid,
+  validarPrestamo,
+  validarAbono,
+  validarCliente,
+  validarCreditoTomado,
+  validarPagoCreditoTomado,
+  validarMovimientoCaja,
+  validarUsuarioNuevo,
+  validarUsuarioEdicion,
+  validarPerfilPropio,
+} = require('../middlewares/validar');
 const dashboardController = require('../controllers/admin/dashboard.controller');
 const clientesController = require('../controllers/admin/clientes.controller');
 const prestamosController = require('../controllers/admin/prestamos.controller');
@@ -20,6 +52,7 @@ const auditoriaController = require('../controllers/admin/auditoria.controller')
 const archivoController = require('../controllers/admin/archivo.controller');
 const renegociadosController = require('../controllers/admin/renegociados.controller');
 const creditosTomadosController = require('../controllers/admin/creditos-tomados.controller');
+const usuariosController = require('../controllers/admin/usuarios.controller');
 const dashboardService = require('../services/dashboard.service');
 
 router.use(requireAuth, requireAdmin);
@@ -44,38 +77,50 @@ router.get('/dashboard', dashboardController.mostrarDashboard);
 
 router.get('/clientes', clientesController.listarClientes);
 router.get('/clientes/nuevo', clientesController.mostrarFormularioNuevo);
-router.post('/clientes', clientesController.crearCliente);
-router.get('/clientes/:id', clientesController.mostrarFicha);
-router.get('/clientes/:id/editar', clientesController.mostrarFormularioEditar);
-router.post('/clientes/:id/editar', clientesController.editarCliente);
-router.post('/clientes/:id/estado', clientesController.cambiarEstado);
-router.post('/clientes/:id/notas', clientesController.guardarNotas);
-router.post('/clientes/:id/documentos', subida.single('documento'), clientesController.subirDocumento);
-router.get('/clientes/:id/documentos/:docId/ver', clientesController.verDocumento);
-router.post('/clientes/:id/documentos/:docId/eliminar', clientesController.eliminarDocumento);
+router.post('/clientes',
+  validarCliente,
+  revisar(clientesController.renderNuevoConError),
+  clientesController.crearCliente);
+router.get('/clientes/:id', esUuid('id'), revisar(), clientesController.mostrarFicha);
+router.get('/clientes/:id/editar', esUuid('id'), revisar(), clientesController.mostrarFormularioEditar);
+router.post('/clientes/:id/editar',
+  esUuid('id'), validarCliente,
+  revisar(clientesController.renderEditarConError),
+  clientesController.editarCliente);
+router.post('/clientes/:id/estado', esUuid('id'), revisar(), clientesController.cambiarEstado);
+router.post('/clientes/:id/notas', esUuid('id'), revisar(), clientesController.guardarNotas);
+router.post('/clientes/:id/documentos', esUuid('id'), revisar(), subida.single('documento'), clientesController.subirDocumento);
+router.get('/clientes/:id/documentos/:docId/ver', esUuid('id'), esUuid('docId'), revisar(), clientesController.verDocumento);
+router.post('/clientes/:id/documentos/:docId/eliminar', esUuid('id'), esUuid('docId'), revisar(), clientesController.eliminarDocumento);
 
 router.get('/prestamos', prestamosController.listarTodos);
 router.get('/prestamos/exportar', prestamosController.exportarCsv);
 router.get('/prestamos/nuevo', prestamosController.mostrarFormularioNuevo);
-router.post('/prestamos', prestamosController.crearPrestamo);
-router.get('/prestamos/:id', prestamosController.mostrarDetalle);
-router.get('/prestamos/:id/comprobante', prestamosController.generarComprobante);
-router.get('/prestamos/:id/paz-y-salvo', prestamosController.generarPazYSalvo);
-router.get('/prestamos/:id/cuotas/:cuotaId/comprobante', prestamosController.generarComprobanteCuota);
-router.get('/prestamos/:id/pagos/:pagoId/comprobante', prestamosController.generarComprobantePago);
-router.post('/prestamos/:id/pagos', pagosController.registrarAbono);
+router.post('/prestamos',
+  validarPrestamo,
+  revisar(prestamosController.renderCrearConError),
+  prestamosController.crearPrestamo);
+router.get('/prestamos/:id', esUuid('id'), revisar(), prestamosController.mostrarDetalle);
+router.get('/prestamos/:id/comprobante', esUuid('id'), revisar(), prestamosController.generarComprobante);
+router.get('/prestamos/:id/paz-y-salvo', esUuid('id'), revisar(), prestamosController.generarPazYSalvo);
+router.get('/prestamos/:id/cuotas/:cuotaId/comprobante', esUuid('id'), esUuid('cuotaId'), revisar(), prestamosController.generarComprobanteCuota);
+router.get('/prestamos/:id/pagos/:pagoId/comprobante', esUuid('id'), esUuid('pagoId'), revisar(), prestamosController.generarComprobantePago);
+router.post('/prestamos/:id/pagos', validarAbono, revisar(), pagosController.registrarAbono);
 
 router.get('/pagos', pagosController.listarTodos);
 
 router.get('/caja', cajaController.mostrarCaja);
-router.post('/caja', cajaController.registrarMovimientoManual);
+router.post('/caja', validarMovimientoCaja, revisar(), cajaController.registrarMovimientoManual);
 
 router.get('/creditos-tomados', creditosTomadosController.listarTodos);
 router.get('/creditos-tomados/nuevo', creditosTomadosController.mostrarFormularioNuevo);
-router.post('/creditos-tomados', creditosTomadosController.crearCredito);
-router.get('/creditos-tomados/:id', creditosTomadosController.mostrarDetalle);
-router.post('/creditos-tomados/:id/cuotas', creditosTomadosController.pagarCuota);
-router.post('/creditos-tomados/:id/pagos', creditosTomadosController.registrarPago);
+router.post('/creditos-tomados',
+  validarCreditoTomado,
+  revisar(creditosTomadosController.renderCrearConError),
+  creditosTomadosController.crearCredito);
+router.get('/creditos-tomados/:id', esUuid('id'), revisar(), creditosTomadosController.mostrarDetalle);
+router.post('/creditos-tomados/:id/cuotas', validarPagoCreditoTomado, revisar(), creditosTomadosController.pagarCuota);
+router.post('/creditos-tomados/:id/pagos', validarPagoCreditoTomado, revisar(), creditosTomadosController.registrarPago);
 
 router.get('/cobros', cobrosController.mostrarCobros);
 router.post('/cobros/notificar', cobrosController.notificarCobrosHoy);
@@ -83,7 +128,10 @@ router.get('/mora', cobrosController.mostrarMora);
 router.get('/mora/datos', cobrosController.datosMora);
 
 router.get('/reportes', reportesController.mostrarIndice);
-router.get('/reportes/capital-prestado', reportesController.mostrarCapitalPrestado);
+// La exportación va ANTES de /:clave para que "exportar" no se lea como el
+// nombre de un reporte.
+router.get('/reportes/:clave/exportar', reportesController.exportarReporte);
+router.get('/reportes/:clave', reportesController.mostrarReporte);
 
 router.get('/auditoria', auditoriaController.mostrarAuditoria);
 
@@ -91,18 +139,19 @@ router.get('/archivo', archivoController.mostrarArchivo);
 router.get('/renegociados', renegociadosController.mostrarRenegociados);
 
 router.get('/configuracion', configuracionController.mostrarConfiguracion);
+// Cuenta propia: cada quien edita sus datos y cambia su clave (exige la actual).
+router.post('/configuracion/perfil', validarPerfilPropio, revisar(), configuracionController.editarMiPerfil);
+router.post('/configuracion/clave', configuracionController.cambiarMiClave);
 
-router.get('/descargar-app', (req, res) => {
-  const distDir = path.join(__dirname, '..', 'dist');
-  if (!fs.existsSync(distDir)) {
-    return res.status(404).send('El instalador no está disponible todavía. Ejecuta npm run electron:build primero.');
-  }
-  const archivos = fs.readdirSync(distDir).filter(f => f.endsWith('.exe') && f.includes('Setup'));
-  if (archivos.length === 0) {
-    return res.status(404).send('No se encontró el instalador en la carpeta dist/.');
-  }
-  const instalador = path.join(distDir, archivos[0]);
-  res.download(instalador, archivos[0]);
-});
+// --- Usuarios del sistema (staff) ---
+// Crear usuarios y restablecer contraseñas es dar acceso a toda la cartera:
+// requireAdmin ya cubre todo /admin, así que un cobrador no llega aquí.
+router.get('/usuarios', usuariosController.listar);
+router.get('/usuarios/nuevo', usuariosController.mostrarFormularioNuevo);
+router.post('/usuarios', validarUsuarioNuevo, revisar(), usuariosController.crear);
+router.get('/usuarios/:id/editar', esUuid('id'), revisar(), usuariosController.mostrarFormularioEditar);
+router.post('/usuarios/:id/editar', esUuid('id'), validarUsuarioEdicion, revisar(), usuariosController.editar);
+router.post('/usuarios/:id/estado', esUuid('id'), revisar(), usuariosController.cambiarEstado);
+router.post('/usuarios/:id/clave', esUuid('id'), revisar(), usuariosController.restablecerClave);
 
 module.exports = router;

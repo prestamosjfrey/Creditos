@@ -23,8 +23,9 @@ function rangoPeriodo(periodo, q = {}) {
 
 async function mostrarDashboard(req, res, next) {
   try {
-    await prestamosService.marcarCuotasVencidas();
-
+    // El marcado de cuotas vencidas ya NO se hace aquí: corre en un job propio
+    // (services/mora-job.service.js) cada hora. Un GET no debe escribir en la
+    // base, y la mora no puede depender de que alguien abra el dashboard.
     let periodo = req.query.periodo;
     if (!periodo) periodo = (req.query.desde || req.query.hasta) ? 'personalizado' : 'este_mes';
     if (!PERIODOS.includes(periodo)) periodo = 'este_mes';

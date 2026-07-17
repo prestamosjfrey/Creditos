@@ -1,5 +1,5 @@
 const { supabaseAdmin } = require('../config/supabase');
-const { siguienteFecha, formatoISO } = require('../utils/fechas');
+const { fechaDeCuota, formatoISO } = require('../utils/fechas');
 const { formatCOP } = require('../utils/moneda');
 const cajaService = require('./caja.service');
 const auditoria = require('./auditoria.service');
@@ -7,7 +7,7 @@ const auditoria = require('./auditoria.service');
 function calcularPlanDeCuotas(credito) {
   const { numero_cuotas, valor_cuota, monto_total_a_pagar, frecuencia_pago, fecha_primer_pago } = credito;
   const cuotas = [];
-  let fecha = new Date(`${fecha_primer_pago}T00:00:00`);
+  const primerPago = new Date(`${fecha_primer_pago}T00:00:00`);
   let acumulado = 0;
 
   for (let i = 1; i <= numero_cuotas; i++) {
@@ -15,9 +15,14 @@ function calcularPlanDeCuotas(credito) {
     const monto = esUltima
       ? Math.round((monto_total_a_pagar - acumulado) * 100) / 100
       : Math.round(valor_cuota * 100) / 100;
-    cuotas.push({ numero_cuota: i, fecha_vencimiento: formatoISO(fecha), monto, estado: 'pendiente' });
+    cuotas.push({
+      numero_cuota: i,
+      // Anclada al primer pago (ver fechaDeCuota en utils/fechas.js).
+      fecha_vencimiento: formatoISO(fechaDeCuota(primerPago, frecuencia_pago, i - 1)),
+      monto,
+      estado: 'pendiente',
+    });
     acumulado += monto;
-    fecha = siguienteFecha(fecha, frecuencia_pago);
   }
   return cuotas;
 }

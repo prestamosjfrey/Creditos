@@ -25,6 +25,24 @@ function esErrorDeRed(err) {
   return /fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|UND_ERR/i.test(String(code) + ' ' + msg);
 }
 
+// Resuelve el perfil de staff a partir de un access token, o null si el token
+// no es válido / el usuario está inactivo. Sin efectos secundarios: lo usa
+// tanto requireAuth como el handshake de Socket.IO.
+async function usuarioDesdeToken(accessToken) {
+  if (!accessToken) return null;
+  const { data, error } = await supabaseAnon.auth.getUser(accessToken);
+  if (error || !data?.user) return null;
+
+  const { data: perfil, error: perfilError } = await supabaseAdmin
+    .from('usuarios')
+    .select('*')
+    .eq('id', data.user.id)
+    .single();
+
+  if (perfilError || !perfil || !perfil.activo) return null;
+  return perfil;
+}
+
 async function requireAuth(req, res, next) {
   const accessToken = req.cookies['sb-access-token'];
   if (!accessToken) return res.redirect('/auth/login');
@@ -81,17 +99,10 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-function requireCliente(req, res, next) {
-  if (req.usuario.rol !== 'cliente') {
-    return res.status(403).render('errores/403');
-  }
-  next();
-}
-
 module.exports = {
   requireAuth,
   requireAdmin,
-  requireCliente,
+  usuarioDesdeToken,
   setSessionCookies,
   clearSessionCookies,
 };

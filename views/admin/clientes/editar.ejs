@@ -29,6 +29,7 @@
     </div>
 
     <form action="/admin/clientes/<%= cliente.id %>/editar" method="POST" class="space-y-4" data-loading-title="Guardando cambios…">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <div>
         <label class="label-field text-center" for="nombre_completo">Nombre completo <span class="text-red-500">*</span></label>
         <div class="relative">

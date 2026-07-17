@@ -3,18 +3,36 @@ const documentosService = require('../../services/documentos.service');
 const auditoria = require('../../services/auditoria.service');
 const scoreService = require('../../services/score.service');
 
+// El término de búsqueda se interpola dentro de la expresión `.or()` de
+// PostgREST, que tiene su propia sintaxis: las comas separan condiciones, los
+// paréntesis agrupan y el punto separa columna/operador/valor. Si se pasa el
+// texto crudo, el usuario puede reescribir el filtro (p. ej. cerrar la
+// condición e inyectar otra sobre columnas que no le tocan).
+//
+// Se eliminan los metacaracteres de esa sintaxis y se limita la longitud. Los
+// comodines % y _ de ILIKE también se quitan: aquí no aportan y permiten
+// construir patrones costosos.
+function sanearBusqueda(texto) {
+  return texto
+    .replace(/[,()."'\\%_*:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+}
+
 async function listarClientes(req, res, next) {
   try {
     const busqueda = (req.query.q || '').trim();
+    const termino = sanearBusqueda(busqueda);
 
     let query = supabaseAdmin
       .from('clientes')
       .select('*')
       .order('nombre_completo', { ascending: true });
 
-    if (busqueda) {
+    if (termino) {
       query = query.or(
-        `nombre_completo.ilike.%${busqueda}%,numero_documento.ilike.%${busqueda}%,telefono.ilike.%${busqueda}%`
+        `nombre_completo.ilike.%${termino}%,numero_documento.ilike.%${termino}%,telefono.ilike.%${termino}%`
       );
     }
 
@@ -46,6 +64,24 @@ async function listarClientes(req, res, next) {
 
 async function mostrarFormularioNuevo(req, res) {
   res.render('admin/clientes/form', { titulo: 'Nuevo cliente', error: null, valores: {} });
+}
+
+// Repinta el formulario de alta conservando lo escrito (lo llama el validador).
+function renderNuevoConError(req, res, mensaje) {
+  res.status(400).render('admin/clientes/form', {
+    titulo: 'Nuevo cliente',
+    error: mensaje,
+    valores: req.body,
+  });
+}
+
+// Ídem para la edición.
+function renderEditarConError(req, res, mensaje) {
+  res.status(400).render('admin/clientes/editar', {
+    titulo: 'Editar cliente',
+    cliente: { id: req.params.id, ...req.body },
+    error: mensaje,
+  });
 }
 
 async function crearCliente(req, res, next) {
@@ -257,7 +293,9 @@ async function subirDocumento(req, res, next) {
 
 async function verDocumento(req, res, next) {
   try {
-    const url = await documentosService.obtenerUrlFirmada(req.params.docId);
+    // Se pasa el id del cliente de la URL: el servicio exige que el documento
+    // sea suyo (ver documentos.service.js).
+    const url = await documentosService.obtenerUrlFirmada(req.params.docId, req.params.id);
     res.redirect(url);
   } catch (err) {
     next(err);
@@ -267,7 +305,7 @@ async function verDocumento(req, res, next) {
 async function eliminarDocumento(req, res, next) {
   const { id, docId } = req.params;
   try {
-    await documentosService.eliminarDocumento(docId);
+    await documentosService.eliminarDocumento(docId, id);
     await auditoria.registrar({
       tipo: 'documento_eliminado',
       descripcion: 'Documento eliminado del cliente.',
@@ -284,6 +322,8 @@ async function eliminarDocumento(req, res, next) {
 module.exports = {
   listarClientes,
   mostrarFormularioNuevo,
+  renderNuevoConError,
+  renderEditarConError,
   crearCliente,
   mostrarFicha,
   mostrarFormularioEditar,
