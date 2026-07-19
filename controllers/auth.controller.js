@@ -86,7 +86,7 @@ async function procesarRecuperar(req, res) {
   // fallo de CallMeBot): así nadie puede averiguar qué usuarios existen.
   res.render('auth/nueva-clave', {
     error: null,
-    exito: `Si el usuario existe y tiene WhatsApp registrado, le enviamos un código. Vence en ${recuperacionService.VIGENCIA_MINUTOS} minuto: úsalo ya.`,
+    exito: `Si el usuario existe y tiene WhatsApp registrado, le enviamos un código. Vence en ${recuperacionService.VIGENCIA_MINUTOS} minutos.`,
     usuario: identificador,
     paso: 1,
     layout: false,

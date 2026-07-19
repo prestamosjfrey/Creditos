@@ -89,6 +89,17 @@
         </button>
       </form>
 
+      <!-- Reenviar: publica el mismo usuario a /auth/recuperar. El botón queda
+           bloqueado 2 minutos (mismo cooldown que aplica el servidor). -->
+      <form action="/auth/recuperar" method="POST" id="form-reenviar" data-no-loading style="margin-top:.75rem;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <input type="hidden" name="usuario" id="reenviar-usuario" value="<%= typeof usuario !== 'undefined' ? usuario : '' %>" />
+        <button type="submit" id="btn-reenviar"
+          style="width:100%;background:none;border:1px solid #e2e8f0;border-radius:.6rem;padding:.6rem;font-size:.85rem;color:#475569;cursor:pointer;">
+          Reenviar código
+        </button>
+      </form>
+
       <% } else { %>
       <!-- ===== PASO 2: elegir la contraseña ===== -->
       <form action="/auth/nueva-clave" method="POST" id="form-clave" data-no-loading>
@@ -128,9 +139,9 @@
       <% } %>
 
       <div class="forgot">
-        <a href="/auth/recuperar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-          Solicitar un código nuevo
+        <a href="/auth/login">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+          Volver a iniciar sesión
         </a>
       </div>
     </section>
@@ -156,22 +167,66 @@
         });
       }
 
-      // Cuenta regresiva del código: dura 1 minuto, así que conviene que el
-      // usuario vea cuánto le queda en vez de descubrirlo al fallar.
+      // Formatea segundos como m:ss (ej. 118 -> "1:58").
+      function mmss(s) {
+        var m = Math.floor(s / 60);
+        var r = s % 60;
+        return m + ':' + (r < 10 ? '0' : '') + r;
+      }
+
+      // Cuenta regresiva del código: dura 2 minutos. El usuario ve cuánto le
+      // queda en vez de descubrirlo al fallar.
       var reloj = document.getElementById('cuenta-regresiva');
       if (reloj) {
-        var quedan = 60;
-        var tic = setInterval(function () {
-          quedan--;
+        var quedan = 120;
+        var pinta = function () {
           if (quedan > 0) {
-            reloj.textContent = '⏱ El código vence en ' + quedan + ' segundo' + (quedan === 1 ? '' : 's');
+            reloj.textContent = '⏱ El código vence en ' + mmss(quedan);
           } else {
             clearInterval(tic);
             reloj.style.color = '#dc2626';
-            reloj.textContent = '⚠ El código ya venció. Solicita uno nuevo.';
+            reloj.textContent = '⚠ El código ya venció. Reenvía uno nuevo.';
           }
-        }, 1000);
-        reloj.textContent = '⏱ El código vence en 60 segundos';
+        };
+        pinta();
+        var tic = setInterval(function () { quedan--; pinta(); }, 1000);
+      }
+
+      // Botón de reenvío: bloqueado 2 minutos (mismo cooldown que el servidor).
+      // Antes de tiempo, un reenvío no haría nada (el servidor lo ignora por el
+      // cooldown), así que se deshabilita y se muestra cuánto falta.
+      var btnReenviar = document.getElementById('btn-reenviar');
+      var formReenviar = document.getElementById('form-reenviar');
+      var inputUsuario = document.getElementById('usuario');
+      var reenviarUsuario = document.getElementById('reenviar-usuario');
+      if (btnReenviar && formReenviar) {
+        var espera = 120;
+        var etiqueta = function () {
+          if (espera > 0) {
+            btnReenviar.disabled = true;
+            btnReenviar.style.opacity = '.55';
+            btnReenviar.style.cursor = 'not-allowed';
+            btnReenviar.textContent = 'Reenviar código en ' + mmss(espera);
+          } else {
+            clearInterval(ticR);
+            btnReenviar.disabled = false;
+            btnReenviar.style.opacity = '1';
+            btnReenviar.style.cursor = 'pointer';
+            btnReenviar.textContent = 'Reenviar código';
+          }
+        };
+        etiqueta();
+        var ticR = setInterval(function () { espera--; etiqueta(); }, 1000);
+
+        // Reenvía al usuario que esté escrito arriba (por si lo corrigió).
+        formReenviar.addEventListener('submit', function (e) {
+          if (btnReenviar.disabled) { e.preventDefault(); return; }
+          if (inputUsuario && reenviarUsuario) reenviarUsuario.value = inputUsuario.value.trim();
+          if (!reenviarUsuario.value) {
+            e.preventDefault();
+            Swal.fire({ icon: 'info', title: 'Falta el usuario', text: 'Escribe tu usuario para reenviar el código.', confirmButtonColor: '#16a34a' });
+          }
+        });
       }
 
       // Validación rápida antes de enviar (el servidor la repite: esto es solo

@@ -24,12 +24,16 @@ const auditoria = require('./auditoria.service');
 // servidor. Ni siquiera con acceso a la tabla se puede deducir (6 dígitos son
 // solo un millón de combinaciones: un hash simple sería trivial de romper).
 
-// El código sirve 1 minuto: es solo para demostrar que quien pide el cambio
-// tiene el WhatsApp. Una ventana tan corta deja casi sin margen a que alguien
-// lo intercepte y lo use.
-const VIGENCIA_MINUTOS = 1;
+// El código sirve 2 minutos: suficiente para copiarlo del WhatsApp y escribirlo,
+// pero lo bastante corto para que casi no haya margen a interceptarlo.
+const VIGENCIA_MINUTOS = 2;
 const MAX_INTENTOS = 5;
-const MAX_ENVIOS_POR_HORA = 3;
+
+// Entre un envío y el siguiente deben pasar 2 minutos (mismo tiempo que dura el
+// código). Así, justo cuando el código vence, ya se puede pedir otro; y no se
+// puede bombardear a un empleado con mensajes. Sustituye al viejo tope de "3 por
+// hora", que en la práctica dejaba de reenviar tras unos pocos intentos.
+const COOLDOWN_MINUTOS = 2;
 
 // Una vez validado el código, se abre una ventana aparte para escribir la
 // contraseña nueva. Si la contraseña se pidiera dentro del mismo minuto, al
@@ -78,17 +82,17 @@ async function solicitarCodigo(identificador, { ip } = {}) {
     return generico;
   }
 
-  // Tope de envíos por hora: evita que alguien use el sistema para bombardear
-  // por WhatsApp a un empleado.
-  const haceUnaHora = new Date(Date.now() - 3600000).toISOString();
+  // Cooldown: si ya se envió un código hace menos de COOLDOWN_MINUTOS, no se
+  // manda otro. Evita bombardear al empleado y limita la fuerza bruta.
+  const desdeCooldown = new Date(Date.now() - COOLDOWN_MINUTOS * 60000).toISOString();
   const { count } = await supabaseAdmin
     .from('codigos_recuperacion')
     .select('id', { count: 'exact', head: true })
     .eq('usuario_id', usuario.id)
-    .gte('creado_en', haceUnaHora);
+    .gte('creado_en', desdeCooldown);
 
-  if ((count || 0) >= MAX_ENVIOS_POR_HORA) {
-    console.warn('[recuperacion] tope de envíos alcanzado para', usuario.usuario);
+  if ((count || 0) > 0) {
+    console.warn('[recuperacion] en cooldown, no se reenvía a', usuario.usuario);
     return generico;
   }
 
@@ -115,7 +119,7 @@ async function solicitarCodigo(identificador, { ip } = {}) {
   const texto =
     `🔑 *Cash R&R* — Recuperar contraseña\n\n` +
     `Tu código es: *${codigo}*\n\n` +
-    `⏱ Vence en ${VIGENCIA_MINUTOS} minuto y sirve una sola vez. Úsalo ya.\n` +
+    `⏱ Vence en ${VIGENCIA_MINUTOS} minutos y sirve una sola vez.\n` +
     `Si no lo pediste tú, ignora este mensaje y avisa al administrador.`;
 
   const envio = await callmebot.enviarWhatsApp(wa.telefono, wa.apikey, texto);
@@ -219,4 +223,5 @@ module.exports = {
   cambiarPassword,
   VIGENCIA_MINUTOS,
   VIGENCIA_TICKET_MINUTOS,
+  COOLDOWN_MINUTOS,
 };

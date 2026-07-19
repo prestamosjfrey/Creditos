@@ -23,11 +23,13 @@ const limitadorLogin = rateLimit({
   },
 });
 
-// Recuperación: más estricto todavía. Cada intento dispara un correo, así que
-// el abuso aquí molesta a terceros (y quema la cuota de envío de Supabase).
+// Recuperación / reenvío del código. El guardia real es el cooldown de 2 minutos
+// por usuario (recuperacion.service.js): este límite por IP solo evita que
+// alguien golpee el endpoint para muchos usuarios distintos. Se deja holgado
+// para no bloquear los reenvíos legítimos (uno cada 2 min).
 const limitadorRecuperar = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora
-  max: 5,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
