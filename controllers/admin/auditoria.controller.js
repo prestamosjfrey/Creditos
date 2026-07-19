@@ -7,8 +7,8 @@ async function mostrarAuditoria(req, res, next) {
     const cat = CATEGORIAS[req.query.cat] ? req.query.cat : 'todos';
     const tipos = CATEGORIAS[cat] || null;
     const [eventos, conteos] = await Promise.all([
-      auditoria.listar({ limite: 300, tipos }),
-      auditoria.contarPorCategoria(),
+      auditoria.listar({ limite: 300, tipos, actorId: req.usuario.id }),
+      auditoria.contarPorCategoria(req.usuario.id),
     ]);
     res.render('admin/auditoria/index', { titulo: 'Auditoría', eventos, cat, conteos });
   } catch (err) {

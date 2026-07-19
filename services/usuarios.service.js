@@ -1,15 +1,18 @@
 const crypto = require('crypto');
 const { supabaseAdmin } = require('../config/supabase');
 const auditoria = require('./auditoria.service');
+const callmebot = require('./callmebot.service');
 
 // Gestión del staff que inicia sesión.
 //
-// IDENTIDAD: Supabase Auth exige correo único, pero aquí varios empleados
-// comparten el correo del jefe. Por eso el login NO usa el correo real:
+// IDENTIDAD: Supabase Auth exige un correo único por cuenta, y no todos los
+// empleados tienen uno propio. Por eso la identidad de login es el USUARIO y el
+// correo que ve Supabase es sintético:
 //
 //   · usuario     -> identificador de login, único (ej. "juan.cobrador")
 //   · email_auth  -> correo sintético que ve Supabase (juan.cobrador@cartera.local)
-//   · email       -> correo REAL de contacto, puede repetirse
+//   · email       -> correo REAL de contacto. OPCIONAL, pero si se pone debe ser
+//                    ÚNICO: así también sirve para iniciar sesión sin ambigüedad.
 //
 // email_auth es un detalle de implementación: nunca se le muestra al usuario.
 
@@ -27,6 +30,29 @@ function correoInterno(usuario) {
   return `${usuario}@${DOMINIO_INTERNO}`;
 }
 
+// El correo de contacto es ÚNICO por usuario: es lo que permite iniciar sesión
+// con él sin ambigüedad. La garantía real la da el índice único de la base
+// (correo-unico-por-usuario.sql); esto solo se adelanta para dar un mensaje
+// claro en vez del error crudo de Postgres.
+//
+// `excluirId` evita que un usuario choque consigo mismo al editarse.
+async function exigirCorreoLibre(email, excluirId = null) {
+  const limpio = (email || '').trim().toLowerCase();
+  if (!limpio) return null; // el correo es opcional
+
+  let q = supabaseAdmin.from('usuarios').select('id, usuario').eq('email', limpio);
+  if (excluirId) q = q.neq('id', excluirId);
+
+  const { data } = await q.limit(1);
+  if (data && data.length) {
+    throw Object.assign(
+      new Error(`El correo ${limpio} ya lo usa el usuario "${data[0].usuario}". Cada usuario debe tener el suyo.`),
+      { status: 409 }
+    );
+  }
+  return limpio;
+}
+
 async function listarUsuarios() {
   const { data, error } = await supabaseAdmin
     .from('usuarios')
@@ -34,10 +60,12 @@ async function listarUsuarios() {
     .order('creado_en', { ascending: true });
   if (error) throw error;
 
-  // Nunca se devuelve la apikey a la vista: solo si está puesta o no.
+  // Nunca se devuelve la apikey a la vista: solo si el usuario puede recibir
+  // WhatsApp. Cuenta también la apikey heredada de CALLMEBOT_DESTINOS cuando su
+  // teléfono ya estaba configurado ahí (ver callmebot.resolverWhatsApp).
   return (data || []).map((u) => ({
     ...u,
-    tieneWhatsApp: !!(u.telefono && u.callmebot_apikey),
+    tieneWhatsApp: !!callmebot.resolverWhatsApp(u),
     callmebot_apikey: undefined,
   }));
 }
@@ -52,14 +80,21 @@ async function obtenerUsuario(id) {
   return data;
 }
 
-// Busca por identificador de login: acepta el usuario o el correo de Auth.
-// Aceptar el correo evita dejar fuera a las cuentas creadas antes de que
-// existiera el campo `usuario`.
+// Busca por identificador de login. Se acepta, en este orden:
+//   1. el nombre de usuario        (juan.cobrador)   — siempre único
+//   2. el correo interno de Auth   (juan.cobrador@cartera.local o el histórico)
+//   3. el correo REAL de contacto  (jefe@gmail.com)  — solo si es de un usuario
 //
-// El identificador viene del formulario de login, así que NO se interpola crudo
-// en un filtro .or(): las comas y paréntesis son sintaxis de PostgREST y
-// permitirían reescribir la condición. Se limita a los caracteres válidos de un
-// usuario o un correo, y las dos búsquedas van por separado.
+// El caso 3 tiene truco: el correo de contacto PUEDE REPETIRSE (varios
+// empleados comparten el del jefe). Si lo comparten dos o más, es imposible
+// saber quién intenta entrar, así que se devuelve { ambiguo: true } y el login
+// le pide su nombre de usuario en vez de fallar sin explicar por qué.
+//
+// El identificador viene del formulario, así que NO se interpola crudo en un
+// filtro .or(): las comas y paréntesis son sintaxis de PostgREST y permitirían
+// reescribir la condición. Se limita a los caracteres válidos de un usuario o un
+// correo, y cada búsqueda va por separado con igualdad exacta (nunca LIKE, cuyos
+// comodines % y _ convertirían un correo en un patrón de búsqueda).
 async function buscarPorIdentificador(identificador) {
   const id = String(identificador || '')
     .trim()
@@ -74,9 +109,21 @@ async function buscarPorIdentificador(identificador) {
     .from('usuarios').select(columnas).eq('usuario', id).maybeSingle();
   if (porUsuario) return porUsuario;
 
-  const { data: porCorreo } = await supabaseAdmin
+  const { data: porCorreoAuth } = await supabaseAdmin
     .from('usuarios').select(columnas).eq('email_auth', id).maybeSingle();
-  return porCorreo || null;
+  if (porCorreoAuth) return porCorreoAuth;
+
+  // Correo de contacto. Se piden 2 filas para detectar si está repetido.
+  // Igualdad exacta: los correos se guardan normalizados en minúsculas
+  // (normalizeEmail en middlewares/validar.js) y el identificador ya viene en
+  // minúsculas, así que coinciden sin necesidad de LIKE.
+  const { data: porContacto } = await supabaseAdmin
+    .from('usuarios').select(columnas).eq('email', id).limit(2);
+
+  if (porContacto && porContacto.length === 1) return porContacto[0];
+  if (porContacto && porContacto.length > 1) return { ambiguo: true };
+
+  return null;
 }
 
 async function crearUsuario({ usuario, nombre_completo, email, telefono, rol, password, callmebot_apikey, actorId }) {
@@ -90,6 +137,8 @@ async function crearUsuario({ usuario, nombre_completo, email, telefono, rol, pa
   const { data: existe } = await supabaseAdmin
     .from('usuarios').select('id').eq('usuario', user).maybeSingle();
   if (existe) throw Object.assign(new Error(`El usuario "${user}" ya existe. Elige otro.`), { status: 409 });
+
+  const correo = await exigirCorreoLibre(email);
 
   const emailAuth = correoInterno(user);
 
@@ -112,8 +161,8 @@ async function crearUsuario({ usuario, nombre_completo, email, telefono, rol, pa
       usuario: user,
       email_auth: emailAuth,
       nombre_completo: (nombre_completo || '').trim(),
-      email: (email || '').trim() || null,     // correo REAL, puede repetirse
-      telefono: (telefono || '').trim() || null,
+      email: correo,                                              // correo de contacto, ÚNICO
+      telefono: callmebot.normalizarTelefono(telefono) || null,   // siempre con indicativo 57
       callmebot_apikey: (callmebot_apikey || '').trim() || null,
       rol,
       activo: true,
@@ -141,8 +190,8 @@ async function editarUsuario(id, { nombre_completo, email, telefono, rol, callme
 
   const cambios = {
     nombre_completo: (nombre_completo || '').trim(),
-    email: (email || '').trim() || null,
-    telefono: (telefono || '').trim() || null,
+    email: await exigirCorreoLibre(email, id),                  // único entre usuarios
+    telefono: callmebot.normalizarTelefono(telefono) || null,   // siempre con indicativo 57
   };
   if (rol) cambios.rol = rol;
   // Una apikey vacía no borra la que ya había: para quitarla se manda '-'.
@@ -213,8 +262,8 @@ async function establecerPassword(id, password, actorId) {
 async function editarPerfilPropio(id, { nombre_completo, email, telefono, numero_documento, callmebot_apikey }) {
   const cambios = {
     nombre_completo: (nombre_completo || '').trim(),
-    email: (email || '').trim() || null,
-    telefono: (telefono || '').trim() || null,
+    email: await exigirCorreoLibre(email, id),                  // único entre usuarios
+    telefono: callmebot.normalizarTelefono(telefono) || null,   // siempre con indicativo 57
     numero_documento: (numero_documento || '').trim() || null,
   };
   // Vacío = no tocar la apikey que ya hubiera; '-' = borrarla.

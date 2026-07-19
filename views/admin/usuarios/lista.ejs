@@ -83,6 +83,16 @@
                   <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" /></svg>
                 </a>
 
+                <form action="/admin/usuarios/<%= u.id %>/probar-whatsapp" method="POST" class="form-probar" data-usuario="<%= u.usuario %>" data-listo="<%= u.tieneWhatsApp %>">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <button type="submit"
+                    class="action-btn <%= u.tieneWhatsApp ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-300' %>"
+                    title="<%= u.tieneWhatsApp ? 'Enviar WhatsApp de prueba' : 'Sin teléfono o apikey: no se puede probar' %>"
+                    aria-label="Enviar WhatsApp de prueba">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" /></svg>
+                  </button>
+                </form>
+
                 <form action="/admin/usuarios/<%= u.id %>/clave" method="POST" class="form-clave" data-usuario="<%= u.usuario %>">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                   <button type="submit" class="action-btn" title="Restablecer contraseña" aria-label="Restablecer contraseña">
@@ -132,6 +142,41 @@
         });
       });
     }
+
+    // Prueba de WhatsApp: avisa si falta configuración antes de gastar el envío.
+    document.querySelectorAll('.form-probar').forEach(function (f) {
+      f.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (f.dataset.listo !== 'true') {
+          Swal.fire({
+            icon: 'info',
+            title: 'Falta configurar el WhatsApp',
+            html: '<strong>' + f.dataset.usuario + '</strong> necesita <strong>teléfono</strong> y <strong>apikey de CallMeBot</strong>.<br>Edita el usuario para agregarlos.',
+            confirmButtonColor: '#16a34a',
+          });
+          return;
+        }
+        Swal.fire({
+          icon: 'question',
+          title: '¿Enviar WhatsApp de prueba?',
+          html: 'Se enviará un mensaje de prueba al WhatsApp de <strong>' + f.dataset.usuario + '</strong>.',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, enviar',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#16a34a',
+        }).then(function (r) {
+          if (!r.isConfirmed) return;
+          // CallMeBot puede tardar unos segundos: se avisa para que no parezca colgado.
+          Swal.fire({
+            title: 'Enviando…',
+            text: 'Esto puede tardar unos segundos.',
+            allowOutsideClick: false,
+            didOpen: function () { Swal.showLoading(); },
+          });
+          f.submit();
+        });
+      });
+    });
 
     // Confirmación antes de restablecer una clave: invalida la que el empleado
     // esté usando ahora mismo.

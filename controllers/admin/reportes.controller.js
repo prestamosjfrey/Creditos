@@ -19,7 +19,7 @@ async function mostrarReporte(req, res, next) {
     if (!reporte) return res.status(404).render('errores/404');
 
     const rango = resolverRango(req.query, 'este_mes');
-    const datos = await reporte.calcular(rango);
+    const datos = await reporte.calcular(rango, req.usuario.id);
 
     res.render('admin/reportes/ver', {
       titulo: reporte.titulo,
@@ -42,7 +42,7 @@ async function exportarReporte(req, res, next) {
     if (!reporte) return res.status(404).render('errores/404');
 
     const rango = resolverRango(req.query, 'este_mes');
-    const { columnas, filas } = await reporte.calcular(rango);
+    const { columnas, filas } = await reporte.calcular(rango, req.usuario.id);
 
     // Excel y LibreOffice ejecutan como fórmula cualquier celda que empiece por
     // = + - @ (o tabulador/retorno). Un nombre de cliente como =HYPERLINK(...)

@@ -47,12 +47,15 @@ function construirSerie(cuotasMora, hoy) {
   };
 }
 
-async function obtenerCentroMora() {
+async function obtenerCentroMora(usuarioId) {
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const hoyISO = formatoISO(hoy);
   const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   const inicioMesAnt = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
 
+  // Todo acotado a los préstamos de este usuario (por creado_por). Los conteos
+  // de préstamos/clientes son la base de los porcentajes, así que también van
+  // acotados para que las cifras cuadren entre sí.
   const [
     { data: cuotasMora, error: e1 },
     { count: totalPrestamos },
@@ -61,14 +64,15 @@ async function obtenerCentroMora() {
     { data: pagos },
   ] = await Promise.all([
     supabaseAdmin.from('cuotas')
-      .select('id, numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, estado, prestamo_id, prestamos:prestamo_id(id, numero, numero_cuotas, monto_capital, monto_total_a_pagar, valor_cuota, frecuencia_pago, cliente_id, perfiles:clientes(nombre_completo, numero_documento, telefono))')
+      .select('id, numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, estado, prestamo_id, prestamos:prestamo_id!inner(id, numero, numero_cuotas, monto_capital, monto_total_a_pagar, valor_cuota, frecuencia_pago, cliente_id, creado_por, perfiles:clientes(nombre_completo, numero_documento, telefono))')
+      .eq('prestamos.creado_por', usuarioId)
       .in('estado', ['pendiente', 'parcial', 'vencida'])
       .lt('fecha_vencimiento', hoyISO)
       .order('fecha_vencimiento', { ascending: true }),
-    supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true }),
+    supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true }).eq('creado_por', usuarioId),
     supabaseAdmin.from('clientes').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('prestamos').select('monto_capital').in('estado', ['activo', 'en_mora']),
-    supabaseAdmin.from('pagos').select('monto, fecha_pago').gte('fecha_pago', formatoISO(inicioMesAnt)),
+    supabaseAdmin.from('prestamos').select('monto_capital').eq('creado_por', usuarioId).in('estado', ['activo', 'en_mora']),
+    supabaseAdmin.from('pagos').select('monto, fecha_pago, prestamos:prestamo_id!inner(creado_por)').eq('prestamos.creado_por', usuarioId).gte('fecha_pago', formatoISO(inicioMesAnt)),
   ]);
   if (e1) throw e1;
 

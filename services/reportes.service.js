@@ -27,6 +27,14 @@ function acotar(query, campo, { desde, hasta }) {
   return query;
 }
 
+// Cada reporte muestra SOLO los datos del usuario. `col` es la columna de dueño
+// del recurso (creado_por, registrado_por…). Para recursos que cuelgan de un
+// préstamo (pagos, cuotas) se filtra por el dueño del préstamo con !inner en la
+// propia consulta, no aquí.
+function delUsuario(query, col, usuarioId) {
+  return query.eq(col, usuarioId);
+}
+
 function variacion(actual, anterior) {
   if (!anterior) return null; // sin base de comparación
   return Math.round(((actual - anterior) / anterior) * 1000) / 10;
@@ -49,10 +57,11 @@ function serieMensual(filas) {
 // ---------------------------------------------------------------------------
 // 1. COLOCACIÓN — el dinero que salió a la calle en el periodo
 // ---------------------------------------------------------------------------
-async function colocacion(rango) {
+async function colocacion(rango, usuarioId) {
   let q = supabaseAdmin
     .from('prestamos')
     .select('numero, fecha_inicio, monto_capital, monto_total_a_pagar, numero_cuotas, frecuencia_pago, estado, perfiles:clientes(nombre_completo, numero_documento)');
+  q = delUsuario(q, 'creado_por', usuarioId);
   const { data, error } = await acotar(q, 'fecha_inicio', rango).order('fecha_inicio', { ascending: false });
   if (error) throw error;
 
@@ -66,7 +75,7 @@ async function colocacion(rango) {
   const prev = rangoAnterior(rango);
   if (prev) {
     const { data: dPrev } = await acotar(
-      supabaseAdmin.from('prestamos').select('monto_capital'), 'fecha_inicio', prev
+      delUsuario(supabaseAdmin.from('prestamos').select('monto_capital'), 'creado_por', usuarioId), 'fecha_inicio', prev
     );
     cambio = variacion(capital, (dPrev || []).reduce((a, p) => a + Number(p.monto_capital), 0));
   }
@@ -115,10 +124,11 @@ async function colocacion(rango) {
 // ---------------------------------------------------------------------------
 // 2. RECAUDO — el dinero que entró en el periodo
 // ---------------------------------------------------------------------------
-async function recaudo(rango) {
+async function recaudo(rango, usuarioId) {
   let q = supabaseAdmin
     .from('pagos')
-    .select('monto, fecha_pago, metodo, tipo, prestamos:prestamo_id(numero, perfiles:clientes(nombre_completo, numero_documento))');
+    .select('monto, fecha_pago, metodo, tipo, prestamos:prestamo_id!inner(numero, creado_por, perfiles:clientes(nombre_completo, numero_documento))')
+    .eq('prestamos.creado_por', usuarioId);
   const { data, error } = await acotar(q, 'fecha_pago', rango).order('fecha_pago', { ascending: false });
   if (error) throw error;
 
@@ -128,7 +138,9 @@ async function recaudo(rango) {
   let cambio = null;
   const prev = rangoAnterior(rango);
   if (prev) {
-    const { data: dPrev } = await acotar(supabaseAdmin.from('pagos').select('monto'), 'fecha_pago', prev);
+    const { data: dPrev } = await acotar(
+      supabaseAdmin.from('pagos').select('monto, prestamos:prestamo_id!inner(creado_por)').eq('prestamos.creado_por', usuarioId),
+      'fecha_pago', prev);
     cambio = variacion(total, (dPrev || []).reduce((a, p) => a + Number(p.monto), 0));
   }
 
@@ -188,11 +200,12 @@ async function recaudo(rango) {
 // Este reporte NO se filtra por el rango: la mora es una foto de HOY. El rango
 // se ignora a propósito y la vista lo advierte.
 // ---------------------------------------------------------------------------
-async function mora() {
+async function mora(rango, usuarioId) {
   const hoy = formatoISO(new Date());
   const { data, error } = await supabaseAdmin
     .from('cuotas')
-    .select('numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, prestamos:prestamo_id(numero, cliente_id, perfiles:clientes(nombre_completo, numero_documento, telefono))')
+    .select('numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, prestamos:prestamo_id!inner(numero, cliente_id, creado_por, perfiles:clientes(nombre_completo, numero_documento, telefono))')
+    .eq('prestamos.creado_por', usuarioId)
     .in('estado', ['pendiente', 'parcial', 'vencida'])
     .lt('fecha_vencimiento', hoy)
     .order('fecha_vencimiento', { ascending: true });
@@ -277,10 +290,11 @@ async function mora() {
 // ---------------------------------------------------------------------------
 // 4. RENTABILIDAD — cuánto interés se ganó de verdad en el periodo
 // ---------------------------------------------------------------------------
-async function rentabilidad(rango) {
+async function rentabilidad(rango, usuarioId) {
   let q = supabaseAdmin
     .from('pagos')
-    .select('monto, fecha_pago, prestamos:prestamo_id(numero, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo))');
+    .select('monto, fecha_pago, prestamos:prestamo_id!inner(numero, creado_por, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo))')
+    .eq('prestamos.creado_por', usuarioId);
   const { data, error } = await acotar(q, 'fecha_pago', rango).order('fecha_pago', { ascending: false });
   if (error) throw error;
 
@@ -355,10 +369,12 @@ async function rentabilidad(rango) {
 // ---------------------------------------------------------------------------
 // 5. FLUJO DE CAJA — entradas y salidas reales del periodo
 // ---------------------------------------------------------------------------
-async function flujoCaja(rango) {
+async function flujoCaja(rango, usuarioId) {
   // movimientos_caja marca la fecha en creado_en (timestamptz), no en una
   // columna date: el extremo 'hasta' se extiende al final del día.
-  let q = supabaseAdmin.from('movimientos_caja').select('tipo, monto, concepto, origen, creado_en');
+  // Cada usuario ve solo SU caja (registrado_por).
+  let q = supabaseAdmin.from('movimientos_caja').select('tipo, monto, concepto, origen, creado_en')
+    .eq('registrado_por', usuarioId);
   if (rango.desde) q = q.gte('creado_en', `${rango.desde}T00:00:00`);
   if (rango.hasta) q = q.lte('creado_en', `${rango.hasta}T23:59:59.999`);
   const { data, error } = await q.order('creado_en', { ascending: false });
@@ -417,10 +433,11 @@ async function flujoCaja(rango) {
 // ---------------------------------------------------------------------------
 // 6. PROYECCIÓN DE COBROS — lo que se espera cobrar en el rango
 // ---------------------------------------------------------------------------
-async function proyeccion(rango) {
+async function proyeccion(rango, usuarioId) {
   let q = supabaseAdmin
     .from('cuotas')
-    .select('numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, estado, prestamos:prestamo_id(numero, perfiles:clientes(nombre_completo, telefono))')
+    .select('numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, estado, prestamos:prestamo_id!inner(numero, creado_por, perfiles:clientes(nombre_completo, telefono))')
+    .eq('prestamos.creado_por', usuarioId)
     .in('estado', ['pendiente', 'parcial']);
   const { data, error } = await acotar(q, 'fecha_vencimiento', rango).order('fecha_vencimiento', { ascending: true });
   if (error) throw error;
@@ -466,7 +483,10 @@ async function proyeccion(rango) {
 // ---------------------------------------------------------------------------
 // 7. CLIENTES — altas del periodo y comportamiento de pago
 // ---------------------------------------------------------------------------
-async function clientes(rango) {
+async function clientes(rango, usuarioId) {
+  // Los clientes son compartidos, así que el reporte lista TODOS los clientes
+  // dados de alta en el periodo. Pero el capital que se les colocó cuenta solo
+  // los préstamos de ESTE usuario (cada quien ve lo que él prestó).
   let q = supabaseAdmin.from('clientes').select('id, nombre_completo, numero_documento, telefono, activo, score_credito, creado_en');
   if (rango.desde) q = q.gte('creado_en', `${rango.desde}T00:00:00`);
   if (rango.hasta) q = q.lte('creado_en', `${rango.hasta}T23:59:59.999`);
@@ -475,12 +495,12 @@ async function clientes(rango) {
 
   const nuevos = data || [];
 
-  // Préstamos de esos clientes, para saber cuánto se les ha colocado.
+  // Préstamos DE ESTE USUARIO a esos clientes.
   const ids = nuevos.map((c) => c.id);
   const porCliente = new Map();
   if (ids.length) {
     const { data: prest } = await supabaseAdmin
-      .from('prestamos').select('cliente_id, monto_capital').in('cliente_id', ids);
+      .from('prestamos').select('cliente_id, monto_capital').eq('creado_por', usuarioId).in('cliente_id', ids);
     (prest || []).forEach((p) => {
       const cur = porCliente.get(p.cliente_id) || { n: 0, capital: 0 };
       cur.n += 1; cur.capital += Number(p.monto_capital);
@@ -536,10 +556,11 @@ async function clientes(rango) {
 // ---------------------------------------------------------------------------
 // 8. CRÉDITOS TOMADOS — la deuda propia (pasivos)
 // ---------------------------------------------------------------------------
-async function creditosTomados(rango) {
+async function creditosTomados(rango, usuarioId) {
   let q = supabaseAdmin
     .from('creditos_tomados')
-    .select('id, acreedor, fecha_inicio, monto_capital, monto_total_a_pagar, numero_cuotas, frecuencia_pago, estado');
+    .select('id, acreedor, fecha_inicio, monto_capital, monto_total_a_pagar, numero_cuotas, frecuencia_pago, estado')
+    .eq('creado_por', usuarioId);
   const { data, error } = await acotar(q, 'fecha_inicio', rango).order('fecha_inicio', { ascending: false });
   if (error) throw error;
 

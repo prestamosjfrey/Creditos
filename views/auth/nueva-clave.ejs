@@ -23,9 +23,22 @@
 
     <!-- Formulario -->
     <section class="login-card">
+      <% var _paso = (typeof paso !== 'undefined' && paso === 2) ? 2 : 1; %>
+
       <p class="eyebrow">Restablecer contraseña</p>
-      <h1 class="login-title">Nueva contraseña</h1>
-      <p class="login-sub">Escribe el código que recibiste por WhatsApp y elige tu contraseña nueva.</p>
+      <h1 class="login-title"><%= _paso === 1 ? 'Verifica el código' : 'Nueva contraseña' %></h1>
+      <p class="login-sub">
+        <%= _paso === 1
+              ? 'Escribe el código de 6 dígitos que te llegó por WhatsApp.'
+              : 'Código verificado. Ahora elige tu contraseña nueva.' %>
+      </p>
+
+      <!-- Indicador de paso -->
+      <div style="display:flex;align-items:center;gap:.5rem;margin:.75rem 0 1rem;">
+        <span style="flex:1;height:3px;border-radius:99px;background:<%= _paso >= 1 ? '#16a34a' : '#e2e8f0' %>"></span>
+        <span style="flex:1;height:3px;border-radius:99px;background:<%= _paso >= 2 ? '#16a34a' : '#e2e8f0' %>"></span>
+        <span style="font-size:.7rem;color:#94a3b8;white-space:nowrap;">Paso <%= _paso %> de 2</span>
+      </div>
 
       <% if (typeof exito !== 'undefined' && exito) { %>
         <div class="aviso aviso-ok">
@@ -41,7 +54,9 @@
         </div>
       <% } %>
 
-      <form action="/auth/nueva-clave" method="POST" id="form-clave" data-no-loading>
+      <% if (_paso === 1) { %>
+      <!-- ===== PASO 1: verificar el código ===== -->
+      <form action="/auth/verificar-codigo" method="POST" id="form-codigo" data-no-loading>
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
 
         <div class="field">
@@ -62,10 +77,22 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
             </span>
             <input type="text" id="codigo" name="codigo" required inputmode="numeric" pattern="[0-9]{6}"
-                   maxlength="6" placeholder="6 dígitos" autocomplete="one-time-code"
+                   maxlength="6" placeholder="6 dígitos" autocomplete="one-time-code" autofocus
                    style="letter-spacing:.4em;font-weight:600;" />
           </div>
+          <p id="cuenta-regresiva" style="margin:.4rem 0 0;font-size:.75rem;color:#b45309;"></p>
         </div>
+
+        <button type="submit" class="btn-entrar">
+          Verificar código
+          <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+
+      <% } else { %>
+      <!-- ===== PASO 2: elegir la contraseña ===== -->
+      <form action="/auth/nueva-clave" method="POST" id="form-clave" data-no-loading>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
 
         <div class="field">
           <label for="password">Nueva contraseña</label>
@@ -98,6 +125,7 @@
           <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </form>
+      <% } %>
 
       <div class="forgot">
         <a href="/auth/recuperar">
@@ -126,6 +154,24 @@
         codigo.addEventListener('input', function () {
           codigo.value = codigo.value.replace(/\D/g, '').slice(0, 6);
         });
+      }
+
+      // Cuenta regresiva del código: dura 1 minuto, así que conviene que el
+      // usuario vea cuánto le queda en vez de descubrirlo al fallar.
+      var reloj = document.getElementById('cuenta-regresiva');
+      if (reloj) {
+        var quedan = 60;
+        var tic = setInterval(function () {
+          quedan--;
+          if (quedan > 0) {
+            reloj.textContent = '⏱ El código vence en ' + quedan + ' segundo' + (quedan === 1 ? '' : 's');
+          } else {
+            clearInterval(tic);
+            reloj.style.color = '#dc2626';
+            reloj.textContent = '⚠ El código ya venció. Solicita uno nuevo.';
+          }
+        }, 1000);
+        reloj.textContent = '⏱ El código vence en 60 segundos';
       }
 
       // Validación rápida antes de enviar (el servidor la repite: esto es solo

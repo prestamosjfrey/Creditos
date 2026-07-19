@@ -22,11 +22,14 @@ function tipoRealValido(buffer) {
   });
 }
 
-async function listarDocumentos(clienteId) {
+// Documentos PRIVADOS por usuario: aunque el cliente sea compartido, cada quien
+// ve solo los que él subió (subido_por).
+async function listarDocumentos(clienteId, usuarioId) {
   const { data, error } = await supabaseAdmin
     .from('documentos_cliente')
     .select('*')
     .eq('cliente_id', clienteId)
+    .eq('subido_por', usuarioId)
     .order('creado_en', { ascending: false });
   if (error) throw error;
   return data;
@@ -66,22 +69,21 @@ async function subirDocumento({ clienteId, archivo, subidoPor }) {
   }
 }
 
-// Busca un documento EXIGIENDO que pertenezca al cliente indicado.
-//
-// Antes se resolvía solo por documentoId: la ruta /admin/clientes/:id/documentos/:docId
-// aceptaba cualquier docId aunque fuera de otro cliente, y la app actuaba sobre
-// él igualmente. Atar la búsqueda al cliente de la URL evita que un enlace
-// manipulado mezcle expedientes y mantiene coherente la auditoría por cliente.
-async function obtenerDocumentoDeCliente(documentoId, clienteId) {
-  const { data, error } = await supabaseAdmin
+// Busca un documento EXIGIENDO que sea del cliente indicado Y del usuario que
+// lo pide (subido_por). Así un usuario no puede ver ni borrar el documento que
+// otro subió sobre el mismo cliente compartido, ni mezclar expedientes por id.
+async function obtenerDocumentoDeCliente(documentoId, clienteId, usuarioId) {
+  let q = supabaseAdmin
     .from('documentos_cliente')
-    .select('id, ruta_storage, cliente_id')
+    .select('id, ruta_storage, cliente_id, subido_por')
     .eq('id', documentoId)
-    .eq('cliente_id', clienteId)
-    .maybeSingle();
+    .eq('cliente_id', clienteId);
+  if (usuarioId) q = q.eq('subido_por', usuarioId);
+
+  const { data, error } = await q.maybeSingle();
   if (error) throw error;
   if (!data) {
-    const err = new Error('El documento no existe o no pertenece a este cliente.');
+    const err = new Error('El documento no existe o no es tuyo.');
     err.status = 404;
     throw err;
   }
@@ -89,8 +91,8 @@ async function obtenerDocumentoDeCliente(documentoId, clienteId) {
 }
 
 // URL firmada temporal para ver/descargar el archivo privado (válida 60s).
-async function obtenerUrlFirmada(documentoId, clienteId) {
-  const doc = await obtenerDocumentoDeCliente(documentoId, clienteId);
+async function obtenerUrlFirmada(documentoId, clienteId, usuarioId) {
+  const doc = await obtenerDocumentoDeCliente(documentoId, clienteId, usuarioId);
 
   const { data, error: errorUrl } = await supabaseAdmin.storage
     .from(BUCKET)
@@ -100,8 +102,8 @@ async function obtenerUrlFirmada(documentoId, clienteId) {
   return data.signedUrl;
 }
 
-async function eliminarDocumento(documentoId, clienteId) {
-  const doc = await obtenerDocumentoDeCliente(documentoId, clienteId);
+async function eliminarDocumento(documentoId, clienteId, usuarioId) {
+  const doc = await obtenerDocumentoDeCliente(documentoId, clienteId, usuarioId);
 
   await supabaseAdmin.storage.from(BUCKET).remove([doc.ruta_storage]);
 

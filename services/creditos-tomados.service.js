@@ -56,20 +56,36 @@ async function crearCreditoConPlan(datos) {
   return credito;
 }
 
-async function obtenerCreditoConCuotas(id) {
-  const [{ data: credito, error: e1 }, { data: cuotas, error: e2 }, pagosRes] = await Promise.all([
-    supabaseAdmin.from('creditos_tomados').select('*').eq('id', id).single(),
+// Detalle EXIGIENDO que el crédito sea del usuario (creado_por). Si no es suyo,
+// credito=null y el controlador responde 404 (evita ver el crédito de otro por
+// su id en la URL).
+async function obtenerCreditoConCuotas(id, usuarioId) {
+  let q = supabaseAdmin.from('creditos_tomados').select('*').eq('id', id);
+  if (usuarioId) q = q.eq('creado_por', usuarioId);
+  const { data: credito, error: e1 } = await q.maybeSingle();
+  if (e1) throw e1;
+  if (!credito) return { credito: null, cuotas: [], pagos: [] };
+
+  const [{ data: cuotas, error: e2 }, pagosRes] = await Promise.all([
     supabaseAdmin.from('cuotas_credito_tomado').select('*').eq('credito_id', id).order('numero_cuota'),
     supabaseAdmin.from('pagos_credito_tomado').select('*').eq('credito_id', id).order('creado_en', { ascending: false }),
   ]);
-  if (e1) throw e1;
   if (e2) throw e2;
   // Si aún no se corrió la migración de pagos_credito_tomado, el historial va vacío.
   const pagos = pagosRes && !pagosRes.error ? (pagosRes.data || []) : [];
   return { credito, cuotas: cuotas || [], pagos };
 }
 
+// Verifica que el crédito sea del usuario antes de operar sobre él.
+async function exigirPropiedad(creditoId, usuarioId) {
+  const { data } = await supabaseAdmin
+    .from('creditos_tomados').select('id').eq('id', creditoId).eq('creado_por', usuarioId).maybeSingle();
+  if (!data) throw Object.assign(new Error('El crédito no existe o no es tuyo.'), { status: 404 });
+}
+
 async function pagarCuota({ creditoId, cuotaId, monto, fechaPago, notas, registradoPor }) {
+  await exigirPropiedad(creditoId, registradoPor);
+
   // Marcar cuota como pagada
   const { error: e1 } = await supabaseAdmin
     .from('cuotas_credito_tomado')
@@ -111,6 +127,8 @@ async function pagarCuota({ creditoId, cuotaId, monto, fechaPago, notas, registr
 // pendientes (completas, en orden), registra UN egreso de caja con el método y
 // marca el crédito como pagado si se saldó todo.
 async function registrarPagoCreditoTomado({ creditoId, monto, metodo, fechaPago, notas, registradoPor }) {
+  await exigirPropiedad(creditoId, registradoPor);
+
   const montoTotal = Number(monto) || 0;
   if (montoTotal <= 0) throw new Error('El monto debe ser mayor a cero.');
 
@@ -182,13 +200,22 @@ async function registrarPagoCreditoTomado({ creditoId, monto, metodo, fechaPago,
   return { cuotasPagadas: cubiertas.length, montoAplicado, excedente: montoTotal - montoAplicado };
 }
 
-async function listarTodos() {
-  const [{ data: creditos, error: e1 }, { data: todasCuotas, error: e2 }] = await Promise.all([
-    supabaseAdmin.from('creditos_tomados').select('*').order('creado_en', { ascending: false }),
-    supabaseAdmin.from('cuotas_credito_tomado').select('credito_id, estado, monto, fecha_vencimiento'),
-  ]);
+async function listarTodos(usuarioId) {
+  const { data: creditos, error: e1 } = await supabaseAdmin
+    .from('creditos_tomados').select('*')
+    .eq('creado_por', usuarioId)
+    .order('creado_en', { ascending: false });
   if (e1) throw e1;
-  if (e2) throw e2;
+
+  // Cuotas solo de los créditos de este usuario.
+  const ids = (creditos || []).map((c) => c.id);
+  let todasCuotas = [];
+  if (ids.length) {
+    const { data, error: e2 } = await supabaseAdmin
+      .from('cuotas_credito_tomado').select('credito_id, estado, monto, fecha_vencimiento').in('credito_id', ids);
+    if (e2) throw e2;
+    todasCuotas = data || [];
+  }
 
   const hoy = formatoISO(new Date());
   return (creditos || []).map((c) => {

@@ -133,17 +133,22 @@ async function mostrarFicha(req, res, next) {
       .single();
     if (errorCliente || !cliente) return res.status(404).render('errores/404');
 
+    // El cliente es compartido, pero los préstamos y cuotas que se muestran en
+    // su ficha son SOLO los de este usuario (creado_por).
+    const uid = req.usuario.id;
     const { data: prestamos, error: errorPrestamos } = await supabaseAdmin
       .from('prestamos')
       .select('*')
       .eq('cliente_id', id)
+      .eq('creado_por', uid)
       .order('creado_en', { ascending: false });
     if (errorPrestamos) throw errorPrestamos;
 
     const { data: cuotas, error: errorCuotas } = await supabaseAdmin
       .from('cuotas')
-      .select('*, prestamos!inner(cliente_id)')
-      .eq('prestamos.cliente_id', id);
+      .select('*, prestamos!inner(cliente_id, creado_por)')
+      .eq('prestamos.cliente_id', id)
+      .eq('prestamos.creado_por', uid);
     if (errorCuotas) throw errorCuotas;
 
     // Usar el score persistido; si no existe, calcularlo ahora y guardarlo.
@@ -160,7 +165,10 @@ async function mostrarFicha(req, res, next) {
     }
     const infoScore = scoreCredito !== null ? scoreService.etiquetaScore(scoreCredito) : null;
 
-    const documentos = await documentosService.listarDocumentos(id);
+    // Documentos y nota: PRIVADOS por usuario (aunque el cliente sea compartido).
+    const documentos = await documentosService.listarDocumentos(id, uid);
+    const { data: nota } = await supabaseAdmin
+      .from('notas_cliente').select('texto').eq('cliente_id', id).eq('usuario_id', uid).maybeSingle();
 
     res.render('admin/clientes/ficha', {
       titulo: cliente.nombre_completo,
@@ -171,6 +179,7 @@ async function mostrarFicha(req, res, next) {
       infoScore,
       scoreDetalle,
       documentos,
+      notaPrivada: nota?.texto || '',
       tab: req.query.tab || 'historial',
     });
   } catch (err) {
@@ -259,10 +268,17 @@ async function guardarNotas(req, res, next) {
   const { id } = req.params;
   const { notas_admin } = req.body;
   try {
+    // Nota PRIVADA de este usuario sobre el cliente compartido: upsert en
+    // notas_cliente por (cliente_id, usuario_id). La columna clientes.notas_admin
+    // ya no se usa (era una sola nota compartida por todos).
     const { error } = await supabaseAdmin
-      .from('clientes')
-      .update({ notas_admin: notas_admin || null })
-      .eq('id', id);
+      .from('notas_cliente')
+      .upsert({
+        cliente_id: id,
+        usuario_id: req.usuario.id,
+        texto: notas_admin || null,
+        actualizado_en: new Date().toISOString(),
+      }, { onConflict: 'cliente_id,usuario_id' });
     if (error) throw error;
 
     res.redirect(`/admin/clientes/${id}?tab=notas&ok=${encodeURIComponent('Notas guardadas.')}`);
@@ -295,7 +311,7 @@ async function verDocumento(req, res, next) {
   try {
     // Se pasa el id del cliente de la URL: el servicio exige que el documento
     // sea suyo (ver documentos.service.js).
-    const url = await documentosService.obtenerUrlFirmada(req.params.docId, req.params.id);
+    const url = await documentosService.obtenerUrlFirmada(req.params.docId, req.params.id, req.usuario.id);
     res.redirect(url);
   } catch (err) {
     next(err);
@@ -305,7 +321,7 @@ async function verDocumento(req, res, next) {
 async function eliminarDocumento(req, res, next) {
   const { id, docId } = req.params;
   try {
-    await documentosService.eliminarDocumento(docId, id);
+    await documentosService.eliminarDocumento(docId, id, req.usuario.id);
     await auditoria.registrar({
       tipo: 'documento_eliminado',
       descripcion: 'Documento eliminado del cliente.',

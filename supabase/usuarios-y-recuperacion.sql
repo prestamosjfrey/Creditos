@@ -56,9 +56,12 @@ update public.usuarios u
  where u.email is null;
 
 -- ---------------------------------------------------------------------
--- 3) Unicidad SOLO donde toca.
+-- 3) Unicidad de los identificadores.
 --    `usuario` y `email_auth` son identificadores: únicos.
---    `email` (contacto real) NO lleva unique: debe poder repetirse.
+--
+--    NOTA: `email` (contacto real) TAMBIÉN pasó a ser único después, para poder
+--    iniciar sesión con él sin ambigüedad. Ese índice se crea en
+--    correo-unico-por-usuario.sql (es opcional y admite varios NULL).
 -- ---------------------------------------------------------------------
 create unique index if not exists idx_usuarios_usuario on public.usuarios(lower(usuario));
 create unique index if not exists idx_usuarios_email_auth on public.usuarios(lower(email_auth));

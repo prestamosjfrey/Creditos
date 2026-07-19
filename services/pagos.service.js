@@ -18,6 +18,15 @@ const realtime = require('./realtime');
 // arrastrar la operación: recalcular el score y avisar por realtime.
 
 async function registrarAbono({ prestamoId, cuotaId, monto, fechaPago, metodo, notas, registradoPor, tipo, accion }) {
+  // El préstamo debe ser del usuario que registra el abono. Sin esto, alguien
+  // podría abonar (y ver el comprobante de) un préstamo de otro usuario poniendo
+  // su id en el POST. registradoPor es el usuario autenticado.
+  const { data: dueno } = await supabaseAdmin
+    .from('prestamos').select('id').eq('id', prestamoId).eq('creado_por', registradoPor).maybeSingle();
+  if (!dueno) {
+    throw Object.assign(new Error('El préstamo no existe o no es tuyo.'), { status: 404 });
+  }
+
   const esInteres = tipo === 'interes';
 
   const { data: pagoId, error } = esInteres

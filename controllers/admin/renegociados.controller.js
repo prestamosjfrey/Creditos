@@ -3,18 +3,20 @@ const { formatoISO } = require('../../utils/fechas');
 
 async function mostrarRenegociados(req, res, next) {
   try {
-    // Todos los pagos de tipo 'interes' con datos del préstamo y cliente.
+    // Pagos de tipo 'interes' de los préstamos de ESTE usuario (el !inner +
+    // creado_por deja solo los suyos).
     const { data: pagosInteres, error } = await supabaseAdmin
       .from('pagos')
       .select(`
         id, monto, fecha_pago, accion, notas, creado_en,
         cuota_id,
-        prestamos:prestamo_id(
+        prestamos:prestamo_id!inner(
           id, numero, numero_cuotas, monto_capital, monto_total_a_pagar,
-          valor_cuota, frecuencia_pago, fecha_inicio, estado,
+          valor_cuota, frecuencia_pago, fecha_inicio, estado, creado_por,
           perfiles:clientes(nombre_completo, numero_documento, telefono)
         )
       `)
+      .eq('prestamos.creado_por', req.usuario.id)
       .eq('tipo', 'interes')
       .order('creado_en', { ascending: false });
     if (error) throw error;

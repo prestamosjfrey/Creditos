@@ -333,8 +333,8 @@
     <form action="/admin/clientes/<%= cliente.id %>/notas" method="POST">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <label class="label-field" for="notas_admin">Notas internas sobre el cliente</label>
-      <textarea class="input-field" id="notas_admin" name="notas_admin" rows="6" placeholder="Anotaciones privadas: acuerdos, referencias, recordatorios..."><%= cliente.notas_admin || '' %></textarea>
-      <p class="mt-1 text-xs text-slate-400">Solo tú ves estas notas; el cliente no tiene acceso.</p>
+      <textarea class="input-field" id="notas_admin" name="notas_admin" rows="6" placeholder="Anotaciones privadas: acuerdos, referencias, recordatorios..."><%= typeof notaPrivada !== 'undefined' ? notaPrivada : '' %></textarea>
+      <p class="mt-1 text-xs text-slate-400">Solo tú ves estas notas; ningún otro usuario ni el cliente tiene acceso.</p>
       <div class="mt-4 flex justify-end">
         <button type="submit" class="btn-primary">Guardar notas</button>
       </div>

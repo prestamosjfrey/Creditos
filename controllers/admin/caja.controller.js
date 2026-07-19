@@ -5,8 +5,8 @@ const { formatCOP, parsearNumero } = require('../../utils/moneda');
 async function mostrarCaja(req, res, next) {
   try {
     const [saldoDisponible, movimientos] = await Promise.all([
-      cajaService.obtenerSaldoDisponible(),
-      cajaService.obtenerMovimientos(),
+      cajaService.obtenerSaldoDisponible(req.usuario.id),
+      cajaService.obtenerMovimientos(req.usuario.id),
     ]);
 
     res.render('admin/caja/index', {

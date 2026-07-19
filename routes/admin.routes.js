@@ -61,7 +61,7 @@ router.use(requireAuth, requireAdmin);
 // cualquier vista admin, sin que cada controlador tenga que calcularlos.
 router.use(async (req, res, next) => {
   try {
-    const conteos = await dashboardService.obtenerConteosNotificacion();
+    const conteos = await dashboardService.obtenerConteosNotificacion(req.usuario.id);
     res.locals.moraCount = conteos.moraCount;
     res.locals.cobrosHoyCount = conteos.cobrosHoyCount;
     res.locals.clientesCount = conteos.clientesCount;
@@ -153,5 +153,7 @@ router.get('/usuarios/:id/editar', esUuid('id'), revisar(), usuariosController.m
 router.post('/usuarios/:id/editar', esUuid('id'), validarUsuarioEdicion, revisar(), usuariosController.editar);
 router.post('/usuarios/:id/estado', esUuid('id'), revisar(), usuariosController.cambiarEstado);
 router.post('/usuarios/:id/clave', esUuid('id'), revisar(), usuariosController.restablecerClave);
+// Envía un WhatsApp de prueba para verificar teléfono + apikey de CallMeBot.
+router.post('/usuarios/:id/probar-whatsapp', esUuid('id'), revisar(), usuariosController.probarWhatsApp);
 
 module.exports = router;

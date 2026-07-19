@@ -3,7 +3,7 @@ const { parsearNumero } = require('../../utils/moneda');
 
 async function listarTodos(req, res, next) {
   try {
-    const lista = await creditosService.listarTodos();
+    const lista = await creditosService.listarTodos(req.usuario.id);
     const stats = {
       activos: lista.filter((c) => c.estado === 'activo').length,
       totalDeuda: lista.filter((c) => c.estado === 'activo').reduce((a, c) => a + c.saldo_pendiente, 0),
@@ -76,7 +76,7 @@ async function crearCredito(req, res, next) {
 
 async function mostrarDetalle(req, res, next) {
   try {
-    const { credito, cuotas, pagos } = await creditosService.obtenerCreditoConCuotas(req.params.id);
+    const { credito, cuotas, pagos } = await creditosService.obtenerCreditoConCuotas(req.params.id, req.usuario.id);
     if (!credito) return res.status(404).render('errores/404');
     res.render('admin/creditos-tomados/detalle', {
       titulo: `Crédito — ${credito.acreedor}`,

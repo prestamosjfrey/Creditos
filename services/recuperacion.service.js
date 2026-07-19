@@ -24,9 +24,17 @@ const auditoria = require('./auditoria.service');
 // servidor. Ni siquiera con acceso a la tabla se puede deducir (6 dígitos son
 // solo un millón de combinaciones: un hash simple sería trivial de romper).
 
-const VIGENCIA_MINUTOS = 10;
+// El código sirve 1 minuto: es solo para demostrar que quien pide el cambio
+// tiene el WhatsApp. Una ventana tan corta deja casi sin margen a que alguien
+// lo intercepte y lo use.
+const VIGENCIA_MINUTOS = 1;
 const MAX_INTENTOS = 5;
 const MAX_ENVIOS_POR_HORA = 3;
+
+// Una vez validado el código, se abre una ventana aparte para escribir la
+// contraseña nueva. Si la contraseña se pidiera dentro del mismo minuto, al
+// usuario se le vencería el código mientras la escribe.
+const VIGENCIA_TICKET_MINUTOS = 10;
 
 function hashCodigo(codigo) {
   return crypto
@@ -63,7 +71,9 @@ async function solicitarCodigo(identificador, { ip } = {}) {
     console.warn('[recuperacion] usuario inexistente o inactivo:', identificador);
     return generico;
   }
-  if (!usuario.telefono || !usuario.callmebot_apikey) {
+  // Teléfono normalizado (+57) y apikey propia o heredada de CALLMEBOT_DESTINOS.
+  const wa = callmebot.resolverWhatsApp(usuario);
+  if (!wa) {
     console.warn('[recuperacion] usuario sin WhatsApp configurado:', usuario.usuario);
     return generico;
   }
@@ -105,10 +115,10 @@ async function solicitarCodigo(identificador, { ip } = {}) {
   const texto =
     `🔑 *Cash R&R* — Recuperar contraseña\n\n` +
     `Tu código es: *${codigo}*\n\n` +
-    `Vence en ${VIGENCIA_MINUTOS} minutos y sirve una sola vez.\n` +
+    `⏱ Vence en ${VIGENCIA_MINUTOS} minuto y sirve una sola vez. Úsalo ya.\n` +
     `Si no lo pediste tú, ignora este mensaje y avisa al administrador.`;
 
-  const envio = await callmebot.enviarWhatsApp(usuario.telefono, usuario.callmebot_apikey, texto);
+  const envio = await callmebot.enviarWhatsApp(wa.telefono, wa.apikey, texto);
   if (!envio.ok) console.warn('[recuperacion] CallMeBot falló:', envio.cuerpo);
 
   await auditoria.registrar({
@@ -121,14 +131,14 @@ async function solicitarCodigo(identificador, { ip } = {}) {
   return generico;
 }
 
-// Verifica el código y, si es correcto, cambia la contraseña.
+// PASO 1: comprueba el código y lo consume. No cambia la contraseña todavía;
+// devuelve el usuario para que el controlador abra la ventana del paso 2.
+//
 // Los mensajes de error son deliberadamente iguales para "no existe",
-// "caducado" y "incorrecto": distinguirlos ayudaría a un atacante.
-async function cambiarPasswordConCodigo(identificador, codigo, password) {
+// "caducado" e "incorrecto": distinguirlos ayudaría a un atacante.
+async function verificarCodigo(identificador, codigo) {
   const error = (mensaje) => Object.assign(new Error(mensaje), { status: 400 });
   const GENERICO = 'El código no es válido o ya venció. Solicita uno nuevo.';
-
-  if (!password || password.length < 8) throw error('La contraseña debe tener al menos 8 caracteres.');
 
   const usuariosService = require('./usuarios.service');
   const usuario = await usuariosService.buscarPorIdentificador(identificador);
@@ -159,8 +169,8 @@ async function cambiarPasswordConCodigo(identificador, codigo, password) {
     throw error(GENERICO);
   }
 
-  // Código correcto: se marca usado ANTES de cambiar la clave, para que dos
-  // peticiones simultáneas no puedan usarlo dos veces.
+  // Código correcto: se CONSUME de inmediato (un solo uso). Una segunda
+  // petición simultánea con el mismo código ya no lo encuentra libre.
   const { data: marcado } = await supabaseAdmin
     .from('codigos_recuperacion')
     .update({ usado_en: new Date().toISOString() })
@@ -170,17 +180,43 @@ async function cambiarPasswordConCodigo(identificador, codigo, password) {
     .maybeSingle();
   if (!marcado) throw error(GENERICO); // otra petición se le adelantó
 
-  const { error: errorClave } = await supabaseAdmin.auth.admin.updateUserById(usuario.id, { password });
+  await auditoria.registrar({
+    tipo: 'recuperacion_verificada',
+    descripcion: `${usuario.usuario} validó su código de recuperación.`,
+    detalle: { usuario_id: usuario.id },
+    actorId: null,
+  });
+
+  return { usuarioId: usuario.id, usuario: usuario.usuario };
+}
+
+// PASO 2: cambia la contraseña. Solo se llega aquí con un ticket válido, que el
+// controlador emite (firmado) al superar el paso 1: el código ya se consumió.
+async function cambiarPassword(usuarioId, password) {
+  const error = (mensaje) => Object.assign(new Error(mensaje), { status: 400 });
+  if (!password || password.length < 8) throw error('La contraseña debe tener al menos 8 caracteres.');
+
+  const { data: usuario } = await supabaseAdmin
+    .from('usuarios').select('usuario, activo').eq('id', usuarioId).maybeSingle();
+  if (!usuario || !usuario.activo) throw error('No se pudo actualizar la contraseña.');
+
+  const { error: errorClave } = await supabaseAdmin.auth.admin.updateUserById(usuarioId, { password });
   if (errorClave) throw error('No se pudo actualizar la contraseña. Intenta de nuevo.');
 
   await auditoria.registrar({
     tipo: 'recuperacion_completada',
     descripcion: `${usuario.usuario} cambió su contraseña con un código de WhatsApp.`,
-    detalle: { usuario_id: usuario.id },
-    actorId: usuario.id,
+    detalle: { usuario_id: usuarioId },
+    actorId: usuarioId,
   });
 
   return { ok: true };
 }
 
-module.exports = { solicitarCodigo, cambiarPasswordConCodigo, VIGENCIA_MINUTOS };
+module.exports = {
+  solicitarCodigo,
+  verificarCodigo,
+  cambiarPassword,
+  VIGENCIA_MINUTOS,
+  VIGENCIA_TICKET_MINUTOS,
+};

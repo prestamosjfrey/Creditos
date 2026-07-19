@@ -4,10 +4,12 @@ const { supabaseAdmin } = require('../config/supabase');
 // préstamos (activos y pagados): el plan de pago queda disponible desde que se
 // crea el préstamo; las cuotas pagadas y el paz y salvo aparecen según avance.
 // Es una vista virtual: no guarda archivos, solo organiza lo que ya está en BD.
-async function obtenerArbol() {
+async function obtenerArbol(usuarioId) {
+  // Solo los préstamos de este usuario: el archivo de comprobantes es privado.
   const { data: prestamos, error } = await supabaseAdmin
     .from('prestamos')
     .select('id, fecha_inicio, monto_total_a_pagar, estado, cliente_id, perfiles:clientes(nombre_completo), cuotas(id, numero_cuota), pagos(id, monto, fecha_pago, metodo, tipo, distribucion, creado_en)')
+    .eq('creado_por', usuarioId)
     .order('fecha_inicio', { ascending: false });
   if (error) throw error;
 

@@ -69,18 +69,20 @@ async function calcularKpisAlCorte(fechaCorte) {
 //   • Interés cobrado   = parte de interés de esos pagos del periodo.
 //   • Pendiente         = saldo actual de los préstamos creados en el periodo.
 // El desglose por préstamo reparte cada columna para que sume su KPI.
-async function calcularKpisRango({ desde, hasta }) {
+async function calcularKpisRango({ desde, hasta, usuarioId }) {
   const [
     { data: prestamosRango, error: e1 },
     { data: pagosRango, error: e2 },
   ] = await Promise.all([
-    // Préstamos originados en el periodo (para capital y saldo pendiente).
+    // Préstamos originados en el periodo POR ESTE USUARIO (para capital y saldo).
     supabaseAdmin.from('prestamos')
       .select('id, numero, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo)')
+      .eq('creado_por', usuarioId)
       .gte('fecha_inicio', desde).lte('fecha_inicio', hasta),
-    // Pagos recibidos en el periodo, con su préstamo (para recuperado e interés).
+    // Pagos del periodo sobre préstamos de este usuario (recuperado e interés).
     supabaseAdmin.from('pagos')
-      .select('prestamo_id, monto, prestamos:prestamo_id(numero, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo))')
+      .select('prestamo_id, monto, prestamos:prestamo_id!inner(numero, creado_por, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo))')
+      .eq('prestamos.creado_por', usuarioId)
       .gte('fecha_pago', desde).lte('fecha_pago', hasta),
   ]);
   if (e1) throw e1;
@@ -161,11 +163,13 @@ async function obtenerKpisConTendencia() {
 
 // Datos para la tarjeta destacada: cartera activa, intereses generados este mes
 // y número de clientes distintos con al menos un préstamo activo/en mora.
-async function obtenerResumenCarteraDestacado() {
+async function obtenerResumenCarteraDestacado(usuarioId) {
   const hoy = new Date();
   const inicioMes = formatoISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
 
-  const { data, error } = await supabaseAdmin.from('vista_cartera').select('*');
+  // vista_cartera ahora expone creado_por (ver aislamiento-por-usuario.sql).
+  const { data, error } = await supabaseAdmin
+    .from('vista_cartera').select('*').eq('creado_por', usuarioId);
   if (error) throw error;
 
   const carteraActiva = data
@@ -179,6 +183,7 @@ async function obtenerResumenCarteraDestacado() {
   const { data: prestamosDelMes, error: errorMes } = await supabaseAdmin
     .from('prestamos')
     .select('monto_capital, monto_total_a_pagar')
+    .eq('creado_por', usuarioId)
     .gte('fecha_inicio', inicioMes);
   if (errorMes) throw errorMes;
 
@@ -208,14 +213,16 @@ async function obtenerAlertasMora() {
     .sort((a, b) => b.diasAtraso - a.diasAtraso);
 }
 
-async function obtenerProximosCobros(diasAdelante = 7) {
+async function obtenerProximosCobros(diasAdelante = 7, usuarioId) {
   const hoy = new Date();
   const limite = new Date(hoy);
   limite.setDate(limite.getDate() + diasAdelante);
 
+  // Cuotas de préstamos de este usuario (el !inner filtra por creado_por).
   const { data, error } = await supabaseAdmin
     .from('cuotas')
-    .select('*, prestamos:prestamo_id(cliente_id, perfiles:clientes(nombre_completo, telefono))')
+    .select('*, prestamos:prestamo_id!inner(creado_por, cliente_id, perfiles:clientes(nombre_completo, telefono))')
+    .eq('prestamos.creado_por', usuarioId)
     .in('estado', ['pendiente', 'parcial'])
     .gte('fecha_vencimiento', formatoISO(hoy))
     .lte('fecha_vencimiento', formatoISO(limite))
@@ -352,13 +359,22 @@ async function obtenerSerieIngresos(periodo) {
 }
 
 // Resumen de créditos tomados activos (deuda propia pendiente).
-async function obtenerResumenCreditosTomados() {
-  const [{ data: creditos, error: e1 }, { data: cuotas, error: e2 }] = await Promise.all([
-    supabaseAdmin.from('creditos_tomados').select('id, monto_capital, monto_total_a_pagar').eq('estado', 'activo'),
-    supabaseAdmin.from('cuotas_credito_tomado').select('credito_id, monto').eq('estado', 'pagada'),
-  ]);
+async function obtenerResumenCreditosTomados(usuarioId) {
+  const { data: creditos, error: e1 } = await supabaseAdmin
+    .from('creditos_tomados').select('id, monto_capital, monto_total_a_pagar')
+    .eq('creado_por', usuarioId).eq('estado', 'activo');
   if (e1) throw e1;
-  if (e2) throw e2;
+
+  // Cuotas pagadas solo de los créditos de este usuario.
+  const ids = (creditos || []).map((c) => c.id);
+  let cuotas = [];
+  if (ids.length) {
+    const { data, error: e2 } = await supabaseAdmin
+      .from('cuotas_credito_tomado').select('credito_id, monto')
+      .eq('estado', 'pagada').in('credito_id', ids);
+    if (e2) throw e2;
+    cuotas = data || [];
+  }
 
   const pagadoPorCredito = new Map();
   (cuotas || []).forEach((c) => {
@@ -379,9 +395,12 @@ async function obtenerResumenCreditosTomados() {
 // Conteos reales y livianos usados en el header/sidebar de todas las vistas
 // admin: cuotas en mora (badge de la campana) y cuotas que vencen hoy
 // (widget "Resumen rápido" del sidebar).
-async function obtenerConteosNotificacion() {
+async function obtenerConteosNotificacion(usuarioId) {
   const hoy = formatoISO(new Date());
 
+  // Mora, cobros de hoy, préstamos y renegociados: SOLO de este usuario (vía el
+  // dueño del préstamo). Los clientes son compartidos, así que ese conteo es
+  // global (todos ven la misma cartera de clientes).
   const [
     { count: moraCount, error: errorMora },
     { count: cobrosHoyCount, error: errorHoy },
@@ -389,15 +408,18 @@ async function obtenerConteosNotificacion() {
     { count: prestamosCount, error: errorPrest },
     { data: renegData, error: errorReneg },
   ] = await Promise.all([
-    supabaseAdmin.from('cuotas').select('id', { count: 'exact', head: true })
+    supabaseAdmin.from('cuotas').select('id, prestamos:prestamo_id!inner(creado_por)', { count: 'exact', head: true })
+      .eq('prestamos.creado_por', usuarioId)
       .in('estado', ['pendiente', 'parcial', 'vencida']).lt('fecha_vencimiento', hoy),
-    supabaseAdmin.from('cuotas').select('id', { count: 'exact', head: true })
+    supabaseAdmin.from('cuotas').select('id, prestamos:prestamo_id!inner(creado_por)', { count: 'exact', head: true })
+      .eq('prestamos.creado_por', usuarioId)
       .in('estado', ['pendiente', 'parcial']).eq('fecha_vencimiento', hoy),
     supabaseAdmin.from('clientes').select('id', { count: 'exact', head: true })
       .eq('activo', true),
     supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true })
-      .eq('estado', 'activo'),
-    supabaseAdmin.from('pagos').select('prestamo_id, prestamos:prestamo_id(estado)').eq('tipo', 'interes'),
+      .eq('creado_por', usuarioId).eq('estado', 'activo'),
+    supabaseAdmin.from('pagos').select('prestamo_id, prestamos:prestamo_id!inner(creado_por, estado)')
+      .eq('prestamos.creado_por', usuarioId).eq('tipo', 'interes'),
   ]);
   if (errorMora) throw errorMora;
   if (errorHoy) throw errorHoy;
@@ -430,9 +452,10 @@ async function obtenerPagosRecientes(limite = 8) {
 
 // Línea de tiempo combinada: pagos recibidos, préstamos nuevos y cuotas
 // vencidas (mora), todo real, ordenado por fecha descendente.
-async function obtenerActividadReciente(limite = 8) {
+async function obtenerActividadReciente(limite = 8, usuarioId) {
   const desde = formatoISO(new Date(new Date().setDate(new Date().getDate() - 30)));
 
+  // Cada fuente se acota a este usuario (por el dueño del préstamo o del crédito).
   const [
     { data: pagos, error: e1 },
     { data: prestamos, error: e2 },
@@ -442,35 +465,40 @@ async function obtenerActividadReciente(limite = 8) {
   ] = await Promise.all([
     supabaseAdmin
       .from('pagos')
-      .select('monto, creado_en, prestamos:prestamo_id(perfiles:clientes(nombre_completo))')
+      .select('monto, creado_en, prestamos:prestamo_id!inner(creado_por, perfiles:clientes(nombre_completo))')
+      .eq('prestamos.creado_por', usuarioId)
       .gte('creado_en', desde)
       .order('creado_en', { ascending: false })
       .limit(limite),
     supabaseAdmin
       .from('prestamos')
       .select('monto_capital, creado_en, perfiles:clientes(nombre_completo)')
+      .eq('creado_por', usuarioId)
       .gte('creado_en', desde)
       .order('creado_en', { ascending: false })
       .limit(limite),
     supabaseAdmin
       .from('cuotas')
-      .select('monto_esperado, monto_pagado, fecha_vencimiento, prestamos:prestamo_id(perfiles:clientes(nombre_completo))')
+      .select('monto_esperado, monto_pagado, fecha_vencimiento, prestamos:prestamo_id!inner(creado_por, perfiles:clientes(nombre_completo))')
+      .eq('prestamos.creado_por', usuarioId)
       .eq('estado', 'vencida')
       .gte('fecha_vencimiento', desde)
       .order('fecha_vencimiento', { ascending: false })
       .limit(limite),
-    // Pagos de cuotas de créditos que NOSOTROS tomamos (nuestros pasivos).
+    // Pagos de cuotas de créditos que ESTE usuario tomó (sus pasivos).
     supabaseAdmin
       .from('cuotas_credito_tomado')
-      .select('monto, pagado_en, creditos_tomados:credito_id(acreedor)')
+      .select('monto, pagado_en, creditos_tomados:credito_id!inner(acreedor, creado_por)')
+      .eq('creditos_tomados.creado_por', usuarioId)
       .eq('estado', 'pagada')
       .gte('pagado_en', desde)
       .order('pagado_en', { ascending: false })
       .limit(limite),
-    // Créditos que NOSOTROS tomamos (creación del pasivo → capital que entró a caja).
+    // Créditos que ESTE usuario tomó (creación del pasivo).
     supabaseAdmin
       .from('creditos_tomados')
       .select('monto_capital, creado_en, acreedor')
+      .eq('creado_por', usuarioId)
       .gte('creado_en', desde)
       .order('creado_en', { ascending: false })
       .limit(limite),
@@ -527,7 +555,7 @@ async function obtenerActividadReciente(limite = 8) {
 // usada por el filtro del dashboard (Hoy/Esta semana/Este mes/Este año/rango).
 // La granularidad se elige según el largo del rango: diaria hasta 31 días,
 // semanal hasta ~3 meses, mensual en rangos más largos.
-async function obtenerSerieIngresosRango({ desde, hasta }) {
+async function obtenerSerieIngresosRango({ desde, hasta, usuarioId }) {
   const inicio = new Date(`${desde}T00:00:00`);
   const fin = new Date(`${hasta}T00:00:00`);
   const dias = Math.max(1, Math.round((fin - inicio) / 86400000) + 1);
@@ -537,8 +565,10 @@ async function obtenerSerieIngresosRango({ desde, hasta }) {
   else if (dias > 31) granularidad = 'semana';
 
   const [{ data, error }, { data: prestamosRango, error: errorPrestamos }] = await Promise.all([
-    supabaseAdmin.from('pagos').select('fecha_pago, monto').gte('fecha_pago', desde).lte('fecha_pago', hasta),
-    supabaseAdmin.from('prestamos').select('fecha_inicio, monto_capital, monto_total_a_pagar').gte('fecha_inicio', desde).lte('fecha_inicio', hasta),
+    supabaseAdmin.from('pagos').select('fecha_pago, monto, prestamos:prestamo_id!inner(creado_por)')
+      .eq('prestamos.creado_por', usuarioId).gte('fecha_pago', desde).lte('fecha_pago', hasta),
+    supabaseAdmin.from('prestamos').select('fecha_inicio, monto_capital, monto_total_a_pagar')
+      .eq('creado_por', usuarioId).gte('fecha_inicio', desde).lte('fecha_inicio', hasta),
   ]);
   if (error) throw error;
   if (errorPrestamos) throw errorPrestamos;
@@ -654,17 +684,18 @@ async function obtenerCapitalPrestadoPorMes({ desde, hasta } = {}) {
   return { meses, total, cantidad: data.length };
 }
 
+// Solo se exportan las funciones que la app usa y que están acotadas por
+// usuario. Varias funciones de este archivo quedaron SIN usar tras el
+// aislamiento (calcularKpisAlCorte, obtenerKpisConTendencia, obtenerAlertasMora,
+// obtenerSerieIngresos, obtenerPagosRecientes, obtenerCapitalPrestadoPorMes):
+// son código muerto y leen TODOS los préstamos sin filtrar por dueño, así que NO
+// se exponen. Si alguna se reactiva, primero hay que acotarla por creado_por.
 module.exports = {
-  obtenerKpisConTendencia,
   calcularKpisRango,
   obtenerResumenCarteraDestacado,
   obtenerResumenCreditosTomados,
-  obtenerAlertasMora,
   obtenerProximosCobros,
   obtenerConteosNotificacion,
-  obtenerSerieIngresos,
   obtenerSerieIngresosRango,
-  obtenerPagosRecientes,
   obtenerActividadReciente,
-  obtenerCapitalPrestadoPorMes,
 };

@@ -32,6 +32,7 @@ async function mostrarDashboard(req, res, next) {
     let { desde, hasta } = rangoPeriodo(periodo, req.query);
     if (!desde || !hasta) { const r = rangoPeriodo('este_mes'); desde = desde || r.desde; hasta = hasta || r.hasta; }
 
+    const uid = req.usuario.id;
     const [
       kpis,
       resumenDestacado,
@@ -41,13 +42,13 @@ async function mostrarDashboard(req, res, next) {
       actividadReciente,
       serie,
     ] = await Promise.all([
-      dashboardService.calcularKpisRango({ desde, hasta }),
-      dashboardService.obtenerResumenCarteraDestacado(),
-      cajaService.obtenerSaldoDisponible(),
-      dashboardService.obtenerResumenCreditosTomados(),
-      dashboardService.obtenerProximosCobros(30),
-      dashboardService.obtenerActividadReciente(6),
-      dashboardService.obtenerSerieIngresosRango({ desde, hasta }),
+      dashboardService.calcularKpisRango({ desde, hasta, usuarioId: uid }),
+      dashboardService.obtenerResumenCarteraDestacado(uid),
+      cajaService.obtenerSaldoDisponible(uid),
+      dashboardService.obtenerResumenCreditosTomados(uid),
+      dashboardService.obtenerProximosCobros(30, uid),
+      dashboardService.obtenerActividadReciente(6, uid),
+      dashboardService.obtenerSerieIngresosRango({ desde, hasta, usuarioId: uid }),
     ]);
 
     res.render('admin/dashboard', {

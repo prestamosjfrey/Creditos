@@ -1,15 +1,15 @@
 const { supabaseAdmin } = require('../config/supabase');
 
-// Saldo disponible para prestar = suma de ingresos - suma de egresos de todo
-// el historial. No se guarda un "saldo actual" aparte: siempre se recalcula
-// desde el libro de movimientos, así nunca puede desincronizarse.
+// Saldo disponible para prestar = suma de ingresos - suma de egresos.
 //
-// La suma la hace Postgres (función saldo_caja), no Node. Antes se descargaba
-// la tabla ENTERA de movimientos en cada request solo para sumarla: con años de
-// operación son cientos de miles de filas viajando por la red para devolver un
-// único número, y el formulario de "nuevo préstamo" lo pide en cada carga.
-async function obtenerSaldoDisponible() {
-  const { data, error } = await supabaseAdmin.rpc('saldo_caja');
+// Cada usuario tiene SU propia caja: sus préstamos salen de su saldo y sus
+// abonos entran a su saldo. Por eso siempre se pasa el id del usuario — la
+// función saldo_caja filtra por registrado_por. (Sin usuario devolvería el
+// total de todos, algo que la app ya no usa: el aislamiento es obligatorio.)
+//
+// La suma la hace Postgres, no Node, para no descargar toda la tabla.
+async function obtenerSaldoDisponible(usuarioId) {
+  const { data, error } = await supabaseAdmin.rpc('saldo_caja', { p_usuario: usuarioId || null });
   if (error) throw error;
   return Number(data) || 0;
 }
@@ -26,12 +26,13 @@ async function registrarMovimiento({ tipo, monto, concepto, origen, referenciaId
   if (error) throw error;
 }
 
-// Historial completo con saldo corrido (como un extracto bancario), más
-// reciente primero.
-async function obtenerMovimientos() {
+// Historial con saldo corrido (como un extracto bancario), más reciente
+// primero. Solo los movimientos del usuario: es su propia caja.
+async function obtenerMovimientos(usuarioId) {
   const { data, error } = await supabaseAdmin
     .from('movimientos_caja')
     .select('*')
+    .eq('registrado_por', usuarioId)
     .order('creado_en', { ascending: true });
   if (error) throw error;
 

@@ -18,6 +18,49 @@ function parseDestinos() {
     .filter((d) => d.telefono && d.apikey);
 }
 
+// Colombia es el único país en uso, así que el indicativo siempre es 57.
+// CallMeBot exige el número en formato internacional (573001234567): sin el 57
+// el envío falla. Aquí se normaliza para que nadie tenga que acordarse:
+//   "300 123 4567"   -> 573001234567
+//   "+57 300 1234567"-> 573001234567
+//   "573001234567"   -> 573001234567 (ya estaba bien)
+const INDICATIVO_CO = '57';
+
+function normalizarTelefono(valor) {
+  const digitos = String(valor || '').replace(/\D/g, '');
+  if (!digitos) return '';
+  // Ya viene con indicativo (57 + 10 dígitos).
+  if (digitos.length === 12 && digitos.startsWith(INDICATIVO_CO)) return digitos;
+  // Celular colombiano suelto: 10 dígitos que empiezan por 3.
+  if (digitos.length === 10) return INDICATIVO_CO + digitos;
+  // Cualquier otro caso se deja tal cual: puede ser un fijo o un número de otro
+  // país, y forzarle un 57 lo rompería en silencio.
+  return digitos;
+}
+
+// Busca en CALLMEBOT_DESTINOS la apikey ya configurada para un teléfono.
+//
+// Evita tener el mismo dato en dos sitios: el teléfono del prestamista suele
+// estar ya en esa variable (la usan los avisos de cobros del día), así que si
+// coincide con el de un usuario, se reutiliza su apikey en vez de pedirla otra
+// vez. Los empleados nuevos, que no están en esa lista, sí necesitan la suya.
+function apikeyDeDestinos(telefono) {
+  const buscado = normalizarTelefono(telefono);
+  if (!buscado) return null;
+  const destino = parseDestinos().find((d) => normalizarTelefono(d.telefono) === buscado);
+  return destino ? destino.apikey : null;
+}
+
+// Resuelve el WhatsApp utilizable de un usuario: su apikey propia si la tiene,
+// o la del .env si su teléfono ya estaba configurado ahí.
+function resolverWhatsApp(usuario) {
+  const telefono = normalizarTelefono(usuario?.telefono);
+  if (!telefono) return null;
+  const apikey = usuario.callmebot_apikey || apikeyDeDestinos(telefono);
+  if (!apikey) return null;
+  return { telefono, apikey, origen: usuario.callmebot_apikey ? 'usuario' : 'env' };
+}
+
 // Envía un mensaje de WhatsApp por la API gratuita de CallMeBot.
 async function enviarWhatsApp(telefono, apikey, texto) {
   const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(telefono)}` +
@@ -96,4 +139,13 @@ async function notificarCuotasDeHoy(tipo = 'cobros') {
   return { ok: enviados > 0, enviados, total: destinos.length, cuotas: cuotas.length, errores };
 }
 
-module.exports = { parseDestinos, enviarWhatsApp, obtenerCuotasDeHoy, construirMensaje, notificarCuotasDeHoy };
+module.exports = {
+  parseDestinos,
+  normalizarTelefono,
+  apikeyDeDestinos,
+  resolverWhatsApp,
+  enviarWhatsApp,
+  obtenerCuotasDeHoy,
+  construirMensaje,
+  notificarCuotasDeHoy,
+};

@@ -49,7 +49,9 @@ const limitadorNuevaClave = rateLimit({
   handler: (req, res) => {
     res.status(429).render('auth/nueva-clave', {
       error: 'Demasiados intentos. Espera una hora e inténtalo de nuevo.',
-      access_token: '',
+      exito: null,
+      usuario: (req.body && req.body.usuario) || '',
+      paso: 1,
       layout: false,
     });
   },
@@ -63,6 +65,10 @@ router.post('/logout', authController.procesarLogout);
 router.get('/recuperar', authController.mostrarRecuperar);
 router.post('/recuperar', limitadorRecuperar, authController.procesarRecuperar);
 router.get('/nueva-clave', authController.mostrarNuevaClave);
+// Paso 1: validar el código de WhatsApp. Limitado para que no se pueda probar
+// código tras código por fuerza bruta (además del tope de 5 intentos por código).
+router.post('/verificar-codigo', limitadorNuevaClave, authController.procesarVerificarCodigo);
+// Paso 2: elegir la contraseña nueva (requiere el ticket del paso 1).
 router.post('/nueva-clave', limitadorNuevaClave, authController.procesarNuevaClave);
 
 module.exports = router;

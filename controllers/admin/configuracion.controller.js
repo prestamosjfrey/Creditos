@@ -4,7 +4,7 @@ const usuariosService = require('../../services/usuarios.service');
 async function mostrarConfiguracion(req, res, next) {
   try {
     const [saldoDisponible, perfil] = await Promise.all([
-      cajaService.obtenerSaldoDisponible(),
+      cajaService.obtenerSaldoDisponible(req.usuario.id),
       usuariosService.obtenerUsuario(req.usuario.id),
     ]);
 
@@ -34,7 +34,8 @@ async function editarMiPerfil(req, res, next) {
     await usuariosService.editarPerfilPropio(req.usuario.id, req.body);
     res.redirect(`/admin/configuracion?ok=${encodeURIComponent('Tus datos se actualizaron.')}`);
   } catch (err) {
-    if (err.status === 400) {
+    // 409 = el correo ya lo tiene otro usuario (debe ser único).
+    if (err.status === 400 || err.status === 409) {
       return res.redirect(`/admin/configuracion?error=${encodeURIComponent(err.message)}`);
     }
     next(err);

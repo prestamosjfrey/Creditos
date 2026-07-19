@@ -26,6 +26,17 @@ async function procesarLogin(req, res) {
   if (!identificador || !password) return fallo();
 
   const perfil = await usuariosService.buscarPorIdentificador(identificador);
+
+  // El correo de contacto puede repetirse entre usuarios: si lo comparten
+  // varios, no hay forma de saber quién intenta entrar. Se le pide el nombre de
+  // usuario, que sí es único.
+  if (perfil && perfil.ambiguo) {
+    return res.status(401).render('auth/login', {
+      error: 'Ese correo lo comparten varios usuarios. Inicia sesión con tu nombre de usuario.',
+      layout: false,
+    });
+  }
+
   // Mensaje idéntico si el usuario no existe o si la clave está mal: distinguirlos
   // permitiría averiguar qué usuarios existen.
   if (!perfil || !perfil.email_auth) return fallo();
@@ -75,43 +86,123 @@ async function procesarRecuperar(req, res) {
   // fallo de CallMeBot): así nadie puede averiguar qué usuarios existen.
   res.render('auth/nueva-clave', {
     error: null,
-    exito: `Si el usuario existe y tiene WhatsApp registrado, le enviamos un código. Vence en ${recuperacionService.VIGENCIA_MINUTOS} minutos.`,
+    exito: `Si el usuario existe y tiene WhatsApp registrado, le enviamos un código. Vence en ${recuperacionService.VIGENCIA_MINUTOS} minuto: úsalo ya.`,
     usuario: identificador,
+    paso: 1,
     layout: false,
   });
 }
 
-// Pantalla donde se pega el código recibido por WhatsApp y se elige la clave.
+// --- Recuperación en DOS pasos ---
+//
+// Paso 1: se valida el código (vive 1 minuto). Al superarlo se emite un TICKET
+//         firmado con el secreto del servidor, guardado en una cookie httpOnly.
+// Paso 2: con ese ticket se elige la contraseña nueva.
+//
+// El ticket existe porque el código dura 1 minuto: si la contraseña se pidiera
+// en la misma pantalla, se vencería mientras el usuario la escribe. El código ya
+// quedó consumido en el paso 1, así que el ticket no lo revive: solo prueba que
+// hace un momento se superó la validación.
+
+const COOKIE_TICKET = 'recuperacion';
+
+function emitirTicket(res, usuarioId) {
+  const vence = Date.now() + recuperacionService.VIGENCIA_TICKET_MINUTOS * 60000;
+  res.cookie(COOKIE_TICKET, JSON.stringify({ u: usuarioId, e: vence }), {
+    signed: true,      // firmada con SESSION_COOKIE_SECRET: no se puede falsificar
+    httpOnly: true,    // ningún script del navegador la lee
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: recuperacionService.VIGENCIA_TICKET_MINUTOS * 60000,
+  });
+}
+
+// Devuelve el id de usuario del ticket, o null si no hay, está manipulado o venció.
+function leerTicket(req) {
+  const crudo = req.signedCookies?.[COOKIE_TICKET];
+  if (!crudo) return null;
+  try {
+    const { u, e } = JSON.parse(crudo);
+    if (!u || !e || Date.now() > e) return null;
+    return u;
+  } catch (err) {
+    return null;
+  }
+}
+
+function borrarTicket(res) {
+  res.clearCookie(COOKIE_TICKET, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+}
+
+// Pantalla de recuperación: pide el código, o la contraseña si ya se validó.
 function mostrarNuevaClave(req, res) {
   res.render('auth/nueva-clave', {
     error: null,
     exito: null,
     usuario: (req.query.usuario || '').trim(),
+    paso: leerTicket(req) ? 2 : 1,
     layout: false,
   });
 }
 
-async function procesarNuevaClave(req, res) {
-  const { usuario, codigo, password, password2 } = req.body;
+// PASO 1: validar el código recibido por WhatsApp.
+async function procesarVerificarCodigo(req, res) {
+  const { usuario, codigo } = req.body;
 
   const renderError = (mensaje) =>
     res.status(400).render('auth/nueva-clave', {
       error: mensaje,
       exito: null,
       usuario: (usuario || '').trim(),
+      paso: 1,
       layout: false,
     });
 
   if (!usuario || !codigo) return renderError('Escribe tu usuario y el código que recibiste.');
+
+  try {
+    const { usuarioId } = await recuperacionService.verificarCodigo(usuario.trim(), String(codigo).trim());
+    emitirTicket(res, usuarioId);
+
+    return res.render('auth/nueva-clave', {
+      error: null,
+      exito: 'Código correcto. Ahora elige tu contraseña nueva.',
+      usuario: usuario.trim(),
+      paso: 2,
+      layout: false,
+    });
+  } catch (err) {
+    return renderError(err.status === 400 ? err.message : 'No se pudo validar el código. Intenta de nuevo.');
+  }
+}
+
+// PASO 2: elegir la contraseña nueva (requiere ticket del paso 1).
+async function procesarNuevaClave(req, res) {
+  const { password, password2 } = req.body;
+
+  const renderError = (mensaje, paso = 2) =>
+    res.status(400).render('auth/nueva-clave', {
+      error: mensaje,
+      exito: null,
+      usuario: '',
+      paso,
+      layout: false,
+    });
+
+  const usuarioId = leerTicket(req);
+  if (!usuarioId) {
+    borrarTicket(res);
+    return renderError('La sesión de recuperación venció. Solicita un código nuevo.', 1);
+  }
+
   if (!password || password.length < 8) return renderError('La contraseña debe tener al menos 8 caracteres.');
   if (password !== password2) return renderError('Las contraseñas no coinciden.');
 
   try {
-    await recuperacionService.cambiarPasswordConCodigo(usuario.trim(), String(codigo).trim(), password);
+    await recuperacionService.cambiarPassword(usuarioId, password);
+    borrarTicket(res);
     return res.redirect(`/auth/login?ok=${encodeURIComponent('Contraseña actualizada. Ya puedes iniciar sesión.')}`);
   } catch (err) {
-    // El servicio ya devuelve mensajes pensados para el usuario final y que no
-    // distinguen entre "código malo", "caducado" o "usuario inexistente".
     return renderError(err.status === 400 ? err.message : 'No se pudo actualizar la contraseña. Intenta de nuevo.');
   }
 }
@@ -147,5 +238,6 @@ module.exports = {
   mostrarRecuperar,
   procesarRecuperar,
   mostrarNuevaClave,
+  procesarVerificarCodigo,
   procesarNuevaClave,
 };

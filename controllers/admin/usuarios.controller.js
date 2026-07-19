@@ -1,4 +1,5 @@
 const usuariosService = require('../../services/usuarios.service');
+const callmebot = require('../../services/callmebot.service');
 
 async function listar(req, res, next) {
   try {
@@ -62,9 +63,10 @@ async function editar(req, res, next) {
     await usuariosService.editarUsuario(req.params.id, req.body, req.usuario.id);
     res.redirect(`/admin/usuarios?ok=${encodeURIComponent('Usuario actualizado.')}`);
   } catch (err) {
-    if (err.status === 400) {
+    // 409 = el correo ya lo tiene otro usuario (debe ser único).
+    if (err.status === 400 || err.status === 409) {
       const usuario = await usuariosService.obtenerUsuario(req.params.id);
-      return res.status(400).render('admin/usuarios/form', {
+      return res.status(err.status).render('admin/usuarios/form', {
         titulo: 'Editar usuario', usuario, error: err.message, valores: req.body,
       });
     }
@@ -109,6 +111,51 @@ async function restablecerClave(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// Envía un WhatsApp de PRUEBA al usuario, para comprobar que su teléfono y su
+// apikey de CallMeBot están bien antes de depender de ellos el día que de
+// verdad necesite recuperar la contraseña.
+//
+// A diferencia del flujo real de recuperación (que responde siempre lo mismo
+// para no revelar qué usuarios existen), aquí SÍ se muestra el error concreto:
+// quien lo usa es un administrador autenticado diagnosticando su propia cuenta,
+// y sin el motivo real la prueba no sirve de nada.
+async function probarWhatsApp(req, res, next) {
+  const volver = (clave, mensaje) =>
+    res.redirect(`/admin/usuarios?${clave}=${encodeURIComponent(mensaje)}`);
+
+  try {
+    const usuario = await usuariosService.obtenerUsuario(req.params.id);
+    if (!usuario) return res.status(404).render('errores/404');
+
+    // Resuelve teléfono normalizado (+57) y apikey, propia o heredada del .env.
+    const wa = callmebot.resolverWhatsApp(usuario);
+    if (!wa) {
+      const faltan = [];
+      if (!usuario.telefono) faltan.push('teléfono');
+      if (!usuario.callmebot_apikey) faltan.push('apikey de CallMeBot');
+      return volver('error', `A ${usuario.usuario} le falta: ${faltan.join(' y ')}. Edítalo para agregarlo.`);
+    }
+
+    const texto =
+      `✅ *Cash R&R* — Mensaje de prueba\n\n` +
+      `Tu WhatsApp quedó bien configurado, ${usuario.nombre_completo || usuario.usuario}.\n` +
+      `Si olvidas tu contraseña, el código de recuperación llegará por aquí.\n\n` +
+      `No necesitas hacer nada con este mensaje.`;
+
+    const envio = await callmebot.enviarWhatsApp(wa.telefono, wa.apikey, texto);
+
+    if (envio.ok) {
+      const fuente = wa.origen === 'env' ? ' (usando la apikey de CALLMEBOT_DESTINOS)' : '';
+      return volver('ok', `Mensaje de prueba enviado al ${wa.telefono}${fuente}. Revisa el WhatsApp de ${usuario.usuario}.`);
+    }
+    // El cuerpo que devuelve CallMeBot suele decir qué pasó (apikey inválida,
+    // teléfono no autorizado…). Se muestra tal cual para poder corregirlo.
+    return volver('error', `CallMeBot no pudo enviarlo: ${envio.cuerpo || 'sin detalle'}`);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listar,
   mostrarFormularioNuevo,
@@ -117,4 +164,5 @@ module.exports = {
   editar,
   cambiarEstado,
   restablecerClave,
+  probarWhatsApp,
 };

@@ -29,7 +29,7 @@ async function registrar({ tipo, descripcion, prestamoId = null, clienteId = nul
   }
 }
 
-async function listar({ prestamoId, clienteId, tipos, limite = 300 } = {}) {
+async function listar({ prestamoId, clienteId, tipos, actorId, limite = 300 } = {}) {
   let query = supabaseAdmin
     .from('bitacora')
     .select('*, actor:actor_id(nombre_completo), cliente:cliente_id(nombre_completo, numero_documento), prestamo:prestamo_id(perfiles:clientes(nombre_completo, numero_documento))')
@@ -37,6 +37,8 @@ async function listar({ prestamoId, clienteId, tipos, limite = 300 } = {}) {
     .limit(limite);
   if (prestamoId) query = query.eq('prestamo_id', prestamoId);
   if (clienteId) query = query.eq('cliente_id', clienteId);
+  // Cada usuario ve solo SU actividad (los eventos que él generó).
+  if (actorId) query = query.eq('actor_id', actorId);
   if (tipos && tipos.length) query = query.in('tipo', tipos);
 
   const { data, error } = await query;
@@ -49,8 +51,8 @@ async function listar({ prestamoId, clienteId, tipos, limite = 300 } = {}) {
 // El conteo lo hace Postgres y devuelve una fila por tipo (~15 filas). Antes se
 // descargaba la bitácora COMPLETA solo para contarla en memoria: como es una
 // tabla append-only que solo crece, esa consulta se degradaba para siempre.
-async function contarPorCategoria() {
-  const { data, error } = await supabaseAdmin.rpc('conteo_bitacora_por_tipo');
+async function contarPorCategoria(actorId) {
+  const { data, error } = await supabaseAdmin.rpc('conteo_bitacora_por_tipo', { p_actor: actorId || null });
   if (error) throw error;
 
   const tipoACat = {};

@@ -66,13 +66,20 @@ async function crearPrestamoConPlan(datosPrestamo) {
   return prestamo;
 }
 
-async function obtenerPrestamoConCuotas(prestamoId) {
-  const { data: prestamo, error } = await supabaseAdmin
+// Devuelve el préstamo con sus cuotas y pagos, EXIGIENDO que sea del usuario
+// (creado_por). Si no es suyo, devuelve prestamo=null y el controlador responde
+// 404 — así un usuario no puede abrir el préstamo de otro escribiendo su id en
+// la URL (IDOR).
+async function obtenerPrestamoConCuotas(prestamoId, usuarioId) {
+  let q = supabaseAdmin
     .from('prestamos')
     .select('*, perfiles:clientes(nombre_completo, numero_documento, telefono, email, direccion)')
-    .eq('id', prestamoId)
-    .single();
+    .eq('id', prestamoId);
+  if (usuarioId) q = q.eq('creado_por', usuarioId);
+
+  const { data: prestamo, error } = await q.maybeSingle();
   if (error) throw error;
+  if (!prestamo) return { prestamo: null, cuotas: [], pagos: [] };
 
   const { data: cuotas, error: errorCuotas } = await supabaseAdmin
     .from('cuotas')
