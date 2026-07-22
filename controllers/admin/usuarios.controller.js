@@ -156,10 +156,26 @@ async function probarWhatsApp(req, res, next) {
   }
 }
 
+// Chequeo en vivo del correo (formulario de usuario, paso 2). Responde JSON.
+// `excluir` es el id del usuario que se edita, para que no choque consigo mismo.
+async function verificarCorreo(req, res, next) {
+  try {
+    const email = (req.query.email || '').trim();
+    if (!email) return res.json({ disponible: true, email: '' });
+
+    const excluir = req.query.excluir && /^[0-9a-f-]{36}$/i.test(req.query.excluir) ? req.query.excluir : null;
+    const r = await usuariosService.correoDisponible(email, excluir);
+    res.json({ disponible: r.disponible, usuario: r.usuario || null, email });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listar,
   mostrarFormularioNuevo,
   crear,
+  verificarCorreo,
   mostrarFormularioEditar,
   editar,
   cambiarEstado,

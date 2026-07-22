@@ -198,7 +198,10 @@ async function verificarCodigo(identificador, codigo) {
 // controlador emite (firmado) al superar el paso 1: el código ya se consumió.
 async function cambiarPassword(usuarioId, password) {
   const error = (mensaje) => Object.assign(new Error(mensaje), { status: 400 });
-  if (!password || password.length < 8) throw error('La contraseña debe tener al menos 8 caracteres.');
+
+  // Misma política de contraseña segura que en el resto del sistema.
+  const errPass = require('./usuarios.service').validarPasswordSegura(password);
+  if (errPass) throw error(errPass);
 
   const { data: usuario } = await supabaseAdmin
     .from('usuarios').select('usuario, activo').eq('id', usuarioId).maybeSingle();

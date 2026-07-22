@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../config/supabase');
+const { scope } = require('./alcance');
 const { formatoISO } = require('../utils/fechas');
 
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -63,16 +64,16 @@ async function obtenerCentroMora(usuarioId) {
     { data: activos },
     { data: pagos },
   ] = await Promise.all([
-    supabaseAdmin.from('cuotas')
+    scope(supabaseAdmin.from('cuotas')
       .select('id, numero_cuota, fecha_vencimiento, monto_esperado, monto_pagado, estado, prestamo_id, prestamos:prestamo_id!inner(id, numero, numero_cuotas, monto_capital, monto_total_a_pagar, valor_cuota, frecuencia_pago, cliente_id, creado_por, perfiles:clientes(nombre_completo, numero_documento, telefono))')
-      .eq('prestamos.creado_por', usuarioId)
+      , 'prestamos.creado_por', usuarioId)
       .in('estado', ['pendiente', 'parcial', 'vencida'])
       .lt('fecha_vencimiento', hoyISO)
       .order('fecha_vencimiento', { ascending: true }),
-    supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true }).eq('creado_por', usuarioId),
+    scope(supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true }), 'creado_por', usuarioId),
     supabaseAdmin.from('clientes').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('prestamos').select('monto_capital').eq('creado_por', usuarioId).in('estado', ['activo', 'en_mora']),
-    supabaseAdmin.from('pagos').select('monto, fecha_pago, prestamos:prestamo_id!inner(creado_por)').eq('prestamos.creado_por', usuarioId).gte('fecha_pago', formatoISO(inicioMesAnt)),
+    scope(supabaseAdmin.from('prestamos').select('monto_capital'), 'creado_por', usuarioId).in('estado', ['activo', 'en_mora']),
+    scope(supabaseAdmin.from('pagos').select('monto, fecha_pago, prestamos:prestamo_id!inner(creado_por)'), 'prestamos.creado_por', usuarioId).gte('fecha_pago', formatoISO(inicioMesAnt)),
   ]);
   if (e1) throw e1;
 

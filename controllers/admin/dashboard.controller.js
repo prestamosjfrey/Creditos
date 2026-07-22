@@ -2,6 +2,7 @@ const dashboardService = require('../../services/dashboard.service');
 const prestamosService = require('../../services/prestamos.service');
 const cajaService = require('../../services/caja.service');
 const { formatoISO } = require('../../utils/fechas');
+const { alcanceDe } = require('../../utils/alcance');
 
 // Mismo filtro de periodo que las demás vistas (Hoy / Esta semana / Este mes /
 // Este año / rango personalizado).
@@ -32,7 +33,8 @@ async function mostrarDashboard(req, res, next) {
     let { desde, hasta } = rangoPeriodo(periodo, req.query);
     if (!desde || !hasta) { const r = rangoPeriodo('este_mes'); desde = desde || r.desde; hasta = hasta || r.hasta; }
 
-    const uid = req.usuario.id;
+    // Alcance: el propio id, o null si es super admin (ve la suma de todos).
+    const uid = alcanceDe(req.usuario);
     const [
       kpis,
       resumenDestacado,

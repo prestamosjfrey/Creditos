@@ -19,8 +19,23 @@ window.mostrarCargando = mostrarCargando;
 // quedó: con el spinner de "Procesando…" aún abierto y el botón de enviar
 // deshabilitado. Al restaurar (e.persisted), cerramos el spinner y reactivamos
 // los botones para que la vista vuelva a quedar usable.
+//
+// Además: si ESTA página envió un formulario y el usuario vuelve con "Atrás",
+// el navegador la restaura con los datos viejos (el asistente en el último
+// paso, un formulario de edición con lo de antes) y permitiría reenviar. Cuando
+// el regreso es a la misma URL que envió, se recarga en blanco. Se marca con la
+// URL exacta para no recargar OTRAS páginas al volver a ellas.
 window.addEventListener('pageshow', function (e) {
   if (!e.persisted) return;
+
+  var envioEn = null;
+  try { envioEn = sessionStorage.getItem('form-enviado-en'); } catch (err) {}
+  if (envioEn === location.href) {
+    try { sessionStorage.removeItem('form-enviado-en'); } catch (err) {}
+    window.location.reload();
+    return;
+  }
+
   if (window.Swal && Swal.isVisible && Swal.isVisible()) Swal.close();
   document.querySelectorAll('button[type="submit"][disabled], input[type="submit"][disabled]')
     .forEach(function (btn) { btn.disabled = false; });
@@ -46,6 +61,11 @@ document.addEventListener('submit', function (e) {
   // pero bloquea un segundo clic.
   var btn = form.querySelector('button[type="submit"], input[type="submit"]');
   if (btn) setTimeout(function () { btn.disabled = true; }, 0);
+
+  // Se recuerda QUÉ página envió, para recargarla en blanco si el usuario vuelve
+  // con "Atrás" (ver el handler de pageshow). Es la URL exacta, así solo se
+  // recarga este formulario y no cualquier otra página del historial.
+  try { sessionStorage.setItem('form-enviado-en', location.href); } catch (e) {}
 });
 
 // Sidebar desplegable (hamburguesa).

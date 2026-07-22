@@ -3,6 +3,20 @@ const { supabaseAdmin } = require('../config/supabase');
 const auditoria = require('./auditoria.service');
 const callmebot = require('./callmebot.service');
 
+// Regla única de contraseña segura para TODO el servidor: crear usuario,
+// restablecer, cambiar la propia y recuperar por WhatsApp. Devuelve el primer
+// requisito que falta (o null si cumple). Debe coincidir con REGLAS_PASSWORD de
+// middlewares/validar.js y con el checklist del formulario.
+function validarPasswordSegura(valor) {
+  const v = String(valor || '');
+  if (v.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+  if (!/[A-Z]/.test(v)) return 'La contraseña debe incluir al menos una mayúscula.';
+  if (!/[a-z]/.test(v)) return 'La contraseña debe incluir al menos una minúscula.';
+  if (!/\d/.test(v)) return 'La contraseña debe incluir al menos un número.';
+  if (!/[^A-Za-z0-9]/.test(v)) return 'La contraseña debe incluir al menos un carácter especial.';
+  return null;
+}
+
 // Gestión del staff que inicia sesión.
 //
 // IDENTIDAD: Supabase Auth exige un correo único por cuenta, y no todos los
@@ -51,6 +65,20 @@ async function exigirCorreoLibre(email, excluirId = null) {
     );
   }
   return limpio;
+}
+
+// Versión que NO lanza: solo dice si el correo está libre. La usa el chequeo en
+// vivo del formulario (paso 2) para no dejar avanzar con un correo repetido.
+async function correoDisponible(email, excluirId = null) {
+  const limpio = (email || '').trim().toLowerCase();
+  if (!limpio) return { disponible: true };
+
+  let q = supabaseAdmin.from('usuarios').select('usuario').eq('email', limpio);
+  if (excluirId) q = q.neq('id', excluirId);
+
+  const { data } = await q.limit(1);
+  if (data && data.length) return { disponible: false, usuario: data[0].usuario };
+  return { disponible: true };
 }
 
 async function listarUsuarios() {
@@ -126,13 +154,15 @@ async function buscarPorIdentificador(identificador) {
   return null;
 }
 
-async function crearUsuario({ usuario, nombre_completo, email, telefono, rol, password, callmebot_apikey, actorId }) {
+async function crearUsuario({ usuario, nombre_completo, email, telefono, password, callmebot_apikey, actorId }) {
   const user = normalizarUsuario(usuario);
   if (!user) throw Object.assign(new Error('El nombre de usuario no es válido.'), { status: 400 });
-  if (!ROLES.includes(rol)) throw Object.assign(new Error('Rol inválido.'), { status: 400 });
-  if (!password || password.length < 8) {
-    throw Object.assign(new Error('La contraseña debe tener al menos 8 caracteres.'), { status: 400 });
-  }
+  // Todos los usuarios se crean como administrador. No se toma el rol del
+  // formulario (ya no se pide): se fija aquí, así nadie puede crear un rol
+  // distinto manipulando el POST.
+  const rol = 'admin';
+  const errPass = validarPasswordSegura(password);
+  if (errPass) throw Object.assign(new Error(errPass), { status: 400 });
 
   const { data: existe } = await supabaseAdmin
     .from('usuarios').select('id').eq('usuario', user).maybeSingle();
@@ -233,9 +263,8 @@ async function cambiarEstado(id, actorId) {
 
 // Restablece la contraseña desde el panel de administración.
 async function establecerPassword(id, password, actorId) {
-  if (!password || password.length < 8) {
-    throw Object.assign(new Error('La contraseña debe tener al menos 8 caracteres.'), { status: 400 });
-  }
+  const errPass = validarPasswordSegura(password);
+  if (errPass) throw Object.assign(new Error(errPass), { status: 400 });
   const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password });
   if (error) throw error;
 
@@ -291,9 +320,8 @@ async function editarPerfilPropio(id, { nombre_completo, email, telefono, numero
 async function cambiarPasswordPropia(id, passwordActual, passwordNueva) {
   const error = (m) => Object.assign(new Error(m), { status: 400 });
 
-  if (!passwordNueva || passwordNueva.length < 8) {
-    throw error('La contraseña nueva debe tener al menos 8 caracteres.');
-  }
+  const errPass = validarPasswordSegura(passwordNueva);
+  if (errPass) throw error(errPass);
   if (passwordActual === passwordNueva) {
     throw error('La contraseña nueva debe ser distinta de la actual.');
   }
@@ -327,20 +355,25 @@ async function cambiarPasswordPropia(id, passwordActual, passwordNueva) {
   });
 }
 
-// Contraseña temporal legible: se le dicta al empleado de viva voz.
-// Se evitan caracteres ambiguos (0/O, 1/l/I) para que no haya errores al
-// dictarla por teléfono.
+// Contraseña temporal legible: se le dicta al empleado de viva voz. Se evitan
+// caracteres ambiguos (0/O, 1/l/I) y se usan solo símbolos fáciles de nombrar
+// por teléfono. CUMPLE la política (mayúscula, minúscula, número y especial),
+// así que pasa validarPasswordSegura sin problema.
 function generarPasswordTemporal() {
   const abc = 'abcdefghijkmnpqrstuvwxyz';
   const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const num = '23456789';
+  const esp = '@#$*-';                 // arroba, numeral, peso, asterisco, guion
   const pick = (s) => s[crypto.randomInt(s.length)];
-  let out = [pick(ABC), pick(abc), pick(abc), pick(abc), pick(num), pick(num), pick(abc), pick(num)];
+  // Al menos uno de cada tipo; el resto, letras/números. 8 caracteres.
+  const out = [pick(ABC), pick(abc), pick(abc), pick(num), pick(num), pick(abc), pick(esp), pick(abc)];
   return out.join('');
 }
 
 module.exports = {
   ROLES,
+  validarPasswordSegura,
+  correoDisponible,
   normalizarUsuario,
   correoInterno,
   listarUsuarios,

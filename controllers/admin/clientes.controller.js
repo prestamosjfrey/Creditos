@@ -2,6 +2,7 @@ const { supabaseAdmin } = require('../../config/supabase');
 const documentosService = require('../../services/documentos.service');
 const auditoria = require('../../services/auditoria.service');
 const scoreService = require('../../services/score.service');
+const { alcanceDe, scope } = require('../../utils/alcance');
 
 // El término de búsqueda se interpola dentro de la expresión `.or()` de
 // PostgREST, que tiene su propia sintaxis: las comas separan condiciones, los
@@ -133,22 +134,23 @@ async function mostrarFicha(req, res, next) {
       .single();
     if (errorCliente || !cliente) return res.status(404).render('errores/404');
 
-    // El cliente es compartido, pero los préstamos y cuotas que se muestran en
-    // su ficha son SOLO los de este usuario (creado_por).
+    // El cliente es compartido. Los préstamos/cuotas de su ficha son los del
+    // usuario (creado_por), o los de TODOS si es super admin (alcance = null).
+    // Los documentos y notas SIGUEN siendo privados de cada usuario (uid), aun
+    // para el super admin: son anotaciones personales.
     const uid = req.usuario.id;
-    const { data: prestamos, error: errorPrestamos } = await supabaseAdmin
-      .from('prestamos')
-      .select('*')
-      .eq('cliente_id', id)
-      .eq('creado_por', uid)
+    const alcance = alcanceDe(req.usuario);
+
+    const { data: prestamos, error: errorPrestamos } = await scope(
+      supabaseAdmin.from('prestamos').select('*').eq('cliente_id', id),
+      'creado_por', alcance)
       .order('creado_en', { ascending: false });
     if (errorPrestamos) throw errorPrestamos;
 
-    const { data: cuotas, error: errorCuotas } = await supabaseAdmin
-      .from('cuotas')
-      .select('*, prestamos!inner(cliente_id, creado_por)')
-      .eq('prestamos.cliente_id', id)
-      .eq('prestamos.creado_por', uid);
+    const { data: cuotas, error: errorCuotas } = await scope(
+      supabaseAdmin.from('cuotas').select('*, prestamos!inner(cliente_id, creado_por)')
+        .eq('prestamos.cliente_id', id),
+      'prestamos.creado_por', alcance);
     if (errorCuotas) throw errorCuotas;
 
     // Usar el score persistido; si no existe, calcularlo ahora y guardarlo.

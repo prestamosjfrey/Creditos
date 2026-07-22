@@ -72,7 +72,11 @@
       "Bash(curl -s -o /dev/null -w \"  /auth/login -> HTTP %{http_code}\\\\n\" http://localhost:3000/auth/login)",
       "Bash(curl -s -o /dev/null -w \"  /auth/login          -> HTTP %{http_code}\\\\n\" http://localhost:3000/auth/login)",
       "Bash(curl -s -o /dev/null -w \"  /admin/reportes/capital-prestado -> HTTP %{http_code} \\(302 = pide login, existe\\)\\\\n\" \"http://localhost:3000/admin/reportes/capital-prestado\")",
-      "Bash(curl -s -o /dev/null -w \"servidor -> HTTP %{http_code}\\\\n\" http://localhost:3000/auth/login)"
+      "Bash(curl -s -o /dev/null -w \"servidor -> HTTP %{http_code}\\\\n\" http://localhost:3000/auth/login)",
+      "Bash(xargs echo \"  reglas pl-10:\")",
+      "Bash(node --check public/js/main.js)",
+      "Bash(node --check services/dashboard.service.js)",
+      "Bash(node --check controllers/admin/creditos-tomados.controller.js)"
     ]
   }
 }

@@ -12,6 +12,29 @@ const { parsearNumero } = require('../utils/moneda');
 // Estos validadores se ejecutan ANTES de tocar la base y devuelven mensajes
 // que un usuario entiende.
 
+// Contraseña segura: mínimo 8 caracteres con mayúscula, minúscula, número y un
+// carácter especial. Se valida en el SERVIDOR además de en el navegador, porque
+// la validación del formulario se salta con cualquier herramienta.
+//
+// La misma expresión y las mismas reglas se reflejan en el checklist en vivo del
+// formulario (views/admin/usuarios/form.ejs) para que coincidan.
+const REGLAS_PASSWORD = [
+  { prueba: (v) => v.length >= 8, error: 'La contraseña debe tener al menos 8 caracteres.' },
+  { prueba: (v) => /[A-Z]/.test(v), error: 'La contraseña debe incluir al menos una mayúscula.' },
+  { prueba: (v) => /[a-z]/.test(v), error: 'La contraseña debe incluir al menos una minúscula.' },
+  { prueba: (v) => /\d/.test(v), error: 'La contraseña debe incluir al menos un número.' },
+  { prueba: (v) => /[^A-Za-z0-9]/.test(v), error: 'La contraseña debe incluir al menos un carácter especial.' },
+];
+
+function passwordSegura(campo) {
+  return body(campo).custom((valor) => {
+    const v = String(valor || '');
+    const falla = REGLAS_PASSWORD.find((r) => !r.prueba(v));
+    if (falla) throw new Error(falla.error);
+    return true;
+  });
+}
+
 const FRECUENCIAS = ['diario', 'semanal', 'quincenal', 'mensual'];
 // 'cuota_manual' se retiró de los formularios: ya no se acepta como entrada.
 // El CHECK de la base sigue admitiéndolo por si hubiera registros históricos.
@@ -228,8 +251,9 @@ const validarUsuarioNuevo = [
     .isLength({ min: 3, max: 30 }).withMessage('El usuario debe tener entre 3 y 30 caracteres.')
     .matches(/^[a-zA-Z0-9._-]+$/).withMessage('El usuario solo admite letras, números, punto, guion y guion bajo.'),
   body('nombre_completo').trim().isLength({ min: 3, max: 150 }).withMessage('Escribe el nombre completo.'),
-  body('rol').isIn(['admin', 'cobrador']).withMessage('Rol inválido.'),
-  body('password').isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres.'),
+  // El rol NO se valida ni se toma del formulario: todos se crean como admin
+  // (crearUsuario lo fija). Si llega en el POST, se ignora.
+  passwordSegura('password'),
   body('email').optional({ values: 'falsy' }).trim().isEmail().withMessage('El correo no es válido.'),
   body('telefono').optional({ values: 'falsy' })
     .trim().matches(/^[\d+\s()-]{7,20}$/).withMessage('El teléfono no es válido.'),

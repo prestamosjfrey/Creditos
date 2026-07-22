@@ -1,3 +1,4 @@
+const { alcanceDe } = require("../../utils/alcance");
 const { CATALOGO, buscarReporte } = require('../../services/reportes.service');
 const { PERIODOS, resolverRango, etiquetaRango } = require('../../utils/rangos');
 
@@ -16,7 +17,7 @@ async function mostrarReporte(req, res, next) {
     if (!reporte) return res.status(404).render('errores/404');
 
     const rango = resolverRango(req.query, 'este_mes');
-    const datos = await reporte.calcular(rango, req.usuario.id);
+    const datos = await reporte.calcular(rango, alcanceDe(req.usuario));
 
     res.render('admin/reportes/ver', {
       titulo: reporte.titulo,
@@ -39,7 +40,7 @@ async function exportarReporte(req, res, next) {
     if (!reporte) return res.status(404).render('errores/404');
 
     const rango = resolverRango(req.query, 'este_mes');
-    const { columnas, filas } = await reporte.calcular(rango, req.usuario.id);
+    const { columnas, filas } = await reporte.calcular(rango, alcanceDe(req.usuario));
 
     // Excel y LibreOffice ejecutan como fórmula cualquier celda que empiece por
     // = + - @ (o tabulador/retorno). Un nombre de cliente como =HYPERLINK(...)

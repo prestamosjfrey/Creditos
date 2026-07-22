@@ -4,6 +4,7 @@ const cajaService = require('../../services/caja.service');
 const comprobanteService = require('../../services/comprobante.service');
 const { parsearNumero } = require('../../utils/moneda');
 const { formatoISO, formatoRelativoDias } = require('../../utils/fechas');
+const { alcanceDe, scope } = require('../../utils/alcance');
 
 // Rango de fechas (sobre fecha_inicio) según el periodo del filtro.
 function rangoFechaInicio(periodo, q) {
@@ -32,10 +33,12 @@ async function obtenerListaFiltrada(query, usuarioId) {
   let periodo = periodosValidos.includes(query.periodo) ? query.periodo : ((query.desde || query.hasta) ? 'personalizado' : 'todos');
   const { desde, hasta } = rangoFechaInicio(periodo, query);
 
-  const { data: prestamos, error: e1 } = await supabaseAdmin
-    .from('prestamos')
-    .select('*, perfiles:clientes(nombre_completo, numero_documento, telefono)')
-    .eq('creado_por', usuarioId)
+  // usuarioId es el ALCANCE: el id del usuario, o null si es super admin (=todos).
+  const { data: prestamos, error: e1 } = await scope(
+    supabaseAdmin
+      .from('prestamos')
+      .select('*, perfiles:clientes(nombre_completo, numero_documento, telefono)'),
+    'creado_por', usuarioId)
     .order('creado_en', { ascending: false });
   if (e1) throw e1;
 
@@ -109,7 +112,7 @@ async function obtenerListaFiltrada(query, usuarioId) {
 
 async function listarTodos(req, res, next) {
   try {
-    const { tabla, lista, stats, filtro, periodo, desde, hasta } = await obtenerListaFiltrada(req.query, req.usuario.id);
+    const { tabla, lista, stats, filtro, periodo, desde, hasta } = await obtenerListaFiltrada(req.query, alcanceDe(req.usuario));
     res.render('admin/prestamos/lista', { titulo: 'Préstamos', prestamos: tabla, todosPrestamos: lista, stats, filtro, periodo, desde, hasta });
   } catch (err) {
     next(err);
@@ -118,7 +121,7 @@ async function listarTodos(req, res, next) {
 
 async function exportarCsv(req, res, next) {
   try {
-    const { tabla } = await obtenerListaFiltrada(req.query, req.usuario.id);
+    const { tabla } = await obtenerListaFiltrada(req.query, alcanceDe(req.usuario));
 
     // Excel y LibreOffice interpretan como FÓRMULA cualquier celda que empiece
     // por = + - @ (o tab/CR). Un cliente llamado `=HYPERLINK("http://...")` se
@@ -303,7 +306,7 @@ async function eliminarPrestamo(req, res, next) {
 async function mostrarDetalle(req, res, next) {
   try {
     const { id } = req.params;
-    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, req.usuario.id);
+    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, alcanceDe(req.usuario));
     if (!prestamo) return res.status(404).render('errores/404');
 
     res.render('admin/prestamos/detalle', {
@@ -322,7 +325,7 @@ async function mostrarDetalle(req, res, next) {
 async function generarComprobante(req, res, next) {
   try {
     const { id } = req.params;
-    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, req.usuario.id);
+    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, alcanceDe(req.usuario));
     if (!prestamo) return res.status(404).render('errores/404');
 
     const nombre = (prestamo.perfiles?.nombre_completo || 'cliente').replace(/[^\w]+/g, '_');
@@ -338,7 +341,7 @@ async function generarComprobante(req, res, next) {
 async function generarComprobantePago(req, res, next) {
   try {
     const { id, pagoId } = req.params;
-    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, req.usuario.id);
+    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, alcanceDe(req.usuario));
     if (!prestamo) return res.status(404).render('errores/404');
     const pago = (pagos || []).find((p) => p.id === pagoId);
     if (!pago) return res.status(404).render('errores/404');
@@ -360,7 +363,7 @@ async function generarComprobantePago(req, res, next) {
 async function generarComprobanteCuota(req, res, next) {
   try {
     const { id, cuotaId } = req.params;
-    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, req.usuario.id);
+    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, alcanceDe(req.usuario));
     if (!prestamo) return res.status(404).render('errores/404');
     const cuota = cuotas.find((c) => c.id === cuotaId);
     if (!cuota) return res.status(404).render('errores/404');
@@ -403,7 +406,7 @@ async function generarComprobanteCuota(req, res, next) {
 async function generarPazYSalvo(req, res, next) {
   try {
     const { id } = req.params;
-    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, req.usuario.id);
+    const { prestamo, cuotas, pagos } = await prestamosService.obtenerPrestamoConCuotas(id, alcanceDe(req.usuario));
     if (!prestamo) return res.status(404).render('errores/404');
     if (prestamo.estado !== 'pagado') {
       return res.status(400).send('El paz y salvo solo está disponible para préstamos pagados en su totalidad.');

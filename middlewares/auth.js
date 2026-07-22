@@ -1,4 +1,5 @@
 const { supabaseAnon, supabaseAdmin } = require('../config/supabase');
+const { esSuperAdmin } = require('../utils/alcance');
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -81,6 +82,9 @@ async function requireAuth(req, res, next) {
 
     req.usuario = perfil;
     res.locals.usuario = perfil;
+    // El super admin ve todo; se expone a las vistas para el indicador visual.
+    req.esSuperAdmin = esSuperAdmin(perfil);
+    res.locals.esSuperAdmin = req.esSuperAdmin;
     next();
   } catch (err) {
     // Corte de red hacia Supabase: mostrar aviso amable SIN cerrar sesión.

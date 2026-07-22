@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const { alcanceDe } = require('../utils/alcance');
 const router = express.Router();
 
 // Subida de documentos en memoria (se reenvía el buffer a Supabase Storage).
@@ -63,7 +64,7 @@ router.use(requireAuth, requireAdmin);
 // cualquier vista admin, sin que cada controlador tenga que calcularlos.
 router.use(async (req, res, next) => {
   try {
-    const conteos = await dashboardService.obtenerConteosNotificacion(req.usuario.id);
+    const conteos = await dashboardService.obtenerConteosNotificacion(alcanceDe(req.usuario));
     res.locals.moraCount = conteos.moraCount;
     res.locals.cobrosHoyCount = conteos.cobrosHoyCount;
     res.locals.clientesCount = conteos.clientesCount;
@@ -154,6 +155,8 @@ router.post('/configuracion/clave', configuracionController.cambiarMiClave);
 // Crear usuarios y restablecer contraseñas es dar acceso a toda la cartera:
 // requireAdmin ya cubre todo /admin, así que un cobrador no llega aquí.
 router.get('/usuarios', usuariosController.listar);
+// Chequeo en vivo del correo (AJAX desde el formulario). Va antes de /:id.
+router.get('/usuarios/verificar-correo', usuariosController.verificarCorreo);
 router.get('/usuarios/nuevo', usuariosController.mostrarFormularioNuevo);
 router.post('/usuarios', validarUsuarioNuevo, revisar(), usuariosController.crear);
 router.get('/usuarios/:id/editar', esUuid('id'), revisar(), usuariosController.mostrarFormularioEditar);

@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../config/supabase');
+const { scope } = require('../utils/alcance');
 const { formatDistanceToNow } = require('date-fns');
 const { es } = require('date-fns/locale');
 const { diasDeAtraso, formatoISO, formatoRelativoDias } = require('../utils/fechas');
@@ -74,15 +75,15 @@ async function calcularKpisRango({ desde, hasta, usuarioId }) {
     { data: prestamosRango, error: e1 },
     { data: pagosRango, error: e2 },
   ] = await Promise.all([
-    // Préstamos originados en el periodo POR ESTE USUARIO (para capital y saldo).
-    supabaseAdmin.from('prestamos')
-      .select('id, numero, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo)')
-      .eq('creado_por', usuarioId)
+    // Préstamos originados en el periodo (del usuario, o de TODOS si super admin).
+    scope(supabaseAdmin.from('prestamos')
+      .select('id, numero, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo)'),
+      'creado_por', usuarioId)
       .gte('fecha_inicio', desde).lte('fecha_inicio', hasta),
-    // Pagos del periodo sobre préstamos de este usuario (recuperado e interés).
-    supabaseAdmin.from('pagos')
-      .select('prestamo_id, monto, prestamos:prestamo_id!inner(numero, creado_por, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo))')
-      .eq('prestamos.creado_por', usuarioId)
+    // Pagos del periodo sobre esos préstamos (recuperado e interés).
+    scope(supabaseAdmin.from('pagos')
+      .select('prestamo_id, monto, prestamos:prestamo_id!inner(numero, creado_por, monto_capital, monto_total_a_pagar, perfiles:clientes(nombre_completo))'),
+      'prestamos.creado_por', usuarioId)
       .gte('fecha_pago', desde).lte('fecha_pago', hasta),
   ]);
   if (e1) throw e1;
@@ -168,8 +169,8 @@ async function obtenerResumenCarteraDestacado(usuarioId) {
   const inicioMes = formatoISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
 
   // vista_cartera ahora expone creado_por (ver aislamiento-por-usuario.sql).
-  const { data, error } = await supabaseAdmin
-    .from('vista_cartera').select('*').eq('creado_por', usuarioId);
+  const { data, error } = await scope(
+    supabaseAdmin.from('vista_cartera').select('*'), 'creado_por', usuarioId);
   if (error) throw error;
 
   const carteraActiva = data
@@ -180,10 +181,9 @@ async function obtenerResumenCarteraDestacado(usuarioId) {
     data.filter((p) => p.estado === 'activo' || p.estado === 'en_mora').map((p) => p.cliente_id)
   ).size;
 
-  const { data: prestamosDelMes, error: errorMes } = await supabaseAdmin
-    .from('prestamos')
-    .select('monto_capital, monto_total_a_pagar')
-    .eq('creado_por', usuarioId)
+  const { data: prestamosDelMes, error: errorMes } = await scope(
+    supabaseAdmin.from('prestamos').select('monto_capital, monto_total_a_pagar'),
+    'creado_por', usuarioId)
     .gte('fecha_inicio', inicioMes);
   if (errorMes) throw errorMes;
 
@@ -219,10 +219,10 @@ async function obtenerProximosCobros(diasAdelante = 7, usuarioId) {
   limite.setDate(limite.getDate() + diasAdelante);
 
   // Cuotas de préstamos de este usuario (el !inner filtra por creado_por).
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await scope(supabaseAdmin
     .from('cuotas')
     .select('*, prestamos:prestamo_id!inner(creado_por, cliente_id, perfiles:clientes(nombre_completo, telefono))')
-    .eq('prestamos.creado_por', usuarioId)
+    , 'prestamos.creado_por', usuarioId)
     .in('estado', ['pendiente', 'parcial'])
     .gte('fecha_vencimiento', formatoISO(hoy))
     .lte('fecha_vencimiento', formatoISO(limite))
@@ -360,9 +360,9 @@ async function obtenerSerieIngresos(periodo) {
 
 // Resumen de créditos tomados activos (deuda propia pendiente).
 async function obtenerResumenCreditosTomados(usuarioId) {
-  const { data: creditos, error: e1 } = await supabaseAdmin
+  const { data: creditos, error: e1 } = await scope(supabaseAdmin
     .from('creditos_tomados').select('id, monto_capital, monto_total_a_pagar')
-    .eq('creado_por', usuarioId).eq('estado', 'activo');
+    , 'creado_por', usuarioId).eq('estado', 'activo');
   if (e1) throw e1;
 
   // Cuotas pagadas solo de los créditos de este usuario.
@@ -408,18 +408,18 @@ async function obtenerConteosNotificacion(usuarioId) {
     { count: prestamosCount, error: errorPrest },
     { data: renegData, error: errorReneg },
   ] = await Promise.all([
-    supabaseAdmin.from('cuotas').select('id, prestamos:prestamo_id!inner(creado_por)', { count: 'exact', head: true })
-      .eq('prestamos.creado_por', usuarioId)
+    scope(supabaseAdmin.from('cuotas').select('id, prestamos:prestamo_id!inner(creado_por)', { count: 'exact', head: true })
+      , 'prestamos.creado_por', usuarioId)
       .in('estado', ['pendiente', 'parcial', 'vencida']).lt('fecha_vencimiento', hoy),
-    supabaseAdmin.from('cuotas').select('id, prestamos:prestamo_id!inner(creado_por)', { count: 'exact', head: true })
-      .eq('prestamos.creado_por', usuarioId)
+    scope(supabaseAdmin.from('cuotas').select('id, prestamos:prestamo_id!inner(creado_por)', { count: 'exact', head: true })
+      , 'prestamos.creado_por', usuarioId)
       .in('estado', ['pendiente', 'parcial']).eq('fecha_vencimiento', hoy),
     supabaseAdmin.from('clientes').select('id', { count: 'exact', head: true })
       .eq('activo', true),
-    supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true })
-      .eq('creado_por', usuarioId).eq('estado', 'activo'),
-    supabaseAdmin.from('pagos').select('prestamo_id, prestamos:prestamo_id!inner(creado_por, estado)')
-      .eq('prestamos.creado_por', usuarioId).eq('tipo', 'interes'),
+    scope(supabaseAdmin.from('prestamos').select('id', { count: 'exact', head: true })
+      , 'creado_por', usuarioId).eq('estado', 'activo'),
+    scope(supabaseAdmin.from('pagos').select('prestamo_id, prestamos:prestamo_id!inner(creado_por, estado)')
+      , 'prestamos.creado_por', usuarioId).eq('tipo', 'interes'),
   ]);
   if (errorMora) throw errorMora;
   if (errorHoy) throw errorHoy;
@@ -463,42 +463,42 @@ async function obtenerActividadReciente(limite = 8, usuarioId) {
     { data: pagosTomados, error: e4 },
     { data: creditosTomados, error: e5 },
   ] = await Promise.all([
-    supabaseAdmin
+    scope(supabaseAdmin
       .from('pagos')
       .select('monto, creado_en, prestamos:prestamo_id!inner(creado_por, perfiles:clientes(nombre_completo))')
-      .eq('prestamos.creado_por', usuarioId)
+      , 'prestamos.creado_por', usuarioId)
       .gte('creado_en', desde)
       .order('creado_en', { ascending: false })
       .limit(limite),
-    supabaseAdmin
+    scope(supabaseAdmin
       .from('prestamos')
       .select('monto_capital, creado_en, perfiles:clientes(nombre_completo)')
-      .eq('creado_por', usuarioId)
+      , 'creado_por', usuarioId)
       .gte('creado_en', desde)
       .order('creado_en', { ascending: false })
       .limit(limite),
-    supabaseAdmin
+    scope(supabaseAdmin
       .from('cuotas')
       .select('monto_esperado, monto_pagado, fecha_vencimiento, prestamos:prestamo_id!inner(creado_por, perfiles:clientes(nombre_completo))')
-      .eq('prestamos.creado_por', usuarioId)
+      , 'prestamos.creado_por', usuarioId)
       .eq('estado', 'vencida')
       .gte('fecha_vencimiento', desde)
       .order('fecha_vencimiento', { ascending: false })
       .limit(limite),
     // Pagos de cuotas de créditos que ESTE usuario tomó (sus pasivos).
-    supabaseAdmin
+    scope(supabaseAdmin
       .from('cuotas_credito_tomado')
       .select('monto, pagado_en, creditos_tomados:credito_id!inner(acreedor, creado_por)')
-      .eq('creditos_tomados.creado_por', usuarioId)
+      , 'creditos_tomados.creado_por', usuarioId)
       .eq('estado', 'pagada')
       .gte('pagado_en', desde)
       .order('pagado_en', { ascending: false })
       .limit(limite),
     // Créditos que ESTE usuario tomó (creación del pasivo).
-    supabaseAdmin
+    scope(supabaseAdmin
       .from('creditos_tomados')
       .select('monto_capital, creado_en, acreedor')
-      .eq('creado_por', usuarioId)
+      , 'creado_por', usuarioId)
       .gte('creado_en', desde)
       .order('creado_en', { ascending: false })
       .limit(limite),
@@ -565,10 +565,10 @@ async function obtenerSerieIngresosRango({ desde, hasta, usuarioId }) {
   else if (dias > 31) granularidad = 'semana';
 
   const [{ data, error }, { data: prestamosRango, error: errorPrestamos }] = await Promise.all([
-    supabaseAdmin.from('pagos').select('fecha_pago, monto, prestamos:prestamo_id!inner(creado_por)')
-      .eq('prestamos.creado_por', usuarioId).gte('fecha_pago', desde).lte('fecha_pago', hasta),
-    supabaseAdmin.from('prestamos').select('fecha_inicio, monto_capital, monto_total_a_pagar')
-      .eq('creado_por', usuarioId).gte('fecha_inicio', desde).lte('fecha_inicio', hasta),
+    scope(supabaseAdmin.from('pagos').select('fecha_pago, monto, prestamos:prestamo_id!inner(creado_por)')
+      , 'prestamos.creado_por', usuarioId).gte('fecha_pago', desde).lte('fecha_pago', hasta),
+    scope(supabaseAdmin.from('prestamos').select('fecha_inicio, monto_capital, monto_total_a_pagar')
+      , 'creado_por', usuarioId).gte('fecha_inicio', desde).lte('fecha_inicio', hasta),
   ]);
   if (error) throw error;
   if (errorPrestamos) throw errorPrestamos;

@@ -1,11 +1,12 @@
 const { supabaseAdmin } = require('../../config/supabase');
 const { formatoISO } = require('../../utils/fechas');
+const { alcanceDe, scope } = require('../../utils/alcance');
 
 async function mostrarRenegociados(req, res, next) {
   try {
-    // Pagos de tipo 'interes' de los préstamos de ESTE usuario (el !inner +
-    // creado_por deja solo los suyos).
-    const { data: pagosInteres, error } = await supabaseAdmin
+    // Pagos de tipo 'interes' de los préstamos del usuario (o de TODOS si es
+    // super admin: alcanceDe devuelve null y scope no filtra).
+    const { data: pagosInteres, error } = await scope(supabaseAdmin
       .from('pagos')
       .select(`
         id, monto, fecha_pago, accion, notas, creado_en,
@@ -15,8 +16,7 @@ async function mostrarRenegociados(req, res, next) {
           valor_cuota, frecuencia_pago, fecha_inicio, estado, creado_por,
           perfiles:clientes(nombre_completo, numero_documento, telefono)
         )
-      `)
-      .eq('prestamos.creado_por', req.usuario.id)
+      `), 'prestamos.creado_por', alcanceDe(req.usuario))
       .eq('tipo', 'interes')
       .order('creado_en', { ascending: false });
     if (error) throw error;

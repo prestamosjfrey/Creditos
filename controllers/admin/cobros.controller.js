@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../../config/supabase');
+const { scope, alcanceDe } = require('../../utils/alcance');
 const { formatoISO } = require('../../utils/fechas');
 const callmebot = require('../../services/callmebot.service');
 const moraService = require('../../services/mora.service');
@@ -21,14 +22,14 @@ async function obtenerCobros(diasAdelante = 30, usuarioId) {
 
   // Cuotas próximas (hoy → +30 días) + cuotas en mora (vencidas antes de hoy)
   const [{ data: proximas, error: e1 }, { data: vencidas, error: e2 }] = await Promise.all([
-    supabaseAdmin.from('cuotas').select(campos)
-      .eq('prestamos.creado_por', usuarioId)
+    scope(supabaseAdmin.from('cuotas').select(campos)
+      , 'prestamos.creado_por', usuarioId)
       .in('estado', ['pendiente', 'parcial'])
       .gte('fecha_vencimiento', hoyISO)
       .lte('fecha_vencimiento', formatoISO(limite))
       .order('fecha_vencimiento', { ascending: true }),
-    supabaseAdmin.from('cuotas').select(campos)
-      .eq('prestamos.creado_por', usuarioId)
+    scope(supabaseAdmin.from('cuotas').select(campos)
+      , 'prestamos.creado_por', usuarioId)
       .in('estado', ['pendiente', 'parcial', 'vencida'])
       .lt('fecha_vencimiento', hoyISO)
       .order('fecha_vencimiento', { ascending: false }),
@@ -71,7 +72,7 @@ async function mostrarCobros(req, res, next) {
     const hoyISO = formatoISO(hoy);
     const semanaISO = formatoISO(new Date(hoy.getTime() + 6 * 86400000));
 
-    const cobros = await obtenerCobros(30, req.usuario.id);
+    const cobros = await obtenerCobros(30, alcanceDe(req.usuario));
 
     const clientesSet = new Set(cobros.map((c) => c.prestamos?.perfiles?.numero_documento).filter(Boolean));
     const hoyItems = cobros.filter((c) => c.estaHoy);
@@ -121,7 +122,7 @@ async function notificarCobrosHoy(req, res, next) {
 
 async function mostrarMora(req, res, next) {
   try {
-    const centro = await moraService.obtenerCentroMora(req.usuario.id);
+    const centro = await moraService.obtenerCentroMora(alcanceDe(req.usuario));
     res.render('admin/mora/index', { titulo: 'Mora', centro });
   } catch (err) { next(err); }
 }
@@ -129,7 +130,7 @@ async function mostrarMora(req, res, next) {
 // Mismos datos en JSON, para refrescar el Centro de Mora en tiempo real.
 async function datosMora(req, res, next) {
   try {
-    const centro = await moraService.obtenerCentroMora(req.usuario.id);
+    const centro = await moraService.obtenerCentroMora(alcanceDe(req.usuario));
     res.json(centro);
   } catch (err) { next(err); }
 }

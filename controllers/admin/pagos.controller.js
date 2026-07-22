@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../../config/supabase');
+const { scope, alcanceDe } = require('../../utils/alcance');
 const pagosService = require('../../services/pagos.service');
 const { parsearNumero } = require('../../utils/moneda');
 const { formatoISO } = require('../../utils/fechas');
@@ -29,11 +30,11 @@ async function listarTodos(req, res, next) {
 
     // Solo los pagos de los préstamos del usuario. El !inner obliga a que el
     // préstamo exista y sea suyo (creado_por), así el pago queda acotado.
-    const uid = req.usuario.id;
-    const { data: pagos, error } = await supabaseAdmin
+    const uid = alcanceDe(req.usuario);
+    const { data: pagos, error } = await scope(supabaseAdmin
       .from('pagos')
       .select('*, prestamos:prestamo_id!inner(creado_por, perfiles:clientes(nombre_completo))')
-      .eq('prestamos.creado_por', uid)
+      , 'prestamos.creado_por', uid)
       .gte('fecha_pago', desde)
       .lte('fecha_pago', hasta)
       .order('fecha_pago', { ascending: false });
@@ -46,9 +47,9 @@ async function listarTodos(req, res, next) {
     const numDias = Math.round((dHasta - dDesde) / MS) + 1;
     const prevHasta = new Date(dDesde); prevHasta.setDate(prevHasta.getDate() - 1);
     const prevDesde = new Date(prevHasta); prevDesde.setDate(prevDesde.getDate() - (numDias - 1));
-    const { data: prevPagos } = await supabaseAdmin
+    const { data: prevPagos } = await scope(supabaseAdmin
       .from('pagos').select('monto, prestamos:prestamo_id!inner(creado_por)')
-      .eq('prestamos.creado_por', uid)
+      , 'prestamos.creado_por', uid)
       .gte('fecha_pago', formatoISO(prevDesde)).lte('fecha_pago', formatoISO(prevHasta));
     const prevTotal = (prevPagos || []).reduce((a, p) => a + Number(p.monto), 0);
 
@@ -73,9 +74,9 @@ async function listarTodos(req, res, next) {
 
     // Todos los pagos del año en curso para el filtro independiente de la gráfica
     const anoActual = new Date().getFullYear();
-    const { data: todosPagosAnio } = await supabaseAdmin
+    const { data: todosPagosAnio } = await scope(supabaseAdmin
       .from('pagos').select('fecha_pago, monto, prestamos:prestamo_id!inner(creado_por)')
-      .eq('prestamos.creado_por', uid)
+      , 'prestamos.creado_por', uid)
       .gte('fecha_pago', `${anoActual}-01-01`)
       .lte('fecha_pago', `${anoActual}-12-31`);
     const chartPagosAll = (todosPagosAnio || []).map((p) => ({ f: p.fecha_pago, m: Number(p.monto) }));

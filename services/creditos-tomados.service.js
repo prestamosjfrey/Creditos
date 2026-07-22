@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../config/supabase');
+const { scope } = require('../utils/alcance');
 const { fechaDeCuota, formatoISO } = require('../utils/fechas');
 const { formatCOP } = require('../utils/moneda');
 const cajaService = require('./caja.service');
@@ -201,9 +202,9 @@ async function registrarPagoCreditoTomado({ creditoId, monto, metodo, fechaPago,
 }
 
 async function listarTodos(usuarioId) {
-  const { data: creditos, error: e1 } = await supabaseAdmin
-    .from('creditos_tomados').select('*')
-    .eq('creado_por', usuarioId)
+  // usuarioId es el alcance: null = super admin (ve los créditos de todos).
+  const { data: creditos, error: e1 } = await scope(
+    supabaseAdmin.from('creditos_tomados').select('*'), 'creado_por', usuarioId)
     .order('creado_en', { ascending: false });
   if (e1) throw e1;
 

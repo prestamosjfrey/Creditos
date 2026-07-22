@@ -1,12 +1,15 @@
 const cajaService = require('../../services/caja.service');
 const auditoria = require('../../services/auditoria.service');
 const { formatCOP, parsearNumero } = require('../../utils/moneda');
+const { alcanceDe } = require('../../utils/alcance');
 
 async function mostrarCaja(req, res, next) {
   try {
+    // Super admin ve la caja global (suma de todas); el resto, solo la suya.
+    const uid = alcanceDe(req.usuario);
     const [saldoDisponible, movimientos] = await Promise.all([
-      cajaService.obtenerSaldoDisponible(req.usuario.id),
-      cajaService.obtenerMovimientos(req.usuario.id),
+      cajaService.obtenerSaldoDisponible(uid),
+      cajaService.obtenerMovimientos(uid),
     ]);
 
     res.render('admin/caja/index', {

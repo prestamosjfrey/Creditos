@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../config/supabase');
+const { scope } = require('./alcance');
 
 // Árbol del archivo de comprobantes, agrupado por cliente. Incluye TODOS los
 // préstamos (activos y pagados): el plan de pago queda disponible desde que se
@@ -6,10 +7,10 @@ const { supabaseAdmin } = require('../config/supabase');
 // Es una vista virtual: no guarda archivos, solo organiza lo que ya está en BD.
 async function obtenerArbol(usuarioId) {
   // Solo los préstamos de este usuario: el archivo de comprobantes es privado.
-  const { data: prestamos, error } = await supabaseAdmin
+  const { data: prestamos, error } = await scope(supabaseAdmin
     .from('prestamos')
     .select('id, fecha_inicio, monto_total_a_pagar, estado, cliente_id, perfiles:clientes(nombre_completo), cuotas(id, numero_cuota), pagos(id, monto, fecha_pago, metodo, tipo, distribucion, creado_en)')
-    .eq('creado_por', usuarioId)
+    , 'creado_por', usuarioId)
     .order('fecha_inicio', { ascending: false });
   if (error) throw error;
 
