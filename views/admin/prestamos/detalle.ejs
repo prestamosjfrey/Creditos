@@ -94,11 +94,67 @@
       <img src="/img/nuevo%20comprobante.ico" alt="Comprobantes" class="h-16 w-16 object-contain" style="image-rendering:auto" />
       Comprobantes
     </a>
-    <a href="/admin/clientes/<%= prestamo.cliente_id %>/editar" class="accion-detalle">
+    <!-- Activa el modo edición sobre esta misma pantalla (no navega a otra). -->
+    <button type="button" id="btn-modo-edicion" class="accion-detalle">
       <img src="/img/nuevo%20editar.ico" alt="Editar" class="h-16 w-16 object-contain" style="image-rendering:auto" />
-      Editar
-    </a>
+      <span id="btn-modo-edicion-txt">Editar</span>
+    </button>
+
+    <!-- Solo aparece en modo edición. En rojo: es una acción destructiva y no
+         debe confundirse con las demás. -->
+    <button type="button" id="btn-eliminar-prestamo"
+            class="solo-edicion oculto accion-detalle accion-detalle-peligro">
+      <svg class="h-16 w-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6h14ZM10 11v6M14 11v6" />
+      </svg>
+      Eliminar
+    </button>
   </div>
+</div>
+
+<!-- ===================== BARRA DEL MODO EDICIÓN ===================== -->
+<div id="barra-edicion" class="mb-6 hidden rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="flex items-start gap-2">
+      <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+      <div>
+        <p class="font-semibold text-amber-900">Modo edición activo</p>
+        <p class="mt-0.5 text-sm text-amber-800">
+          Puedes cambiar el valor y la fecha de las cuotas <strong>pendientes</strong>, ajustar el plan o eliminar el préstamo.
+          Las cuotas ya pagadas no se pueden tocar. Todo queda registrado en la auditoría.
+        </p>
+      </div>
+    </div>
+    <button type="button" id="btn-salir-edicion" class="btn-secondary shrink-0 text-sm">Salir del modo edición</button>
+  </div>
+
+  <!-- Editar el plan completo -->
+  <form action="/admin/prestamos/<%= prestamo.id %>/plan" method="POST" id="form-plan"
+        class="mt-4 grid grid-cols-1 gap-3 border-t border-amber-200 pt-4 sm:grid-cols-3">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <div>
+      <label class="label-field" for="ed-total">Total a pagar</label>
+      <input class="input-field input-moneda" type="text" inputmode="numeric" id="ed-total"
+             name="monto_total_a_pagar" value="<%= Math.round(prestamo.monto_total_a_pagar) %>" required />
+    </div>
+    <div>
+      <label class="label-field" for="ed-cuotas">Número de cuotas</label>
+      <input class="input-field" type="number" min="1" max="500" id="ed-cuotas"
+             name="numero_cuotas" value="<%= prestamo.numero_cuotas %>" required />
+    </div>
+    <div class="flex items-end">
+      <button type="submit" class="btn-primary w-full justify-center">Guardar plan</button>
+    </div>
+    <p class="text-xs text-amber-800 sm:col-span-3">
+      Las cuotas ya pagadas se conservan; el saldo restante se reparte entre las pendientes.
+    </p>
+  </form>
+
+  <!-- El botón de eliminar vive arriba, junto a las demás acciones. Este
+       formulario solo transporta el envío; lo dispara ese botón tras confirmar. -->
+  <form action="/admin/prestamos/<%= prestamo.id %>/eliminar" method="POST" id="form-eliminar" class="hidden">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+  </form>
 </div>
 
 <!-- ===================== KPIs ===================== -->
@@ -174,6 +230,7 @@
         <thead>
           <tr class="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
             <th class="pb-3 pr-3">#</th><th class="pb-3 pr-3">Vence</th><th class="pb-3 pr-3 text-right">Monto</th><th class="pb-3 pr-3 text-right">Pagado</th><th class="pb-3 pr-3 text-right">Saldo</th><th class="pb-3 text-right">Estado</th>
+            <th class="col-edicion hidden pb-3 pl-3 text-right">Editar</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
@@ -195,11 +252,35 @@
               <td class="py-3 pr-3 text-right num text-slate-500"><%= formatCOP(c.monto_pagado) %></td>
               <td class="py-3 pr-3 text-right num font-medium text-slate-800"><%= formatCOP(sc) %></td>
               <td class="py-3 text-right"><%- badge %></td>
+
+              <!-- Columna que solo existe en modo edición. Las cuotas pagadas
+                   no se pueden tocar: son dinero recibido con comprobante. -->
+              <td class="col-edicion hidden py-3 pl-3 text-right">
+                <% if (c.estado === 'pagada') { %>
+                  <span class="text-xs text-slate-300" title="Una cuota pagada no se puede editar">Pagada</span>
+                <% } else { %>
+                  <button type="button" class="btn-editar-cuota text-xs font-medium text-blue-600 hover:underline"
+                          data-cuota="<%= c.id %>"
+                          data-numero="<%= c.numero_cuota %>"
+                          data-monto="<%= Math.round(c.monto_esperado) %>"
+                          data-fecha="<%= c.fecha_vencimiento %>">
+                    Modificar
+                  </button>
+                <% } %>
+              </td>
             </tr>
           <% }); %>
         </tbody>
       </table>
     </div>
+    <!-- Formulario que envía la edición de UNA cuota. Va oculto: lo rellena el
+         diálogo de "Modificar" y se envía desde ahí. -->
+    <form id="form-editar-cuota" method="POST" class="hidden">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <input type="hidden" name="monto" id="ec-monto" />
+      <input type="hidden" name="fecha_vencimiento" id="ec-fecha" />
+    </form>
+
     <!-- Footer stats -->
     <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-slate-100 pt-4">
       <div><p class="text-[11px] text-slate-400">Cuotas pagadas</p><p class="num text-base font-bold text-slate-800"><%= cuotasPagadas %></p></div>
@@ -466,3 +547,130 @@
   });
 </script>
 <% } %>
+
+<!-- ===================== MODO EDICIÓN ===================== -->
+<script>
+  (function () {
+    var PRESTAMO_ID = '<%= prestamo.id %>';
+
+    var btn = document.getElementById('btn-modo-edicion');
+    var btnTxt = document.getElementById('btn-modo-edicion-txt');
+    var barra = document.getElementById('barra-edicion');
+    var btnSalir = document.getElementById('btn-salir-edicion');
+    if (!btn || !barra) return;
+
+    var activo = false;
+
+    function pintar() {
+      barra.classList.toggle('hidden', !activo);
+
+      // Columna "Editar" de la tabla: celdas normales, basta con `hidden`.
+      document.querySelectorAll('.col-edicion').forEach(function (c) {
+        c.classList.toggle('hidden', !activo);
+      });
+
+      // El botón de eliminar usa `.oculto` en vez de `hidden`: .accion-detalle
+      // se define fuera de @layer components y su `display:flex` le ganaría a
+      // la utilidad `hidden` de Tailwind.
+      document.querySelectorAll('.solo-edicion').forEach(function (c) {
+        c.classList.toggle('oculto', !activo);
+      });
+
+      if (btnTxt) btnTxt.textContent = activo ? 'Cerrar edición' : 'Editar';
+      if (activo) barra.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    btn.addEventListener('click', function () { activo = !activo; pintar(); });
+    if (btnSalir) btnSalir.addEventListener('click', function () { activo = false; pintar(); });
+
+    // --- Editar una cuota ---
+    var formCuota = document.getElementById('form-editar-cuota');
+    document.querySelectorAll('.btn-editar-cuota').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var d = b.dataset;
+        Swal.fire({
+          title: 'Cuota #' + d.numero,
+          html:
+            '<div style="text-align:left">' +
+            '<label style="display:block;font-size:12px;color:#64748b;margin-bottom:4px">Valor de la cuota</label>' +
+            '<input id="swal-monto" type="number" min="1" value="' + d.monto + '" class="swal2-input" style="margin:0 0 14px;width:100%">' +
+            '<label style="display:block;font-size:12px;color:#64748b;margin-bottom:4px">Fecha de vencimiento</label>' +
+            '<input id="swal-fecha" type="date" value="' + d.fecha + '" class="swal2-input" style="margin:0;width:100%">' +
+            '</div>',
+          showCancelButton: true,
+          confirmButtonText: 'Guardar cambios',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#16a34a',
+          focusConfirm: false,
+          preConfirm: function () {
+            var monto = document.getElementById('swal-monto').value;
+            var fecha = document.getElementById('swal-fecha').value;
+            if (!monto || Number(monto) <= 0) {
+              Swal.showValidationMessage('El valor debe ser mayor que cero.');
+              return false;
+            }
+            if (!fecha) {
+              Swal.showValidationMessage('Elige la fecha de vencimiento.');
+              return false;
+            }
+            return { monto: monto, fecha: fecha };
+          },
+        }).then(function (r) {
+          if (!r.isConfirmed) return;
+          document.getElementById('ec-monto').value = r.value.monto;
+          document.getElementById('ec-fecha').value = r.value.fecha;
+          formCuota.action = '/admin/prestamos/' + PRESTAMO_ID + '/cuotas/' + d.cuota + '/editar';
+          formCuota.submit();
+        });
+      });
+    });
+
+    // --- Guardar el plan: avisa de que se regeneran las cuotas pendientes ---
+    var formPlan = document.getElementById('form-plan');
+    if (formPlan) {
+      formPlan.addEventListener('submit', function (e) {
+        e.preventDefault();
+        Swal.fire({
+          icon: 'question',
+          title: '¿Actualizar el plan?',
+          html: 'Las cuotas <strong>pendientes</strong> se recalculan con el nuevo total y número de cuotas.<br>Las ya pagadas no se tocan.',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, actualizar',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#16a34a',
+        }).then(function (r) { if (r.isConfirmed) formPlan.submit(); });
+      });
+    }
+
+    // --- Eliminar: confirmación escribiendo ELIMINAR ---
+    // El botón está en el encabezado; este formulario oculto es el que envía.
+    var formEliminar = document.getElementById('form-eliminar');
+    var btnEliminar = document.getElementById('btn-eliminar-prestamo');
+    if (formEliminar && btnEliminar) {
+      btnEliminar.addEventListener('click', function () {
+        Swal.fire({
+          icon: 'warning',
+          title: '¿Eliminar este préstamo?',
+          html:
+            'Se borrarán sus <strong>cuotas y abonos</strong>, y la caja se ajustará ' +
+            '(vuelve el capital, se revierte lo abonado).<br><br>' +
+            '<strong>Esta acción no se puede deshacer.</strong><br>' +
+            '<span style="font-size:13px;color:#64748b">Escribe ELIMINAR para confirmar:</span>',
+          input: 'text',
+          inputPlaceholder: 'ELIMINAR',
+          showCancelButton: true,
+          confirmButtonText: 'Eliminar definitivamente',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#dc2626',
+          preConfirm: function (valor) {
+            if ((valor || '').trim().toUpperCase() !== 'ELIMINAR') {
+              Swal.showValidationMessage('Escribe ELIMINAR para confirmar.');
+              return false;
+            }
+            return true;
+          },
+        }).then(function (r) { if (r.isConfirmed) formEliminar.submit(); });
+      });
+    }
+  })();
+</script>

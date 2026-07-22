@@ -64,7 +64,15 @@
       "Bash(node server.js)",
       "Bash(docker --version)",
       "Bash(psql --version)",
-      "Bash(npx supabase *)"
+      "Bash(npx supabase *)",
+      "Bash(cd /c/Creditos *)",
+      "Read(//c/Creditos/public/js/**)",
+      "Bash(xargs echo \"  ocurrencias de '10rem':\")",
+      "Bash(taskkill //F //PID 13980)",
+      "Bash(curl -s -o /dev/null -w \"  /auth/login -> HTTP %{http_code}\\\\n\" http://localhost:3000/auth/login)",
+      "Bash(curl -s -o /dev/null -w \"  /auth/login          -> HTTP %{http_code}\\\\n\" http://localhost:3000/auth/login)",
+      "Bash(curl -s -o /dev/null -w \"  /admin/reportes/capital-prestado -> HTTP %{http_code} \\(302 = pide login, existe\\)\\\\n\" \"http://localhost:3000/admin/reportes/capital-prestado\")",
+      "Bash(curl -s -o /dev/null -w \"servidor -> HTTP %{http_code}\\\\n\" http://localhost:3000/auth/login)"
     ]
   }
 }

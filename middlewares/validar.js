@@ -126,6 +126,29 @@ const validarAbono = [
   body('notas').optional({ values: 'falsy' }).isLength({ max: 1000 }).withMessage('Las notas son demasiado largas.'),
 ];
 
+// Edición de una cuota pendiente (modo edición del detalle del préstamo).
+// La regla de "no menor a lo ya abonado" y "no si está pagada" la aplica la
+// función SQL, que es quien ve el estado real dentro de la transacción.
+const validarEdicionCuota = [
+  esUuid('id'),
+  esUuid('cuotaId'),
+  montoSaneado('monto')
+    .isInt({ min: 1, max: MONTO_MAX })
+    .withMessage('El valor de la cuota debe ser mayor que cero.'),
+  body('fecha_vencimiento').isISO8601().withMessage('La fecha de vencimiento no es válida.'),
+];
+
+// Edición del plan: total a pagar y número de cuotas.
+const validarEdicionPlan = [
+  esUuid('id'),
+  montoSaneado('monto_total_a_pagar')
+    .isInt({ min: 1, max: MONTO_MAX })
+    .withMessage('El total a pagar debe ser mayor que cero.'),
+  body('numero_cuotas')
+    .isInt({ min: 1, max: 500 })
+    .withMessage('El número de cuotas debe estar entre 1 y 500.'),
+];
+
 const validarCliente = [
   body('nombre_completo')
     .trim()
@@ -253,4 +276,6 @@ module.exports = {
   validarUsuarioNuevo,
   validarUsuarioEdicion,
   validarPerfilPropio,
+  validarEdicionCuota,
+  validarEdicionPlan,
 };

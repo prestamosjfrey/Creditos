@@ -98,6 +98,72 @@ async function obtenerPrestamoConCuotas(prestamoId, usuarioId) {
   return { prestamo, cuotas, pagos };
 }
 
+// --- Edición y eliminación de un préstamo ya creado ---
+//
+// Toda la lógica vive en funciones de Postgres (supabase/editar-prestamos.sql)
+// para que cada operación sea atómica y quede auditada. Aquí solo se comprueba
+// que el préstamo sea del usuario y se traduce el error para la interfaz.
+
+// Un usuario solo puede tocar SUS préstamos, aunque escriba el id de otro.
+async function exigirPropiedad(prestamoId, usuarioId) {
+  const { data } = await supabaseAdmin
+    .from('prestamos').select('id').eq('id', prestamoId).eq('creado_por', usuarioId).maybeSingle();
+  if (!data) throw Object.assign(new Error('El préstamo no existe o no es tuyo.'), { status: 404 });
+}
+
+// Los mensajes de las funciones SQL están escritos para el usuario final
+// ("No se puede editar una cuota que ya está pagada"), así que se dejan pasar.
+function errorLegible(error, porDefecto) {
+  const msg = (error && error.message) || '';
+  const limpio = msg.replace(/^.*?:\s*/, '').trim();
+  return Object.assign(new Error(limpio || porDefecto), { status: 400 });
+}
+
+async function editarCuota({ prestamoId, cuotaId, monto, fecha, usuarioId }) {
+  await exigirPropiedad(prestamoId, usuarioId);
+
+  // La cuota debe ser de ESTE préstamo (si no, se podría editar la de otro).
+  const { data: cuota } = await supabaseAdmin
+    .from('cuotas').select('id').eq('id', cuotaId).eq('prestamo_id', prestamoId).maybeSingle();
+  if (!cuota) throw Object.assign(new Error('La cuota no pertenece a este préstamo.'), { status: 404 });
+
+  const { error } = await supabaseAdmin.rpc('editar_cuota', {
+    p_cuota_id: cuotaId,
+    p_monto: monto,
+    p_fecha: fecha,
+    p_actor: usuarioId,
+  });
+  if (error) throw errorLegible(error, 'No se pudo editar la cuota.');
+
+  realtime.emitir('datos:cambio', { origen: 'prestamo' });
+}
+
+async function editarPlan({ prestamoId, total, numeroCuotas, usuarioId }) {
+  await exigirPropiedad(prestamoId, usuarioId);
+
+  const { error } = await supabaseAdmin.rpc('editar_plan_prestamo', {
+    p_prestamo_id: prestamoId,
+    p_total: total,
+    p_numero_cuotas: numeroCuotas,
+    p_actor: usuarioId,
+  });
+  if (error) throw errorLegible(error, 'No se pudo actualizar el plan.');
+
+  realtime.emitir('datos:cambio', { origen: 'prestamo' });
+}
+
+async function eliminarPrestamo({ prestamoId, usuarioId }) {
+  await exigirPropiedad(prestamoId, usuarioId);
+
+  const { error } = await supabaseAdmin.rpc('eliminar_prestamo', {
+    p_prestamo_id: prestamoId,
+    p_actor: usuarioId,
+  });
+  if (error) throw errorLegible(error, 'No se pudo eliminar el préstamo.');
+
+  realtime.emitir('datos:cambio', { origen: 'prestamo' });
+}
+
 async function marcarCuotasVencidas() {
   const hoy = formatoISO(new Date());
   // .select() devuelve solo las cuotas que efectivamente cruzaron a mora en
@@ -151,5 +217,8 @@ module.exports = {
   calcularPlanDeCuotas,
   crearPrestamoConPlan,
   obtenerPrestamoConCuotas,
+  editarCuota,
+  editarPlan,
+  eliminarPrestamo,
   marcarCuotasVencidas,
 };

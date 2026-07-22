@@ -1,133 +1,193 @@
-<div class="mb-6 flex flex-wrap items-start justify-between gap-3">
-  <div>
-    <h1 class="text-2xl font-bold text-slate-800">Usuarios</h1>
-    <p class="mt-0.5 text-sm text-slate-400">Quién puede entrar al sistema y con qué permisos.</p>
-  </div>
-  <a href="/admin/usuarios/nuevo" class="btn-primary inline-flex items-center gap-1.5">
-    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-    Nuevo usuario
-  </a>
-</div>
+<div class="mx-auto max-w-5xl">
 
-<% if (claveNueva) { %>
-  <!-- Se muestra UNA sola vez: no se guarda en claro en ningún sitio. -->
-  <div class="mb-5 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
-    <div class="flex items-start gap-3">
-      <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-amber-900">Contraseña temporal de <%= usuarioClave %></p>
-        <p class="mt-0.5 text-sm text-amber-800">
-          Anótala o dictásela ahora: <strong>no se vuelve a mostrar</strong>. Dile que la cambie al entrar.
-        </p>
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <code id="clave-temporal" class="rounded-lg border border-amber-300 bg-white px-4 py-2 font-mono text-lg font-bold tracking-widest text-slate-800"><%= claveNueva %></code>
-          <button type="button" id="btn-copiar-clave" class="btn-secondary text-xs">Copiar</button>
+  <!-- Cabecera centrada, como en Reportes -->
+  <div class="mb-6 flex flex-col items-center gap-1 text-center">
+    <h1 class="text-3xl font-bold text-slate-800">Usuarios</h1>
+    <p class="text-sm text-slate-400">Quién puede entrar al sistema y con qué permisos.</p>
+    <div class="mt-1 h-0.5 w-10 rounded-full bg-blue-600"></div>
+  </div>
+
+  <% if (claveNueva) { %>
+    <!-- Se muestra UNA sola vez: no se guarda en claro en ningún sitio. -->
+    <div class="mb-5 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
+      <div class="flex items-start gap-3">
+        <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
+        <div class="min-w-0 flex-1">
+          <p class="font-semibold text-amber-900">Contraseña temporal de <%= usuarioClave %></p>
+          <p class="mt-0.5 text-sm text-amber-800">
+            Anótala o dictásela ahora: <strong>no se vuelve a mostrar</strong>. Dile que la cambie al entrar.
+          </p>
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <code id="clave-temporal" class="rounded-lg border border-amber-300 bg-white px-4 py-2 font-mono text-lg font-bold tracking-widest text-slate-800"><%= claveNueva %></code>
+            <button type="button" id="btn-copiar-clave" class="btn-secondary text-xs">Copiar</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-<% } %>
+  <% } %>
 
-<div class="card overflow-hidden p-0">
-  <div class="overflow-x-auto">
-    <table class="table-base w-full">
-      <thead class="bg-slate-50">
-        <tr>
-          <th>Usuario</th>
-          <th>Nombre</th>
-          <th>Correo de contacto</th>
-          <th>Teléfono</th>
-          <th>Rol</th>
-          <th>WhatsApp</th>
-          <th>Estado</th>
-          <th class="text-right">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if (!usuarios.length) { %>
-          <tr><td colspan="8" class="py-10 text-center text-sm text-slate-400">Aún no hay usuarios.</td></tr>
-        <% } %>
-        <% usuarios.forEach(function (u) { %>
-          <tr class="<%= u.id === yoId ? 'bg-blue-50/40' : '' %>">
-            <td class="font-medium text-slate-800">
-              <%= u.usuario || '—' %>
-              <% if (u.id === yoId) { %><span class="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">tú</span><% } %>
-            </td>
-            <td><%= u.nombre_completo || '—' %></td>
-            <td class="text-slate-500"><%= u.email || '—' %></td>
-            <td class="text-slate-500"><%= u.telefono || '—' %></td>
-            <td>
-              <span class="rounded-full px-2 py-0.5 text-xs font-medium <%= u.rol === 'admin' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600' %>">
-                <%= u.rol === 'admin' ? 'Administrador' : 'Cobrador' %>
-              </span>
-            </td>
-            <td>
-              <% if (u.tieneWhatsApp) { %>
-                <span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600" title="Puede recuperar su contraseña por WhatsApp">
-                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Configurado
-                </span>
-              <% } else { %>
-                <span class="inline-flex items-center gap-1 text-xs text-slate-400" title="Sin teléfono o sin apikey de CallMeBot: no podrá recuperar su contraseña solo">
-                  <span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span> Sin configurar
-                </span>
-              <% } %>
-            </td>
-            <td>
-              <span class="rounded-full px-2 py-0.5 text-xs font-medium <%= u.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' %>">
-                <%= u.activo ? 'Activo' : 'Inactivo' %>
-              </span>
-            </td>
-            <td>
-              <div class="flex items-center justify-end gap-1">
-                <a href="/admin/usuarios/<%= u.id %>/editar" class="action-btn" title="Editar" aria-label="Editar">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" /></svg>
-                </a>
+  <div class="card overflow-hidden p-0">
+    <div class="overflow-x-auto">
+      <table class="table-base w-full">
+        <thead class="bg-slate-50">
+          <tr>
+            <th>Usuario</th>
+            <th>Contacto</th>
+            <th class="text-center">Rol</th>
+            <th class="text-center">WhatsApp</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!usuarios.length) { %>
+            <tr><td colspan="6" class="py-12 text-center text-sm text-slate-400">Aún no hay usuarios.</td></tr>
+          <% } %>
 
-                <form action="/admin/usuarios/<%= u.id %>/probar-whatsapp" method="POST" class="form-probar" data-usuario="<%= u.usuario %>" data-listo="<%= u.tieneWhatsApp %>">
-                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                  <button type="submit"
-                    class="action-btn <%= u.tieneWhatsApp ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-300' %>"
-                    title="<%= u.tieneWhatsApp ? 'Enviar WhatsApp de prueba' : 'Sin teléfono o apikey: no se puede probar' %>"
-                    aria-label="Enviar WhatsApp de prueba">
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" /></svg>
-                  </button>
-                </form>
+          <% usuarios.forEach(function (u) { %>
+            <% var inicial = (u.nombre_completo || u.usuario || '?').charAt(0).toUpperCase(); %>
+            <tr class="<%= u.id === yoId ? 'bg-blue-50/40' : '' %>">
 
-                <form action="/admin/usuarios/<%= u.id %>/clave" method="POST" class="form-clave" data-usuario="<%= u.usuario %>">
-                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                  <button type="submit" class="action-btn" title="Restablecer contraseña" aria-label="Restablecer contraseña">
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
-                  </button>
-                </form>
-
-                <% if (u.id !== yoId) { %>
-                  <form action="/admin/usuarios/<%= u.id %>/estado" method="POST" class="form-estado" data-usuario="<%= u.usuario %>" data-activo="<%= u.activo %>">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                    <button type="submit" class="action-btn" title="<%= u.activo ? 'Desactivar' : 'Activar' %>" aria-label="<%= u.activo ? 'Desactivar' : 'Activar' %>">
-                      <% if (u.activo) { %>
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                      <% } else { %>
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+              <!-- Usuario: avatar + identidad de acceso y nombre real juntos -->
+              <td>
+                <div class="flex items-center gap-3">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full <%= u.id === yoId ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500' %> text-sm font-semibold">
+                    <%= inicial %>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="flex items-center gap-1.5 font-medium text-slate-800">
+                      <%= u.usuario || '—' %>
+                      <% if (u.id === yoId) { %>
+                        <span class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">tú</span>
                       <% } %>
+                    </p>
+                    <p class="truncate text-xs text-slate-400"><%= u.nombre_completo || 'Sin nombre' %></p>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Contacto: correo y teléfono en una sola columna, no dos -->
+              <td>
+                <p class="text-sm text-slate-600"><%= u.email || '—' %></p>
+                <p class="text-xs text-slate-400"><%= u.telefono || 'Sin teléfono' %></p>
+              </td>
+
+              <td class="text-center">
+                <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium <%= u.rol === 'admin' ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600' %>">
+                  <%= u.rol === 'admin' ? 'Administrador' : 'Cobrador' %>
+                </span>
+              </td>
+
+              <td class="text-center">
+                <% if (u.tieneWhatsApp) { %>
+                  <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600" title="Puede recuperar su contraseña por WhatsApp">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Configurado
+                  </span>
+                <% } else { %>
+                  <span class="inline-flex items-center gap-1.5 text-xs text-slate-400" title="Sin teléfono o sin apikey de CallMeBot: no podrá recuperar su contraseña solo">
+                    <span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span> Sin configurar
+                  </span>
+                <% } %>
+              </td>
+
+              <td class="text-center">
+                <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium <%= u.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' %>">
+                  <%= u.activo ? 'Activo' : 'Inactivo' %>
+                </span>
+              </td>
+
+              <td>
+                <div class="flex items-center justify-center gap-1">
+                  <a href="/admin/usuarios/<%= u.id %>/editar" class="action-btn" title="Editar" aria-label="Editar">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" /></svg>
+                  </a>
+
+                  <form action="/admin/usuarios/<%= u.id %>/probar-whatsapp" method="POST" class="form-probar" data-usuario="<%= u.usuario %>" data-listo="<%= u.tieneWhatsApp %>">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button type="submit"
+                      class="action-btn <%= u.tieneWhatsApp ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-300' %>"
+                      title="<%= u.tieneWhatsApp ? 'Enviar WhatsApp de prueba' : 'Sin teléfono o apikey: no se puede probar' %>"
+                      aria-label="Enviar WhatsApp de prueba">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" /></svg>
                     </button>
                   </form>
-                <% } %>
-              </div>
-            </td>
-          </tr>
-        <% }); %>
-      </tbody>
-    </table>
+
+                  <form action="/admin/usuarios/<%= u.id %>/clave" method="POST" class="form-clave" data-usuario="<%= u.usuario %>">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button type="submit" class="action-btn" title="Restablecer contraseña" aria-label="Restablecer contraseña">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
+                    </button>
+                  </form>
+
+                  <% if (u.id !== yoId) { %>
+                    <form action="/admin/usuarios/<%= u.id %>/estado" method="POST" class="form-estado" data-usuario="<%= u.usuario %>" data-activo="<%= u.activo %>">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button type="submit" class="action-btn <%= u.activo ? 'hover:text-red-600' : 'hover:text-emerald-600' %>" title="<%= u.activo ? 'Desactivar' : 'Activar' %>" aria-label="<%= u.activo ? 'Desactivar' : 'Activar' %>">
+                        <% if (u.activo) { %>
+                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                        <% } else { %>
+                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                        <% } %>
+                      </button>
+                    </form>
+                  <% } else { %>
+                    <!-- Hueco del mismo ancho: mantiene las columnas alineadas -->
+                    <span class="inline-block h-8 w-8"></span>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Leyenda de acciones: los iconos solos no se entienden -->
+  <div class="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
+    <span class="inline-flex items-center gap-1.5">
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" /></svg>
+      Editar
+    </span>
+    <span class="inline-flex items-center gap-1.5 text-emerald-600">
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" /></svg>
+      Probar WhatsApp
+    </span>
+    <span class="inline-flex items-center gap-1.5">
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
+      Restablecer contraseña
+    </span>
+    <span class="inline-flex items-center gap-1.5">
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+      Activar / desactivar
+    </span>
+  </div>
+
+  <div class="mt-4 rounded-xl bg-slate-50 p-4 text-xs leading-relaxed text-slate-500">
+    <p class="mb-1 font-medium text-slate-600">Sobre la recuperación por WhatsApp</p>
+    Para que un empleado pueda recuperar su contraseña solo, necesita <strong>teléfono</strong> y <strong>apikey de CallMeBot</strong>.
+    CallMeBot solo permite enviar a quien te autorizó: cada empleado debe escribirle
+    <em>«I allow callmebot to send me messages»</em> al bot y pasarte la apikey que reciba.
+    Si no la tiene, aún puedes restablecerle la clave tú desde aquí.
   </div>
 </div>
 
-<div class="mt-4 rounded-xl bg-slate-50 p-4 text-xs leading-relaxed text-slate-500">
-  <p class="mb-1 font-medium text-slate-600">Sobre la recuperación por WhatsApp</p>
-  Para que un empleado pueda recuperar su contraseña solo, necesita <strong>teléfono</strong> y <strong>apikey de CallMeBot</strong>.
-  CallMeBot solo permite enviar a quien te autorizó: cada empleado debe escribirle
-  <em>«I allow callmebot to send me messages»</em> al bot y pasarte la apikey que reciba.
-  Si no la tiene, aún puedes restablecerle la clave tú desde aquí.
-</div>
+<!-- Botón flotante para crear usuario.
+     · z-40 lo deja por debajo de los modales (z-50) para que nunca los tape.
+     · En reposo es solo el icono "+"; al pasar el ratón se despliega el texto.
+       En pantallas pequeñas (sin hover) el texto se muestra siempre, para que
+       un "+" suelto no quede sin explicación. -->
+<a href="/admin/usuarios/nuevo"
+   class="group fixed bottom-6 right-6 z-40 flex items-center rounded-full bg-blue-600 p-4 text-white shadow-lg shadow-blue-600/30 transition-all duration-300 hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-600/40 focus:outline-none focus:ring-4 focus:ring-blue-600/30"
+   title="Crear un usuario nuevo"
+   aria-label="Nuevo usuario">
+  <svg class="h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+  </svg>
+  <span class="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium transition-all duration-300 group-hover:ml-2 group-hover:max-w-[10rem] max-sm:ml-2 max-sm:max-w-[10rem]">
+    Nuevo usuario
+  </span>
+</a>
 
 <script>
   (function () {

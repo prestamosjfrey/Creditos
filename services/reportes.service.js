@@ -55,9 +55,11 @@ function serieMensual(filas) {
 }
 
 // ---------------------------------------------------------------------------
-// 1. COLOCACIÓN — el dinero que salió a la calle en el periodo
+// 1. CAPITAL PRESTADO — el dinero que salió a la calle en el periodo.
+//    (En el sector se le dice "colocación"; aquí se evita esa jerga porque no
+//    se entiende de un vistazo.)
 // ---------------------------------------------------------------------------
-async function colocacion(rango, usuarioId) {
+async function capitalPrestado(rango, usuarioId) {
   let q = supabaseAdmin
     .from('prestamos')
     .select('numero, fecha_inicio, monto_capital, monto_total_a_pagar, numero_cuotas, frecuencia_pago, estado, perfiles:clientes(nombre_completo, numero_documento)');
@@ -84,13 +86,13 @@ async function colocacion(rango, usuarioId) {
 
   return {
     kpis: [
-      { etiqueta: 'Capital colocado', valor: capital, tipo: 'moneda', cambio },
-      { etiqueta: 'Préstamos otorgados', valor: prestamos.length, tipo: 'numero' },
-      { etiqueta: 'Ticket promedio', valor: prestamos.length ? Math.round(capital / prestamos.length) : 0, tipo: 'moneda' },
-      { etiqueta: 'Interés pactado', valor: interes, tipo: 'moneda', nota: capital ? `${Math.round((interes / capital) * 100)}% sobre el capital` : null },
+      { etiqueta: 'Capital prestado', valor: capital, tipo: 'moneda', cambio },
+      { etiqueta: 'Préstamos entregados', valor: prestamos.length, tipo: 'numero' },
+      { etiqueta: 'Préstamo promedio', valor: prestamos.length ? Math.round(capital / prestamos.length) : 0, tipo: 'moneda' },
+      { etiqueta: 'Interés a ganar', valor: interes, tipo: 'moneda', nota: capital ? `${Math.round((interes / capital) * 100)}% sobre el capital` : null },
     ],
     grafica: {
-      etiqueta: 'Capital colocado por mes',
+      etiqueta: 'Capital prestado por mes',
       labels: serie.map((s) => s.etiqueta),
       datos: serie.map((s) => s.total),
     },
@@ -619,7 +621,7 @@ async function creditosTomados(rango, usuarioId) {
 // Catálogo: lo que ve el índice y lo que resuelven las rutas.
 // ---------------------------------------------------------------------------
 const CATALOGO = [
-  { clave: 'colocacion', titulo: 'Colocación', descripcion: 'Capital que saliste a prestar: préstamos otorgados, ticket promedio e interés pactado.', icono: 'salida', calcular: colocacion },
+  { clave: 'capital-prestado', titulo: 'Capital prestado', descripcion: 'Cuánto dinero entregaste en préstamos: cuántos hiciste, de qué tamaño y cuánto interés vas a ganar.', icono: 'salida', calcular: capitalPrestado },
   { clave: 'recaudo', titulo: 'Recaudo', descripcion: 'Dinero que entró: pagos recibidos, desglose por método y promedio por pago.', icono: 'entrada', calcular: recaudo },
   { clave: 'mora', titulo: 'Mora y antigüedad', descripcion: 'Deuda vencida repartida por tramos de atraso (1-30, 31-60, 61-90, +90 días).', icono: 'alerta', calcular: mora, sinRango: true },
   { clave: 'rentabilidad', titulo: 'Rentabilidad', descripcion: 'Cuánto de lo cobrado fue ganancia y cuánto recuperación de capital.', icono: 'ganancia', calcular: rentabilidad },

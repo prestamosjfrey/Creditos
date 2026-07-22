@@ -268,9 +268,25 @@
   @apply border-blue-500 bg-blue-50 text-blue-600;
 }
 
-/* Botones de acción del detalle del préstamo (Llamar / WhatsApp / etc.). */
+/* Botones de acción del detalle del préstamo (Llamar / WhatsApp / etc.).
+   OJO: estas reglas viven FUERA de @layer components, así que se emiten después
+   de las utilidades de Tailwind y les ganan. Por eso una clase suelta como
+   `hidden` o `text-red-600` en el HTML NO surte efecto sobre .accion-detalle:
+   las variantes hay que declararlas aquí. */
 .accion-detalle {
   @apply flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 transition hover:-translate-y-0.5 hover:shadow-sm;
+}
+
+/* Variante destructiva (eliminar préstamo). */
+.accion-detalle-peligro {
+  @apply border-red-200 bg-red-50 text-red-600 hover:bg-red-100;
+}
+
+/* Elementos que solo existen con el modo edición activo. Se declara aquí para
+   que gane a `display:flex` de .accion-detalle. */
+.accion-detalle.oculto,
+.oculto-edicion {
+  display: none;
 }
 
 /* Resaltado temporal del préstamo al abrir Comprobantes desde el detalle. */

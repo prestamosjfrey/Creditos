@@ -39,6 +39,8 @@ const {
   validarUsuarioNuevo,
   validarUsuarioEdicion,
   validarPerfilPropio,
+  validarEdicionCuota,
+  validarEdicionPlan,
 } = require('../middlewares/validar');
 const dashboardController = require('../controllers/admin/dashboard.controller');
 const clientesController = require('../controllers/admin/clientes.controller');
@@ -106,6 +108,11 @@ router.get('/prestamos/:id/paz-y-salvo', esUuid('id'), revisar(), prestamosContr
 router.get('/prestamos/:id/cuotas/:cuotaId/comprobante', esUuid('id'), esUuid('cuotaId'), revisar(), prestamosController.generarComprobanteCuota);
 router.get('/prestamos/:id/pagos/:pagoId/comprobante', esUuid('id'), esUuid('pagoId'), revisar(), prestamosController.generarComprobantePago);
 router.post('/prestamos/:id/pagos', validarAbono, revisar(), pagosController.registrarAbono);
+
+// --- Modo edición del préstamo (todo queda auditado) ---
+router.post('/prestamos/:id/cuotas/:cuotaId/editar', validarEdicionCuota, revisar(), prestamosController.editarCuota);
+router.post('/prestamos/:id/plan', validarEdicionPlan, revisar(), prestamosController.editarPlan);
+router.post('/prestamos/:id/eliminar', esUuid('id'), revisar(), prestamosController.eliminarPrestamo);
 
 router.get('/pagos', pagosController.listarTodos);
 

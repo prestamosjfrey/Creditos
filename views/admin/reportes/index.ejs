@@ -17,23 +17,19 @@
     caja: 'bg-indigo-100 text-indigo-600', calendario: 'bg-sky-100 text-sky-600',
     clientes: 'bg-violet-100 text-violet-600', deuda: 'bg-orange-100 text-orange-600'
   };
-  // Los reportes heredan el rango elegido aquí.
-  var _qs = 'periodo=' + encodeURIComponent(rango.periodo || 'este_mes')
-    + (rango.desde ? '&desde=' + encodeURIComponent(rango.desde) : '')
-    + (rango.hasta ? '&hasta=' + encodeURIComponent(rango.hasta) : '');
+  // Aquí NO se elige periodo: todavía no se sabe qué reporte se quiere ver.
+  // Cada reporte trae su propio filtro dentro, y arranca en "este mes".
 %>
 
 <div class="mb-6 flex flex-col items-center text-center gap-1">
   <h1 class="text-3xl font-bold text-slate-800">Reportes</h1>
-  <p class="text-sm text-slate-400">Elige un periodo y entra al reporte que necesites.</p>
+  <p class="text-sm text-slate-400">Entra al reporte que necesites y ajusta el periodo dentro.</p>
   <div class="mt-1 h-0.5 w-10 rounded-full bg-indigo-600"></div>
 </div>
 
-<%- include('_filtro', { accion: '/admin/reportes', rango: rango, periodos: periodos }) %>
-
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
   <% reportes.forEach(function (r) { %>
-    <a href="/admin/reportes/<%= r.clave %>?<%= _qs %>" class="card group transition hover:shadow-md">
+    <a href="/admin/reportes/<%= r.clave %>" class="card group transition hover:shadow-md">
       <div class="flex items-start gap-3">
         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full <%= COLORES[r.icono] || 'bg-slate-100 text-slate-600' %>">
           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><%- ICONOS[r.icono] || '' %></svg>

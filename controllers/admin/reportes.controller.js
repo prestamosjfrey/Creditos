@@ -1,15 +1,12 @@
 const { CATALOGO, buscarReporte } = require('../../services/reportes.service');
 const { PERIODOS, resolverRango, etiquetaRango } = require('../../utils/rangos');
 
+// El índice es solo el catálogo: aquí todavía no se ha elegido reporte, así que
+// no tiene sentido pedir el periodo. Cada reporte trae su propio filtro dentro.
 function mostrarIndice(req, res) {
-  // El índice conserva el rango elegido para que al entrar a un reporte ya venga
-  // aplicado, y al volver no se pierda.
-  const rango = resolverRango(req.query, 'este_mes');
   res.render('admin/reportes/index', {
     titulo: 'Reportes',
     reportes: CATALOGO.map(({ clave, titulo, descripcion, icono, sinRango }) => ({ clave, titulo, descripcion, icono, sinRango })),
-    periodos: PERIODOS,
-    rango,
   });
 }
 

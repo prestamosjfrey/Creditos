@@ -244,6 +244,62 @@ async function crearPrestamo(req, res, next) {
   }
 }
 
+// --- Modo edición del préstamo ---
+//
+// Los tres vuelven al detalle con un mensaje: la edición ocurre sobre la misma
+// pantalla, no en un formulario aparte.
+
+async function editarCuota(req, res, next) {
+  const { id, cuotaId } = req.params;
+  try {
+    await prestamosService.editarCuota({
+      prestamoId: id,
+      cuotaId,
+      monto: parsearNumero(req.body.monto),
+      fecha: req.body.fecha_vencimiento,
+      usuarioId: req.usuario.id,
+    });
+    res.redirect(`/admin/prestamos/${id}?ok=${encodeURIComponent('Cuota actualizada.')}`);
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      return res.redirect(`/admin/prestamos/${id}?error=${encodeURIComponent(err.message)}`);
+    }
+    next(err);
+  }
+}
+
+async function editarPlan(req, res, next) {
+  const { id } = req.params;
+  try {
+    await prestamosService.editarPlan({
+      prestamoId: id,
+      total: parsearNumero(req.body.monto_total_a_pagar),
+      numeroCuotas: Number(req.body.numero_cuotas),
+      usuarioId: req.usuario.id,
+    });
+    res.redirect(`/admin/prestamos/${id}?ok=${encodeURIComponent('Plan del préstamo actualizado.')}`);
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      return res.redirect(`/admin/prestamos/${id}?error=${encodeURIComponent(err.message)}`);
+    }
+    next(err);
+  }
+}
+
+// Tras eliminar no se puede volver al detalle: el préstamo ya no existe.
+async function eliminarPrestamo(req, res, next) {
+  const { id } = req.params;
+  try {
+    await prestamosService.eliminarPrestamo({ prestamoId: id, usuarioId: req.usuario.id });
+    res.redirect(`/admin/prestamos?ok=${encodeURIComponent('Préstamo eliminado y caja ajustada.')}`);
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      return res.redirect(`/admin/prestamos/${id}?error=${encodeURIComponent(err.message)}`);
+    }
+    next(err);
+  }
+}
+
 async function mostrarDetalle(req, res, next) {
   try {
     const { id } = req.params;
@@ -368,6 +424,9 @@ module.exports = {
   mostrarFormularioNuevo,
   crearPrestamo,
   renderCrearConError,
+  editarCuota,
+  editarPlan,
+  eliminarPrestamo,
   mostrarDetalle,
   generarComprobante,
   generarComprobanteCuota,

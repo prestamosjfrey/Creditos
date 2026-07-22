@@ -25,24 +25,45 @@
       <label class="label-field" for="hasta">Hasta</label>
       <input class="input-field" type="date" id="hasta" name="hasta" value="<%= _rango.hasta || '' %>" />
     </div>
-
-    <button type="submit" class="btn-primary">Aplicar</button>
   </div>
+
+  <!-- Sin botón "Aplicar": el filtro se aplica al elegir. Si el navegador no
+       ejecuta JavaScript, este botón aparece y el formulario sigue funcionando. -->
+  <noscript>
+    <div class="mt-3">
+      <button type="submit" class="btn-primary">Aplicar</button>
+    </div>
+  </noscript>
 </form>
 
 <script>
   (function () {
-    // Los campos de fecha solo tienen sentido con "Personalizado". Al elegir
-    // cualquier otro periodo se envía solo, porque no hay nada más que decidir.
     var form = document.getElementById('filtro-reportes');
     if (!form) return;
     var periodo = form.querySelector('#periodo');
+    var desde = form.querySelector('#desde');
+    var hasta = form.querySelector('#hasta');
     var campos = form.querySelectorAll('.campo-fecha');
 
+    // Al elegir un periodo normal se aplica solo. Con "Personalizado" no se
+    // envía todavía: primero hay que elegir las dos fechas.
     periodo.addEventListener('change', function () {
       var personalizado = periodo.value === 'personalizado';
       campos.forEach(function (c) { c.classList.toggle('hidden', !personalizado); });
-      if (!personalizado) form.submit();
+      if (personalizado) {
+        if (desde) desde.focus();
+        return;
+      }
+      form.submit();
+    });
+
+    // En "Personalizado" se aplica en cuanto están las DOS fechas. Enviar con
+    // una sola daría un rango a medias, así que se espera a tener ambas.
+    [desde, hasta].forEach(function (campo) {
+      if (!campo) return;
+      campo.addEventListener('change', function () {
+        if (desde.value && hasta.value) form.submit();
+      });
     });
   })();
 </script>
