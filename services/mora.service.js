@@ -1,5 +1,5 @@
 const { supabaseAdmin } = require('../config/supabase');
-const { scope } = require('./alcance');
+const { scope } = require('../utils/alcance');
 const { formatoISO } = require('../utils/fechas');
 
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];

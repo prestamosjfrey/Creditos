@@ -1,5 +1,5 @@
 const { supabaseAdmin } = require('../config/supabase');
-const { scope } = require('./alcance');
+const { scope } = require('../utils/alcance');
 
 // Árbol del archivo de comprobantes, agrupado por cliente. Incluye TODOS los
 // préstamos (activos y pagados): el plan de pago queda disponible desde que se
