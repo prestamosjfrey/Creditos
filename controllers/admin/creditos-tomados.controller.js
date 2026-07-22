@@ -123,4 +123,75 @@ async function registrarPago(req, res, next) {
   }
 }
 
-module.exports = { listarTodos, mostrarFormularioNuevo, renderCrearConError, crearCredito, mostrarDetalle, pagarCuota, registrarPago };
+// --- Modo edición del crédito tomado (todo queda auditado) ---
+// Los cuatro vuelven al detalle con un mensaje: la edición ocurre sobre la
+// misma pantalla, igual que en préstamos.
+
+async function editarCuota(req, res, next) {
+  const { id, cuotaId } = req.params;
+  try {
+    await creditosService.editarCuota({
+      creditoId: id,
+      cuotaId,
+      monto: parsearNumero(req.body.monto),
+      fecha: req.body.fecha_vencimiento,
+      usuarioId: req.usuario.id,
+    });
+    res.redirect(`/admin/creditos-tomados/${id}?ok=${encodeURIComponent('Cuota actualizada.')}`);
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      return res.redirect(`/admin/creditos-tomados/${id}?error=${encodeURIComponent(err.message)}`);
+    }
+    next(err);
+  }
+}
+
+async function editarPlan(req, res, next) {
+  const { id } = req.params;
+  try {
+    await creditosService.editarPlan({
+      creditoId: id,
+      total: parsearNumero(req.body.monto_total_a_pagar),
+      numeroCuotas: Number(req.body.numero_cuotas),
+      usuarioId: req.usuario.id,
+    });
+    res.redirect(`/admin/creditos-tomados/${id}?ok=${encodeURIComponent('Plan del crédito actualizado.')}`);
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      return res.redirect(`/admin/creditos-tomados/${id}?error=${encodeURIComponent(err.message)}`);
+    }
+    next(err);
+  }
+}
+
+// Tras eliminar no se puede volver al detalle: el crédito ya no existe.
+async function eliminarCredito(req, res, next) {
+  const { id } = req.params;
+  try {
+    await creditosService.eliminarCredito({ creditoId: id, usuarioId: req.usuario.id });
+    res.redirect(`/admin/creditos-tomados?ok=${encodeURIComponent('Crédito tomado eliminado y caja ajustada.')}`);
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      return res.redirect(`/admin/creditos-tomados/${id}?error=${encodeURIComponent(err.message)}`);
+    }
+    next(err);
+  }
+}
+
+async function eliminarPago(req, res, next) {
+  const { id, pagoId } = req.params;
+  try {
+    await creditosService.eliminarPago({ creditoId: id, pagoId, usuarioId: req.usuario.id });
+    res.redirect(`/admin/creditos-tomados/${id}?ok=${encodeURIComponent('Pago revertido y caja ajustada.')}`);
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      return res.redirect(`/admin/creditos-tomados/${id}?error=${encodeURIComponent(err.message)}`);
+    }
+    next(err);
+  }
+}
+
+module.exports = {
+  listarTodos, mostrarFormularioNuevo, renderCrearConError, crearCredito, mostrarDetalle, pagarCuota, registrarPago,
+  editarCuota, editarPlan, eliminarCredito, eliminarPago,
+};

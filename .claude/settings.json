@@ -76,7 +76,8 @@
       "Bash(xargs echo \"  reglas pl-10:\")",
       "Bash(node --check public/js/main.js)",
       "Bash(node --check services/dashboard.service.js)",
-      "Bash(node --check controllers/admin/creditos-tomados.controller.js)"
+      "Bash(node --check controllers/admin/creditos-tomados.controller.js)",
+      "Bash(node --check server.js)"
     ]
   }
 }

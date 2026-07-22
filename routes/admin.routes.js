@@ -130,6 +130,12 @@ router.get('/creditos-tomados/:id', esUuid('id'), revisar(), creditosTomadosCont
 router.post('/creditos-tomados/:id/cuotas', validarPagoCreditoTomado, revisar(), creditosTomadosController.pagarCuota);
 router.post('/creditos-tomados/:id/pagos', validarPagoCreditoTomado, revisar(), creditosTomadosController.registrarPago);
 
+// --- Modo edición del crédito tomado (todo queda auditado) ---
+router.post('/creditos-tomados/:id/cuotas/:cuotaId/editar', validarEdicionCuota, revisar(), creditosTomadosController.editarCuota);
+router.post('/creditos-tomados/:id/plan', validarEdicionPlan, revisar(), creditosTomadosController.editarPlan);
+router.post('/creditos-tomados/:id/eliminar', esUuid('id'), revisar(), creditosTomadosController.eliminarCredito);
+router.post('/creditos-tomados/:id/pagos/:pagoId/eliminar', esUuid('id'), esUuid('pagoId'), revisar(), creditosTomadosController.eliminarPago);
+
 router.get('/cobros', cobrosController.mostrarCobros);
 router.post('/cobros/notificar', cobrosController.notificarCobrosHoy);
 router.get('/mora', cobrosController.mostrarMora);

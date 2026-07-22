@@ -34,11 +34,18 @@ app.set('layout', 'layouts/base');
 // Cabeceras de seguridad. La CSP permite 'unsafe-inline' en scripts porque las
 // vistas EJS incorporan scripts en línea (gráficas, SweetAlert). Todo lo demás
 // queda restringido al propio origen: no se carga nada desde CDNs.
+//
+// scriptSrcAttr: helmet lo pone en 'none' por defecto, lo que bloquea los
+// manejadores de evento en línea (onclick=, onmouseover=…) que usan varias
+// vistas. Como ya aceptamos 'unsafe-inline' para los <script>, mantener los
+// atributos bloqueados sería incoherente y no aporta seguridad real (quien
+// pueda inyectar HTML ya podría inyectar un <script>), así que se alinean.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'blob:'],
       connectSrc: ["'self'", 'https://*.supabase.co', 'wss:', 'ws:'],
