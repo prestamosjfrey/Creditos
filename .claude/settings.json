@@ -77,7 +77,13 @@
       "Bash(node --check public/js/main.js)",
       "Bash(node --check services/dashboard.service.js)",
       "Bash(node --check controllers/admin/creditos-tomados.controller.js)",
-      "Bash(node --check server.js)"
+      "Bash(node --check server.js)",
+      "Bash(node --check controllers/admin/prestamos.controller.js)",
+      "Bash(node --check routes/admin.routes.js)",
+      "Bash(python -c \"import PIL; print\\('PIL:', PIL.__version__\\)\")",
+      "Bash(magick -version)",
+      "Bash(convert -version)",
+      "Bash(node \"C:\\\\Users\\\\DEIVER\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Creditos\\\\d291834a-f22d-4d41-97d7-2072d0e3cd2e\\\\scratchpad\\\\testpat.js\")"
     ]
   }
 }

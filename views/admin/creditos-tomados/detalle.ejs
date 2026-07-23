@@ -10,6 +10,9 @@
   var diasRest = proxCuota ? Math.round((new Date(proxCuota.fecha_vencimiento + 'T00:00:00') - new Date(hoy + 'T00:00:00')) / 86400000) : null;
   var diasRestTxt = credito.estado === 'pagado' ? '—' : (diasRest === null ? '—' : (diasRest < 0 ? Math.abs(diasRest) + ' días de mora' : (diasRest === 0 ? 'Hoy' : diasRest + ' días')));
   var METODOS_LBL = { efectivo: 'Efectivo', transferencia: 'Transferencia', nequi: 'Nequi', daviplata: 'Daviplata', otro: 'Otro' };
+  // Interés por cuota = (total a pagar − capital) ÷ nº de cuotas. Se usa como
+  // referencia al pagar SOLO el interés (extensión).
+  var interesPorCuota = Math.round(Math.max(0, Number(credito.monto_total_a_pagar) - Number(credito.monto_capital)) / (Number(credito.numero_cuotas) || 1));
 %>
 
 <%- include('../../partials/header-admin', {
@@ -63,41 +66,31 @@
 </div>
 
 <!-- ===================== BARRA DEL MODO EDICIÓN ===================== -->
-<div id="barra-edicion" class="mb-6 hidden rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
-  <div class="flex flex-wrap items-start justify-between gap-3">
-    <div class="flex items-start gap-2">
-      <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
-      <div>
-        <p class="font-semibold text-amber-900">Modo edición activo</p>
-        <p class="mt-0.5 text-sm text-amber-800">
-          Puedes cambiar el valor y la fecha de las cuotas <strong>pendientes</strong>, ajustar el plan, revertir un pago o eliminar el crédito.
-          Las cuotas ya pagadas no se editan. Todo queda registrado en la auditoría.
-        </p>
-      </div>
-    </div>
-    <button type="button" id="btn-salir-edicion" class="btn-secondary shrink-0 text-sm">Salir del modo edición</button>
+<div id="barra-edicion" class="mb-6 hidden overflow-hidden rounded-xl border border-amber-300 bg-amber-50/70">
+  <!-- Encabezado compacto (una línea) -->
+  <div class="flex items-start gap-2 px-4 py-2.5 text-amber-800">
+    <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+    <p class="text-xs leading-relaxed sm:text-sm">
+      <span class="font-semibold text-amber-900">Modo edición.</span>
+      Edita las cuotas <strong>pendientes</strong>, ajusta el plan, revierte un pago o elimina el crédito. Las pagadas no se editan; todo se audita.
+    </p>
   </div>
 
-  <!-- Editar el plan completo -->
+  <!-- Editar el plan: una sola fila en escritorio -->
   <form action="/admin/creditos-tomados/<%= credito.id %>/plan" method="POST" id="form-plan"
-        class="mt-4 grid grid-cols-1 gap-3 border-t border-amber-200 pt-4 sm:grid-cols-3">
+        class="flex flex-col gap-3 border-t border-amber-200/70 bg-white/40 px-4 py-3 sm:flex-row sm:items-end">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-    <div>
+    <div class="sm:w-48">
       <label class="label-field" for="ed-total">Total a pagar</label>
       <input class="input-field input-moneda" type="text" inputmode="numeric" id="ed-total"
              name="monto_total_a_pagar" value="<%= Math.round(credito.monto_total_a_pagar) %>" required />
     </div>
-    <div>
-      <label class="label-field" for="ed-cuotas">Número de cuotas</label>
+    <div class="sm:w-40">
+      <label class="label-field" for="ed-cuotas">N.º de cuotas</label>
       <input class="input-field" type="number" min="1" max="500" id="ed-cuotas"
              name="numero_cuotas" value="<%= credito.numero_cuotas %>" required />
     </div>
-    <div class="flex items-end">
-      <button type="submit" class="btn-primary w-full justify-center">Guardar plan</button>
-    </div>
-    <p class="text-xs text-amber-800 sm:col-span-3">
-      Las cuotas ya pagadas se conservan; el saldo restante se reparte entre las pendientes.
-    </p>
+    <button type="submit" class="btn-primary justify-center sm:ml-auto sm:w-auto">Guardar plan</button>
   </form>
 
   <!-- Formularios ocultos que disparan los botones tras confirmar. -->
@@ -117,7 +110,7 @@
   <%- include('../../partials/kpi-card', { titulo: 'Saldo por pagar', valor: formatCOP(saldo) }) %>
 </div>
 
-<div class="flex flex-col lg:flex-row gap-6 lg:items-start">
+<div class="flex flex-col lg:flex-row gap-6 lg:items-stretch">
   <!-- Plan de cuotas + Historial -->
   <div class="flex-1 min-w-0 flex flex-col gap-6">
    <div>
@@ -190,10 +183,10 @@
     </div>
    </div>
 
-    <% if (pagos && pagos.length) { %>
-   <div>
+   <div class="flex flex-1 flex-col">
     <h2 class="font-medium text-slate-700 mb-3">Historial de abonos</h2>
-    <div class="card p-0 overflow-x-auto">
+    <% if (pagos && pagos.length) { %>
+    <div class="card flex-1 p-0 overflow-x-auto">
       <table class="table-base w-full" data-datatable>
         <thead>
           <tr><th>Fecha</th><th class="text-right">Monto</th><th>Método</th><th>Aplicado a</th><th class="col-edicion hidden text-right" data-no-sort>Revertir</th></tr>
@@ -207,7 +200,7 @@
             <tr>
               <td class="text-slate-500"><%= fechaTxt %></td>
               <td class="num text-right font-semibold text-slate-800"><%= formatCOP(p.monto) %></td>
-              <td><span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"><%= METODOS_LBL[p.metodo] || p.metodo || '—' %></span></td>
+              <td><span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"><%= METODOS_LBL[p.metodo] || p.metodo || '—' %></span><% if (p.tipo === 'interes') { %><span class="ml-1 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-600">Solo interés</span><% } %></td>
               <td class="text-slate-500"><%= cuotasTxt %></td>
               <td class="col-edicion hidden text-right">
                 <% if (p.id) { %>
@@ -222,8 +215,18 @@
         </tbody>
       </table>
     </div>
-   </div>
+    <% } else { %>
+    <!-- Sin abonos aún: placeholder que llena el alto para quedar a la par de
+         la tarjeta de "Registrar pago" de al lado. -->
+    <div class="card flex flex-1 flex-col items-center justify-center gap-2 border border-dashed border-slate-200 py-10 text-center">
+      <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
+      </span>
+      <p class="font-medium text-slate-500">Aún no hay abonos</p>
+      <p class="max-w-xs text-xs text-slate-400">Cuando registres un pago aparecerá aquí con su fecha, monto, método y las cuotas que cubrió.</p>
+    </div>
     <% } %>
+   </div>
   </div>
 
   <!-- Registrar pago + Info -->
@@ -242,9 +245,17 @@
       <% } else { %>
         <form action="/admin/creditos-tomados/<%= credito.id %>/pagos" method="POST" id="form-pago-credito" data-loading-title="Registrando pago…">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <input type="hidden" name="cuota_id" id="pago-cuota-id" value="" />
           <div class="grid grid-cols-1 gap-3">
             <div>
-              <label class="label-field" for="pago-monto">Monto a pagar</label>
+              <label class="label-field" for="pago-tipo">Tipo de pago</label>
+              <select class="input-field" id="pago-tipo" name="tipo">
+                <option value="abono">Abono normal</option>
+                <option value="interes">Solo interés</option>
+              </select>
+            </div>
+            <div>
+              <label class="label-field" for="pago-monto"><span id="pago-monto-label">Monto a pagar</span></label>
               <div class="relative">
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
                 <input class="input-field pl-7 input-moneda" type="text" inputmode="numeric" id="pago-monto" name="monto" placeholder="0" required />
@@ -270,20 +281,43 @@
             </div>
           </div>
 
-          <p class="label-field mt-4 mb-2">Pagar rápido</p>
-          <div class="grid grid-cols-3 gap-2">
-            <% cuotasPend.slice(0, 3).forEach(function(c) { %>
-              <button type="button" class="chip-cuota-abono" data-monto="<%= c.monto %>">
-                <span class="font-semibold text-slate-700">Cuota <%= c.numero_cuota %></span>
-                <span class="text-slate-400"><%= formatCOP(c.monto) %></span>
-              </button>
-            <% }); %>
+          <!-- Opciones para pago de SOLO INTERÉS -->
+          <div id="bloque-interes" class="hidden mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+            <div>
+              <label class="label-field" for="interes-cuota">Cuota</label>
+              <select class="input-field text-sm" id="interes-cuota">
+                <% cuotasPend.forEach(function(c) { %>
+                  <option value="<%= c.id %>" data-monto="<%= c.monto %>">Cuota <%= c.numero_cuota %> · <%= c.fecha_vencimiento %> · <%= formatCOP(c.monto) %></option>
+                <% }); %>
+              </select>
+            </div>
+            <p class="text-sm font-medium text-amber-800 pt-1">¿Qué se hace con el capital de esta cuota?</p>
+            <label class="flex items-start gap-2 text-sm text-slate-600">
+              <input type="radio" name="accion" value="saldo" class="mt-1" checked />
+              <span><span class="font-medium text-slate-700">Dejar el capital para después</span> — el capital se difiere a una cuota nueva al final, sin interés extra.</span>
+            </label>
+            <label class="flex items-start gap-2 text-sm text-slate-600">
+              <input type="radio" name="accion" value="extension" class="mt-1" />
+              <span><span class="font-medium text-slate-700">Extender un periodo</span> — se agrega una cuota más con interés de <%= formatCOP(interesPorCuota) %>; el capital se difiere al final.</span>
+            </label>
+          </div>
+
+          <div id="bloque-abono">
+            <p class="label-field mt-4 mb-2">Pagar rápido</p>
+            <div class="grid grid-cols-3 gap-2">
+              <% cuotasPend.slice(0, 3).forEach(function(c) { %>
+                <button type="button" class="chip-cuota-abono" data-monto="<%= c.monto %>">
+                  <span class="font-semibold text-slate-700">Cuota <%= c.numero_cuota %></span>
+                  <span class="text-slate-400"><%= formatCOP(c.monto) %></span>
+                </button>
+              <% }); %>
+            </div>
           </div>
 
           <!-- Resumen del pago (en vivo) -->
           <div class="mt-4 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
             <p class="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-2"><svg class="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 16v-4M12 8h.01"/></svg>Resumen del pago</p>
-            <div class="flex justify-between text-sm py-0.5"><span class="text-slate-400">Cuotas que cubre</span><span class="num font-medium text-slate-700" id="pago-cuotas">0</span></div>
+            <div class="flex justify-between text-sm py-0.5"><span class="text-slate-400" id="pago-resumen-label">Cuotas que cubre</span><span class="num font-medium text-slate-700" id="pago-cuotas">0</span></div>
             <div class="flex justify-between text-sm py-0.5"><span class="text-slate-400">Monto aplicado</span><span class="num font-medium text-slate-700" id="pago-aplicado">$ 0</span></div>
             <div class="flex justify-between text-sm py-0.5 border-t border-slate-200 mt-1 pt-1.5"><span class="font-medium text-slate-600">Nuevo saldo por pagar</span><span class="num font-bold text-red-500" id="pago-saldo"><%= formatCOP(saldo) %></span></div>
           </div>
@@ -302,29 +336,70 @@
 (function () {
   var input = document.getElementById('pago-monto');
   if (!input) return;
+  var tipoSel = document.getElementById('pago-tipo');
+  var bloqueInteres = document.getElementById('bloque-interes');
+  var bloqueAbono = document.getElementById('bloque-abono');
+  var cuotaSel = document.getElementById('interes-cuota');
+  var cuotaIdInput = document.getElementById('pago-cuota-id');
+  var montoLabel = document.getElementById('pago-monto-label');
+  var resumenLabel = document.getElementById('pago-resumen-label');
   // Montos de las cuotas pendientes, en orden de vencimiento.
   var pend = <%- JSON.stringify(cuotasPend.map(function(c){ return Number(c.monto); })) %>;
   var saldo = <%- JSON.stringify(saldo) %>;
+  var interesPorCuota = <%- JSON.stringify(interesPorCuota) %>;
   var fmt = window.formatearMoneda || function (v) { return String(Math.round(v || 0)); };
   function cop(v) { return '$ ' + Math.round(v || 0).toLocaleString('es-CO'); }
+  function parse(v) { return window.parseMoneda ? window.parseMoneda(v) : (Number(v) || 0); }
+  function esInteres() { return tipoSel && tipoSel.value === 'interes'; }
 
   function actualizar() {
-    var monto = window.parseMoneda ? window.parseMoneda(input.value) : (Number(input.value) || 0);
-    var restante = monto, cubiertas = 0, aplicado = 0;
-    for (var i = 0; i < pend.length; i++) {
-      if (restante + 1e-6 >= pend[i]) { cubiertas++; aplicado += pend[i]; restante -= pend[i]; }
-      else break;
+    var monto = parse(input.value);
+    if (esInteres()) {
+      // Solo interés: el monto es el interés de UNA cuota; el capital se difiere.
+      var opt = cuotaSel && cuotaSel.options[cuotaSel.selectedIndex];
+      var montoCuota = opt ? Number(opt.dataset.monto) : 0;
+      var interes = Math.min(monto, montoCuota);
+      document.getElementById('pago-cuotas').textContent = '1';
+      document.getElementById('pago-aplicado').textContent = cop(interes);
+      // El interés no reduce el capital: el saldo por pagar no baja (se difiere).
+      document.getElementById('pago-saldo').textContent = cop(saldo);
+    } else {
+      var restante = monto, cubiertas = 0, aplicado = 0;
+      for (var i = 0; i < pend.length; i++) {
+        if (restante + 1e-6 >= pend[i]) { cubiertas++; aplicado += pend[i]; restante -= pend[i]; }
+        else break;
+      }
+      document.getElementById('pago-cuotas').textContent = cubiertas;
+      document.getElementById('pago-aplicado').textContent = cop(aplicado);
+      document.getElementById('pago-saldo').textContent = cop(saldo - aplicado);
     }
-    document.getElementById('pago-cuotas').textContent = cubiertas;
-    document.getElementById('pago-aplicado').textContent = cop(aplicado);
-    document.getElementById('pago-saldo').textContent = cop(saldo - aplicado);
   }
 
+  function pintarModo() {
+    var interes = esInteres();
+    if (bloqueInteres) bloqueInteres.classList.toggle('hidden', !interes);
+    if (bloqueAbono) bloqueAbono.classList.toggle('hidden', interes);
+    if (montoLabel) montoLabel.textContent = interes ? 'Monto del interés' : 'Monto a pagar';
+    if (resumenLabel) resumenLabel.textContent = interes ? 'Cuota' : 'Cuotas que cubre';
+    // Al pasar a "Solo interés" se precarga el interés calculado (para que no se
+    // digite el valor completo de la cuota por error). Al volver a abono, se limpia.
+    input.value = interes ? fmt(interesPorCuota) : '';
+    // cuota_id solo viaja en modo interés (para saber a qué cuota se aplica).
+    if (cuotaIdInput) cuotaIdInput.value = (interes && cuotaSel) ? cuotaSel.value : '';
+    actualizar();
+  }
+
+  if (tipoSel) tipoSel.addEventListener('change', pintarModo);
+  if (cuotaSel) cuotaSel.addEventListener('change', function () {
+    if (cuotaIdInput) cuotaIdInput.value = cuotaSel.value;
+    actualizar();
+  });
   input.addEventListener('input', actualizar);
-  document.querySelectorAll('[data-monto]').forEach(function (b) {
+  // Solo los chips de "Pagar rápido" (no las opciones del selector de interés).
+  document.querySelectorAll('.chip-cuota-abono[data-monto]').forEach(function (b) {
     b.addEventListener('click', function () { input.value = fmt(Number(b.dataset.monto)); actualizar(); });
   });
-  actualizar();
+  pintarModo();
 })();
 </script>
 
@@ -336,7 +411,6 @@
     var btn = document.getElementById('btn-modo-edicion');
     var btnTxt = document.getElementById('btn-modo-edicion-txt');
     var barra = document.getElementById('barra-edicion');
-    var btnSalir = document.getElementById('btn-salir-edicion');
     if (!btn || !barra) return;
 
     var activo = false;
@@ -360,7 +434,6 @@
     }
 
     btn.addEventListener('click', function () { activo = !activo; pintar(); });
-    if (btnSalir) btnSalir.addEventListener('click', function () { activo = false; pintar(); });
 
     // --- Editar una cuota ---
     var formCuota = document.getElementById('form-editar-cuota');

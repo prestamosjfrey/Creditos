@@ -107,16 +107,30 @@ async function pagarCuota(req, res, next) {
 
 async function registrarPago(req, res, next) {
   const { id } = req.params;
-  const { monto, metodo, fecha_pago, notas } = req.body;
+  const { monto, metodo, fecha_pago, notas, tipo, accion, cuota_id } = req.body;
   try {
-    await creditosService.registrarPagoCreditoTomado({
-      creditoId: id,
-      monto: parsearNumero(monto),
-      metodo,
-      fechaPago: fecha_pago,
-      notas: notas || null,
-      registradoPor: req.usuario.id,
-    });
+    if (tipo === 'interes') {
+      // Pago de SOLO INTERÉS (extender un periodo o dejar el capital para después).
+      await creditosService.pagarSoloInteres({
+        creditoId: id,
+        cuotaId: cuota_id || null,
+        monto: parsearNumero(monto),
+        metodo,
+        fechaPago: fecha_pago,
+        notas: notas || null,
+        accion: accion === 'extension' ? 'extension' : 'saldo',
+        registradoPor: req.usuario.id,
+      });
+    } else {
+      await creditosService.registrarPagoCreditoTomado({
+        creditoId: id,
+        monto: parsearNumero(monto),
+        metodo,
+        fechaPago: fecha_pago,
+        notas: notas || null,
+        registradoPor: req.usuario.id,
+      });
+    }
     res.redirect(`/admin/creditos-tomados/${id}?pago=1`);
   } catch (err) {
     res.redirect(`/admin/creditos-tomados/${id}?error=${encodeURIComponent(err.message || 'No se pudo registrar el pago.')}`);

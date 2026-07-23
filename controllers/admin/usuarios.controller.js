@@ -24,6 +24,33 @@ async function mostrarFormularioNuevo(req, res) {
   });
 }
 
+// Repinta el formulario de creación con el error y lo ya escrito (sin perder
+// nada) cuando la VALIDACIÓN previa falla. Lo usa revisar() en la ruta: así el
+// usuario se queda en el formulario en vez de acabar en el dashboard.
+function renderNuevoConError(req, res, mensaje) {
+  res.status(400).render('admin/usuarios/form', {
+    titulo: 'Nuevo usuario',
+    usuario: null,
+    error: mensaje,
+    valores: req.body,
+  });
+}
+
+// Igual, para la edición: necesita recargar el usuario (campos no editables).
+async function renderEditarConError(req, res, mensaje) {
+  try {
+    const usuario = await usuariosService.obtenerUsuario(req.params.id);
+    res.status(400).render('admin/usuarios/form', {
+      titulo: 'Editar usuario',
+      usuario,
+      error: mensaje,
+      valores: req.body,
+    });
+  } catch (err) {
+    res.redirect(`/admin/usuarios?error=${encodeURIComponent(mensaje)}`);
+  }
+}
+
 async function crear(req, res, next) {
   const { usuario, nombre_completo, email, telefono, rol, password, callmebot_apikey } = req.body;
   try {
@@ -174,9 +201,11 @@ async function verificarCorreo(req, res, next) {
 module.exports = {
   listar,
   mostrarFormularioNuevo,
+  renderNuevoConError,
   crear,
   verificarCorreo,
   mostrarFormularioEditar,
+  renderEditarConError,
   editar,
   cambiarEstado,
   restablecerClave,

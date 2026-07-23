@@ -113,6 +113,7 @@ router.post('/prestamos/:id/pagos', validarAbono, revisar(), pagosController.reg
 // --- Modo edición del préstamo (todo queda auditado) ---
 router.post('/prestamos/:id/cuotas/:cuotaId/editar', validarEdicionCuota, revisar(), prestamosController.editarCuota);
 router.post('/prestamos/:id/plan', validarEdicionPlan, revisar(), prestamosController.editarPlan);
+router.post('/prestamos/:id/pagos/:pagoId/revertir', esUuid('id'), esUuid('pagoId'), revisar(), prestamosController.revertirAbono);
 router.post('/prestamos/:id/eliminar', esUuid('id'), revisar(), prestamosController.eliminarPrestamo);
 
 router.get('/pagos', pagosController.listarTodos);
@@ -164,9 +165,9 @@ router.get('/usuarios', usuariosController.listar);
 // Chequeo en vivo del correo (AJAX desde el formulario). Va antes de /:id.
 router.get('/usuarios/verificar-correo', usuariosController.verificarCorreo);
 router.get('/usuarios/nuevo', usuariosController.mostrarFormularioNuevo);
-router.post('/usuarios', validarUsuarioNuevo, revisar(), usuariosController.crear);
+router.post('/usuarios', validarUsuarioNuevo, revisar(usuariosController.renderNuevoConError), usuariosController.crear);
 router.get('/usuarios/:id/editar', esUuid('id'), revisar(), usuariosController.mostrarFormularioEditar);
-router.post('/usuarios/:id/editar', esUuid('id'), validarUsuarioEdicion, revisar(), usuariosController.editar);
+router.post('/usuarios/:id/editar', esUuid('id'), validarUsuarioEdicion, revisar(usuariosController.renderEditarConError), usuariosController.editar);
 router.post('/usuarios/:id/estado', esUuid('id'), revisar(), usuariosController.cambiarEstado);
 router.post('/usuarios/:id/clave', esUuid('id'), revisar(), usuariosController.restablecerClave);
 // Envía un WhatsApp de prueba para verificar teléfono + apikey de CallMeBot.

@@ -113,45 +113,34 @@
 </div>
 
 <!-- ===================== BARRA DEL MODO EDICIÓN ===================== -->
-<div id="barra-edicion" class="mb-6 hidden rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
-  <div class="flex flex-wrap items-start justify-between gap-3">
-    <div class="flex items-start gap-2">
-      <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
-      <div>
-        <p class="font-semibold text-amber-900">Modo edición activo</p>
-        <p class="mt-0.5 text-sm text-amber-800">
-          Puedes cambiar el valor y la fecha de las cuotas <strong>pendientes</strong>, ajustar el plan o eliminar el préstamo.
-          Las cuotas ya pagadas no se pueden tocar. Todo queda registrado en la auditoría.
-        </p>
-      </div>
-    </div>
-    <button type="button" id="btn-salir-edicion" class="btn-secondary shrink-0 text-sm">Salir del modo edición</button>
+<div id="barra-edicion" class="mb-6 hidden overflow-hidden rounded-xl border border-amber-300 bg-amber-50/70">
+  <!-- Encabezado compacto (una línea) -->
+  <div class="flex items-start gap-2 px-4 py-2.5 text-amber-800">
+    <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+    <p class="text-xs leading-relaxed sm:text-sm">
+      <span class="font-semibold text-amber-900">Modo edición.</span>
+      Edita las cuotas <strong>pendientes</strong>, ajusta el plan o elimina el préstamo. Las pagadas no se tocan; todo se audita.
+    </p>
   </div>
 
-  <!-- Editar el plan completo -->
+  <!-- Editar el plan: una sola fila en escritorio -->
   <form action="/admin/prestamos/<%= prestamo.id %>/plan" method="POST" id="form-plan"
-        class="mt-4 grid grid-cols-1 gap-3 border-t border-amber-200 pt-4 sm:grid-cols-3">
+        class="flex flex-col gap-3 border-t border-amber-200/70 bg-white/40 px-4 py-3 sm:flex-row sm:items-end">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-    <div>
+    <div class="sm:w-48">
       <label class="label-field" for="ed-total">Total a pagar</label>
       <input class="input-field input-moneda" type="text" inputmode="numeric" id="ed-total"
              name="monto_total_a_pagar" value="<%= Math.round(prestamo.monto_total_a_pagar) %>" required />
     </div>
-    <div>
-      <label class="label-field" for="ed-cuotas">Número de cuotas</label>
+    <div class="sm:w-40">
+      <label class="label-field" for="ed-cuotas">N.º de cuotas</label>
       <input class="input-field" type="number" min="1" max="500" id="ed-cuotas"
              name="numero_cuotas" value="<%= prestamo.numero_cuotas %>" required />
     </div>
-    <div class="flex items-end">
-      <button type="submit" class="btn-primary w-full justify-center">Guardar plan</button>
-    </div>
-    <p class="text-xs text-amber-800 sm:col-span-3">
-      Las cuotas ya pagadas se conservan; el saldo restante se reparte entre las pendientes.
-    </p>
+    <button type="submit" class="btn-primary justify-center sm:ml-auto sm:w-auto">Guardar plan</button>
   </form>
 
-  <!-- El botón de eliminar vive arriba, junto a las demás acciones. Este
-       formulario solo transporta el envío; lo dispara ese botón tras confirmar. -->
+  <!-- Formulario oculto que dispara el botón "Eliminar" del encabezado. -->
   <form action="/admin/prestamos/<%= prestamo.id %>/eliminar" method="POST" id="form-eliminar" class="hidden">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
   </form>
@@ -297,11 +286,12 @@
         <thead>
           <tr class="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
             <th class="pb-3 pr-3">Fecha</th><th class="pb-3 pr-3 text-right">Monto</th><th class="pb-3 pr-3">Método</th><th class="pb-3 pr-3">Aplicado a</th><th class="pb-3">Comprobante</th>
+            <th class="col-edicion hidden pb-3 pl-3 text-right" data-no-sort>Revertir</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
           <% if (pagos.length === 0) { %>
-            <tr><td colspan="5" class="py-8 text-center text-slate-400">Aún no se han registrado abonos.</td></tr>
+            <tr><td colspan="6" class="py-8 text-center text-slate-400">Aún no se han registrado abonos.</td></tr>
           <% } %>
           <% pagos.forEach(function(p) {
               var apl = (p.distribucion && Array.isArray(p.distribucion.aplicaciones)) ? p.distribucion.aplicaciones : [];
@@ -322,11 +312,25 @@
                   Ver recibo
                 </a>
               </td>
+              <!-- Solo visible en modo edición: revierte el pago completo. -->
+              <td class="col-edicion hidden py-3 pl-3 text-right">
+                <button type="button" class="btn-revertir-abono text-xs font-medium text-red-600 hover:underline"
+                        data-pago="<%= p.id %>"
+                        data-valor="<%= Math.round(p.monto) %>"
+                        data-cuotas="<%= aplTxt %>"
+                        data-interes="<%= esInteresPago ? '1' : '0' %>">
+                  Revertir
+                </button>
+              </td>
             </tr>
           <% }); %>
         </tbody>
       </table>
     </div>
+    <!-- Formulario oculto: lo dispara el botón "Revertir" tras confirmar. -->
+    <form method="POST" id="form-revertir-abono" class="hidden">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    </form>
   </div>
   </div>
   <!-- Derecha -->
@@ -556,7 +560,6 @@
     var btn = document.getElementById('btn-modo-edicion');
     var btnTxt = document.getElementById('btn-modo-edicion-txt');
     var barra = document.getElementById('barra-edicion');
-    var btnSalir = document.getElementById('btn-salir-edicion');
     if (!btn || !barra) return;
 
     var activo = false;
@@ -581,7 +584,6 @@
     }
 
     btn.addEventListener('click', function () { activo = !activo; pintar(); });
-    if (btnSalir) btnSalir.addEventListener('click', function () { activo = false; pintar(); });
 
     // --- Editar una cuota ---
     var formCuota = document.getElementById('form-editar-cuota');
@@ -641,6 +643,34 @@
         }).then(function (r) { if (r.isConfirmed) formPlan.submit(); });
       });
     }
+
+    // --- Revertir un abono/pago desde el historial ---
+    var formRevertir = document.getElementById('form-revertir-abono');
+    document.querySelectorAll('.btn-revertir-abono').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var d = b.dataset;
+        var montoTxt = '$ ' + Number(d.valor || 0).toLocaleString('es-CO');
+        var esInteres = d.interes === '1';
+        var cuotasTxt = (d.cuotas && d.cuotas !== '—') ? d.cuotas : '';
+        Swal.fire({
+          icon: 'warning',
+          title: '¿Revertir este ' + (esInteres ? 'pago de interés' : 'abono') + '?',
+          html:
+            'Se revierte el ' + (esInteres ? 'pago de solo interés' : 'abono') + ' de <strong>' + montoTxt + '</strong>.<br>' +
+            (cuotasTxt ? 'Las cuotas <strong>' + cuotasTxt + '</strong> vuelven a "por pagar".<br>' : '') +
+            'El dinero regresa a tu caja' + (esInteres ? ' y, si fue una extensión, se deshace la cuota añadida.' : '.') + '<br><br>' +
+            '<strong>Esta acción no se puede deshacer.</strong>',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, revertir',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#dc2626',
+        }).then(function (r) {
+          if (!r.isConfirmed) return;
+          formRevertir.action = '/admin/prestamos/' + PRESTAMO_ID + '/pagos/' + d.pago + '/revertir';
+          formRevertir.submit();
+        });
+      });
+    });
 
     // --- Eliminar: confirmación escribiendo ELIMINAR ---
     // El botón está en el encabezado; este formulario oculto es el que envía.

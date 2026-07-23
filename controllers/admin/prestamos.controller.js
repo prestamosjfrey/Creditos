@@ -289,6 +289,20 @@ async function editarPlan(req, res, next) {
   }
 }
 
+// Revertir un abono/pago desde el historial (modo edición).
+async function revertirAbono(req, res, next) {
+  const { id, pagoId } = req.params;
+  try {
+    await prestamosService.revertirAbono({ prestamoId: id, pagoId, usuarioId: req.usuario.id });
+    res.redirect(`/admin/prestamos/${id}?ok=${encodeURIComponent('Pago revertido y caja ajustada.')}`);
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      return res.redirect(`/admin/prestamos/${id}?error=${encodeURIComponent(err.message)}`);
+    }
+    next(err);
+  }
+}
+
 // Tras eliminar no se puede volver al detalle: el préstamo ya no existe.
 async function eliminarPrestamo(req, res, next) {
   const { id } = req.params;
@@ -429,6 +443,7 @@ module.exports = {
   renderCrearConError,
   editarCuota,
   editarPlan,
+  revertirAbono,
   eliminarPrestamo,
   mostrarDetalle,
   generarComprobante,

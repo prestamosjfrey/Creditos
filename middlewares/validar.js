@@ -239,6 +239,8 @@ const validarPagoCreditoTomado = [
     }),
   body('metodo').optional({ values: 'falsy' }).isIn(METODOS).withMessage('Método de pago inválido.'),
   body('cuota_id').optional({ values: 'falsy' }).isUUID().withMessage('Cuota inválida.'),
+  body('tipo').optional({ values: 'falsy' }).isIn(['abono', 'interes']).withMessage('Tipo de pago inválido.'),
+  body('accion').optional({ values: 'falsy' }).isIn(['saldo', 'extension']).withMessage('Acción inválida.'),
 ];
 
 // El nombre de usuario es el identificador de login y acaba dentro de un correo

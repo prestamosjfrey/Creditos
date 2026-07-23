@@ -164,6 +164,31 @@ async function eliminarPrestamo({ prestamoId, usuarioId }) {
   realtime.emitir('datos:cambio', { origen: 'prestamo' });
 }
 
+// Revierte un pago (abono o solo interés) desde el historial. Toda la lógica
+// contable vive en la función SQL revertir_pago (atómica); aquí solo validamos
+// propiedad, recalculamos el score y avisamos por realtime.
+async function revertirAbono({ prestamoId, pagoId, usuarioId }) {
+  await exigirPropiedad(prestamoId, usuarioId);
+
+  // El pago debe ser de ESTE préstamo (evita revertir el de otro por su id).
+  const { data: pago } = await supabaseAdmin
+    .from('pagos').select('id').eq('id', pagoId).eq('prestamo_id', prestamoId).maybeSingle();
+  if (!pago) throw Object.assign(new Error('El pago no pertenece a este préstamo.'), { status: 404 });
+
+  const { error } = await supabaseAdmin.rpc('revertir_pago', {
+    p_pago_id: pagoId,
+    p_actor: usuarioId,
+  });
+  if (error) throw errorLegible(error, 'No se pudo revertir el pago.');
+
+  // Cambió el historial de atrasos del cliente → recalcular su score (fail-soft).
+  const { data: pr } = await supabaseAdmin
+    .from('prestamos').select('cliente_id').eq('id', prestamoId).maybeSingle();
+  if (pr && pr.cliente_id) await scoreService.recalcularYGuardar(pr.cliente_id);
+
+  realtime.emitir('datos:cambio', { origen: 'prestamo' });
+}
+
 async function marcarCuotasVencidas() {
   const hoy = formatoISO(new Date());
   // .select() devuelve solo las cuotas que efectivamente cruzaron a mora en
@@ -220,5 +245,6 @@ module.exports = {
   editarCuota,
   editarPlan,
   eliminarPrestamo,
+  revertirAbono,
   marcarCuotasVencidas,
 };

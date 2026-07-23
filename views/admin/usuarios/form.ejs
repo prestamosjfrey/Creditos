@@ -70,12 +70,12 @@
                 <input class="input-field bg-slate-50 pl-10 text-slate-500" type="text" id="usuario" value="<%= usuario.usuario %>" disabled />
               <% } else { %>
                 <input class="input-field pl-10" type="text" id="usuario" name="usuario" required minlength="3" maxlength="30"
-                       pattern="[a-zA-Z0-9._-]+" value="<%= valores.usuario || '' %>"
+                       pattern="[a-zA-Z0-9._\-]+" value="<%= valores.usuario || '' %>"
                        placeholder="juan.cobrador" autocomplete="off" />
               <% } %>
             </div>
             <p class="mt-1 text-xs text-slate-400">
-              <% if (esEdicion) { %>El usuario no se puede cambiar: es su identidad de acceso.<% } else { %>Con esto inicia sesión. Solo letras, números, punto y guion. No se podrá cambiar después.<% } %>
+              <% if (esEdicion) { %>El usuario no se puede cambiar: es su identidad de acceso.<% } else { %>Con esto inicia sesión. Solo letras, números, punto y guion, <strong>sin espacios</strong>. No se podrá cambiar después.<% } %>
             </p>
           </div>
 
